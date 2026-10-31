@@ -130,7 +130,7 @@ async function inPage({ loaded, theme }) {
 }
 
 /* Opens every view in every theme at phone and desktop width, with the seed history (tests/fixtures/make-seed.js),
-   and twice more as a new install, for the empty states. The clock and time zone are fixed, so "Yesterday" and the
+   and again as a new install, for the welcome and the empty states. The clock and time zone are fixed, so "Yesterday" and the
    streak calendar come out the same on any machine on any day. Each violation is listed once. */
 const SEED = require('./fixtures/seed-records.json');
 const NOW = '2026-10-31T12:00:00Z';
@@ -138,14 +138,14 @@ async function browserViolations(browser, base) {
   const loaded = loadedWeights(), all = {};
   const runs = [];
   for (const [theme, settings] of THEMES) for (const [, viewport] of SIZES_PX) runs.push([theme, settings, viewport, SEED]);
-  runs.push([THEMES[0][0], THEMES[0][1], SIZES_PX[0][1], null], [THEMES[1][0], THEMES[1][1], SIZES_PX[1][1], null]);
+  for (const [theme, settings] of THEMES) for (const [, viewport] of SIZES_PX) runs.push([theme, settings, viewport, null]);   /* a new install, with the welcome, in every theme and size */
   /* Four browser windows at a time: each run is independent, and one at a time takes minutes. */
   const one = async ([theme, settings, viewport, seed]) => {
     const ctx = await browser.newContext({ viewport, timezoneId: 'UTC' });
     const p = await ctx.newPage();
     await p.clock.setFixedTime(new Date(NOW));
     await p.addInitScript(([s, r]) => {
-      localStorage.setItem('stick-timing-trainer.v1', JSON.stringify({ settings: s, cal: null }));
+      localStorage.setItem('stick-timing-trainer.v1', JSON.stringify({ settings: r ? Object.assign({ noise: -50, latCal: true }, s) : s, cal: null }));   /* with history, a returning user: set up. A new install sees the welcome. */
       if (r) localStorage.setItem('stick-timing-trainer.records.v2', JSON.stringify(r));
     }, [settings, seed]);
     await p.goto(base);

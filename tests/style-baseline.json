@@ -4,7 +4,6 @@
  "font-size": [
   "#bReadP { font-size: clamp(16px,5.3vw,24px) }",
   "#pattern { font-size: 24px }",
-  "#setup p { font-size: 14.5px }",
   ".bgo { font-size: 12px }",
   ".big { font-size: 60px }",
   ".bkey.R,.bkey.L { font-size: 32px }",
