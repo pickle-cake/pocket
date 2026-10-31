@@ -2663,7 +2663,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.50';                           /* shown beside the title */
+const VERSION='1.5.51';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -4932,7 +4932,7 @@ function renderRoutineRows(routines,replay){
       const shown=rtAll?mine:mine.slice(0,4);
       const list=document.createElement('div');list.className='rtruns';
       shown.forEach(r=>list.appendChild(runBtn(r,'Scores')));
-      if(mine.length>4){const m=document.createElement('button');m.type='button';m.className='btn link rmore';m.textContent=rtAll?'Show fewer':'Show all '+mine.length+' runs';m.addEventListener('click',()=>{rtAll=!rtAll;renderProgress();});list.appendChild(m);}
+      if(mine.length>4)list.appendChild(moreRunsBtn(mine.length,rtAll,()=>{rtAll=!rtAll;renderProgress();}));
       if(x.runs>mine.length){const o=document.createElement('p');o.className='hint';o.textContent='Older runs are summarised and not listed.';list.appendChild(o);}
       row.appendChild(list);
     }
@@ -5036,11 +5036,12 @@ function emptyState(icon,title,text,label,fn){
   const i=document.createElement('span');i.innerHTML=ICON[icon];
   const t=document.createElement('b');t.textContent=title;
   const p=document.createElement('p');p.textContent=text;
-  const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=label;b.addEventListener('click',fn);
-  e.append(i,t,p,b);return e;
+  e.append(i,t,p,textBtn(label,fn));return e;
 }
 /* A row's trailing arrow: › opens a page, the chevron opens the row in place. Decoration only; the row's button carries the action. */
 function rowArrow(kind){const s=document.createElement('span');s.className='ar'+(kind==='up'?' up':'');s.innerHTML=ICON[kind==='up'?'down':kind];s.setAttribute('aria-hidden','true');return s;}
+/* Under a list of runs that shows four: show them all, or go back to four. */
+function moreRunsBtn(n,all,flip){return textBtn(all?'Show fewer':'Show all '+n+' runs',flip,'btn link rmore');}
 function iconBtn(kind,label,fn){
   const b=document.createElement('button');b.type='button';b.className='btn icon '+kind;b.innerHTML=ICON[kind];b.setAttribute('aria-label',label);b.title=label;
   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();fn(b);});return b;
@@ -5213,7 +5214,7 @@ function groupRow(panel,title,mono,sub,dy,pc,runs){   /* runs: newest first; Pla
   if(!open)return;
   const list=document.createElement('div');list.className='rtruns';
   (histAll?runs:runs.slice(0,4)).forEach(r=>list.appendChild(runBtn(r,'History')));
-  if(runs.length>4){const m=document.createElement('button');m.type='button';m.className='btn link rmore';m.textContent=histAll?'Show fewer':'Show all '+runs.length+' runs';m.addEventListener('click',()=>{histAll=!histAll;renderHistory();});list.appendChild(m);}
+  if(runs.length>4)list.appendChild(moreRunsBtn(runs.length,histAll,()=>{histAll=!histAll;renderHistory();}));
   panel.appendChild(list);
 }
 let runBack='History';   /* what the run page's Back says: the list it was opened from */
@@ -5572,9 +5573,10 @@ async function exportRecs(){
   $('recMsg').textContent='Exported '+bits.join(', ')+'.';$('recMsg').classList.add('flash');
 }
 let impPending=null;
+function sayRec(t){$('recMsg').textContent=t;$('recMsg').classList.add('flash');}
 async function importRecs(file){
   if(!file)return;
-  const say=t=>{$('recMsg').textContent=t;$('recMsg').classList.add('flash');};
+  const say=sayRec;
   if(file.size>5e6){say('That file is too large.');return;}
   try{
     const o=JSON.parse(await file.text());
@@ -5592,7 +5594,7 @@ function importSelected(){
   const sel=readSel();
   $('expModal').hidden=true;
   const {o,u,file}=impPending;impPending=null;
-  const say=t=>{$('recMsg').textContent=t;$('recMsg').classList.add('flash');};   /* shown after the page redraws, so it is not overwritten by the run count */
+  const say=sayRec;   /* shown after the page redraws, so it is not overwritten by the run count */
   const fresh=!recs.runs.length&&!recs.sum.runs;
   let add=0,addL=0,addS=0,setN=0,dup=0,savedCopy=false;
   if(sel.hist){
@@ -5778,8 +5780,7 @@ function onRoutineChanged(){
   syncPlayName();syncEditorBar();
 }
 function dotsBtn(fn){
-  const d=document.createElement('button');d.type='button';d.className='btn icon dots';d.innerHTML=ICON.kebab;d.setAttribute('aria-label','Exercise actions');d.title='Exercise actions';d.setAttribute('aria-haspopup','menu');
-  d.addEventListener('click',e=>{e.stopPropagation();fn();});
+  const d=iconBtn('kebab','Exercise actions',()=>fn());d.classList.add('dots');d.setAttribute('aria-haspopup','menu');
   return d;
 }
 function fillExerciseList(box,onPick,menu){
@@ -6067,7 +6068,7 @@ function arm(b,fn,label){
   });
   return b;
 }
-const textBtn=(label,fn)=>{const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=label;b.addEventListener('click',fn);return b;};
+function textBtn(label,fn,cls){const b=document.createElement('button');b.type='button';b.className=cls||'btn';b.textContent=label;b.addEventListener('click',fn);return b;}
 /* The Library page: the pad if it holds something unsaved, then every saved routine. */
 const libGrpOpen=new Set();   /* the groups that are open on the Library page */
 /* The ⋮ on a row opens a small menu: its items are buttons, and a destructive one asks for a second tap. */
@@ -6221,7 +6222,6 @@ const NEW={url:'',name:''};
 function renderLinks(){
   const box=$('lnkList');box.textContent='';
   if(lnkEdit&&lnkEdit!==NEW&&!S.lists.includes(lnkEdit))lnkEdit=null;
-  const mk=(t,f)=>{const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=t;b.addEventListener('click',f);return b;};
   const form=l=>{
     const row=document.createElement('div');row.className='lnk';
     const nm=document.createElement('input'),ur=document.createElement('input'),ac=document.createElement('div'),er=document.createElement('p');
@@ -6229,7 +6229,7 @@ function renderLinks(){
     nm.value=l.name||'';nm.placeholder=l===NEW?'Name (optional)':listName(l);nm.maxLength=60;nm.setAttribute('aria-label','Library name');
     ur.value=l.url;ur.inputMode='url';ur.maxLength=500;ur.setAttribute('aria-label','Library address');if(l===NEW)ur.placeholder='https://…';
     er.className='err';er.setAttribute('role','alert');ac.className='btns';
-    ac.append(mk(l===NEW?'Add':'Update',()=>{
+    ac.append(textBtn(l===NEW?'Add':'Update',()=>{
       const u=httpUrl(ur.value.trim());
       if(!u){er.textContent=URL_HINT;return;}
       if((l===NEW||u.href!==l.url)&&S.lists.some(q=>q.url===u.href)){er.textContent='That address is already in the list.';return;}
@@ -6242,7 +6242,7 @@ function renderLinks(){
         if(u.href!==l.url){l.url=u.href;delete l.items;l.t=0;lib={items:[],loaded:false,busy:false,cur:''};}
       }
       lnkEdit=null;save();renderLibrary();
-    }),mk('Cancel',()=>{lnkEdit=null;renderLinks();}));
+    }),textBtn('Cancel',()=>{lnkEdit=null;renderLinks();}));
     row.append(nm,ur,ac,er);
     setTimeout(()=>(l===NEW?ur:nm).focus(),0);
     return row;
@@ -6257,7 +6257,7 @@ function renderLinks(){
     box.appendChild(inner);
   });
   if(lnkEdit===NEW)box.appendChild(form(NEW));
-  else{const ab=document.createElement('div');ab.className='btns';ab.appendChild(mk('Add a link',()=>{lnkEdit=NEW;renderLinks();}));box.appendChild(ab);}
+  else{const ab=document.createElement('div');ab.className='btns';ab.appendChild(textBtn('Add a link',()=>{lnkEdit=NEW;renderLinks();}));box.appendChild(ab);}
 }
 function renderLibrary(){
   renderLinks();
@@ -6459,19 +6459,14 @@ function syncSetup(){
     if(!need){li.className='na';li.textContent=st.name.replace('.','')+': not needed with keyboard input';list.appendChild(li);return true;}
     cur=i;
     const t=document.createElement('span'),nm=document.createElement('b');nm.textContent=st.name;t.append(nm,' '+st.label);
-    const b=document.createElement('button');b.type='button';b.className='btn primary';b.textContent=st.btn;b.addEventListener('click',st.go);
-    const sk=st.skip?document.createElement('button'):null;
-    if(sk){sk.type='button';sk.className='btn';sk.textContent='Skip';sk.addEventListener('click',st.skip);}
     const m=document.createElement('p');m.className='hint';m.setAttribute('aria-live','polite');m.textContent=st.msg();
-    const bt=document.createElement('div');bt.className='btns';bt.append(b);if(sk)bt.append(sk);
+    const bt=document.createElement('div');bt.className='btns';bt.append(textBtn(st.btn,st.go,'btn primary'));if(st.skip)bt.append(textBtn('Skip',st.skip));
     li.append(t,bt,m);list.appendChild(li);return false;
   });
   if(cur<0){   /* every step is done: one button leads on to the Play page */
     const li=document.createElement('li');li.className='all';
     const t=document.createElement('span');t.textContent='You\u2019re all set. The loaded exercise is a good first one: press Start, listen to the count-in and play on the moving line.';
-    const b=document.createElement('button');b.type='button';b.className='btn primary';b.textContent='Start practising';
-    b.addEventListener('click',closeWelcome);
-    const bt=document.createElement('div');bt.className='btns';bt.append(b);
+    const bt=document.createElement('div');bt.className='btns';bt.append(textBtn('Start practising',closeWelcome,'btn primary'));
     li.append(t,bt);list.appendChild(li);
   }
   $('setN').textContent=cur<0?'':'\u00b7 step '+(cur+1)+' of 2';
@@ -6482,14 +6477,13 @@ const setupWatch=new MutationObserver(()=>syncSetup());
 function syncInfo(){
   syncSetup();syncPlayName();syncEditorBar();
   const exercises=currentExercises();
+  let ok;   /* there is something to play */
   if(S.mode==='single'){
-    const e0=routineParsed.exercises[0],res=parseExerciseLine(e0&&e0.line!=null?bLines()[e0.line]:bGet()),ok=!!(res&&res.exercise);
+    const e0=routineParsed.exercises[0],res=parseExerciseLine(e0&&e0.line!=null?bLines()[e0.line]:bGet());ok=!!(res&&res.exercise);
     $('patErr').textContent=ok?'':(res&&res.err?'Check the sticking: '+res.err+'.':'');     /* a plain "too short" shows in the status line instead */
-    $('startBtn').disabled=(!ok||setupNeeded())&&!(run&&!run.ended);   /* while set-up is needed the welcome hides Start; disabled still stops the Space shortcut */
   }else{
     const all=allExercises(),n=all.length;
-    const ok=exercises.length>0;
-    $('startBtn').disabled=(!ok||setupNeeded())&&!(run&&!run.ended);
+    ok=exercises.length>0;
     const errs=routineParsed.errors;
     $('routineErr').textContent=n===0&&!S.routineText.trim()?'':(errs.length?errs.slice(0,3).join(' ')+(errs.length>3?' (+'+(errs.length-3)+' more)':''):(n===0?'No exercises found. Type one exercise per line using L and R.':''));
     const total=playTime(exercises);
@@ -6502,6 +6496,7 @@ function syncInfo(){
     $('eachVal').disabled=!!routineParsed.each||(run&&!run.ended);
     $('eachUnit').disabled=!!routineParsed.each||(run&&!run.ended);
   }
+  $('startBtn').disabled=(!ok||setupNeeded())&&!(run&&!run.ended);   /* while set-up is needed the welcome hides Start; disabled still stops the Space shortcut */
   const sum=$('playSummary');
   if(!exercises.length)sum.textContent=S.mode==='single'?'Type an exercise in the editor, then press Start.':'Add some exercises in the editor, then press Start.';
   else if(S.mode==='single'){const b=exercises[0];sum.textContent=S.bpm+' BPM'+pulseNote(exercises)+playsFor();}
