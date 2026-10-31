@@ -2663,7 +2663,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.49';                           /* shown beside the title */
+const VERSION='1.5.50';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -6067,10 +6067,6 @@ function arm(b,fn,label){
   });
   return b;
 }
-function armBtn(label,fn){
-  const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=label;
-  return arm(b,fn);
-}
 const textBtn=(label,fn)=>{const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=label;b.addEventListener('click',fn);return b;};
 /* The Library page: the pad if it holds something unsaved, then every saved routine. */
 const libGrpOpen=new Set();   /* the groups that are open on the Library page */
@@ -6489,7 +6485,7 @@ function syncInfo(){
   if(S.mode==='single'){
     const e0=routineParsed.exercises[0],res=parseExerciseLine(e0&&e0.line!=null?bLines()[e0.line]:bGet()),ok=!!(res&&res.exercise);
     $('patErr').textContent=ok?'':(res&&res.err?'Check the sticking: '+res.err+'.':'');     /* a plain "too short" shows in the status line instead */
-    $('startBtn').disabled=(!ok||setupNeeded())&&!(run&&!run.ended);
+    $('startBtn').disabled=(!ok||setupNeeded())&&!(run&&!run.ended);   /* while set-up is needed the welcome hides Start; disabled still stops the Space shortcut */
   }else{
     const all=allExercises(),n=all.length;
     const ok=exercises.length>0;
@@ -6510,7 +6506,6 @@ function syncInfo(){
   if(!exercises.length)sum.textContent=S.mode==='single'?'Type an exercise in the editor, then press Start.':'Add some exercises in the editor, then press Start.';
   else if(S.mode==='single'){const b=exercises[0];sum.textContent=S.bpm+' BPM'+pulseNote(exercises)+playsFor();}
   else{const g=routineGuide();sum.textContent=g?'Routine cleared at '+g.split(' at ')[1]:'';}
-  if(setupNeeded()&&!(run&&!run.ended))sum.textContent='Finish set up to start: '+(S.noise===null?'run the mic check.':'calibrate latency, or skip it.');   /* a disabled Start always says why */
   {const b=exercises[0];$('playPat').textContent=exercises.length&&S.mode==='single'?showPattern(b.notes,b.groupStart,b.subs,b.defSub,b.sig,b.src):'';}
   $('bpmOut').textContent=S.bpm+' BPM';
   {   /* what the closed Settings drawer holds, so a setting that matters is never hidden */
