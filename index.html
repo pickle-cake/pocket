@@ -2650,7 +2650,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.46';                           /* shown beside the title */
+const VERSION='1.5.47';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -3507,15 +3507,16 @@ function loopClick(T){
   for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(0.002*sr));
   const s=ctx.createBufferSource(),g=ctx.createGain();
   s.buffer=buf;g.gain.value=0.8;s.connect(g);g.connect(ctx.destination);s.start(T);
+  return s;
 }
 async function startLoop(){
   closeListen();
   if(loop){endLoop('Auto calibrate cancelled.');return;}
   if(calMode||calTest||chk||(run&&!run.ended)||S.input!=='mic')return;
   if(!(await ensureAudio(true)))return;
-  const t0=ctx.currentTime+1,T=[];
-  for(let k=0;k<LOOP.n;k++){T.push(t0+k*LOOP.gap);loopClick(T[k]);}
-  loop={T:T,hits:[],timer:setTimeout(finishLoop,(1+LOOP.n*LOOP.gap+0.5)*1000)};
+  const t0=ctx.currentTime+1,T=[],src=[];
+  for(let k=0;k<LOOP.n;k++){T.push(t0+k*LOOP.gap);src.push(loopClick(T[k]));}
+  loop={T:T,src:src,hits:[],timer:setTimeout(finishLoop,(1+LOOP.n*LOOP.gap+0.5)*1000)};
   const show=()=>{$('latMsg').textContent='Auto calibrate: playing '+LOOP.n+' clicks through the speakers. Keep quiet and do not play. '+T.filter(t=>t<=ctx.currentTime).length+'/'+LOOP.n;};
   show();loop.tick=setInterval(show,200);
   setStatus('Auto calibrate running.');
@@ -3523,7 +3524,10 @@ async function startLoop(){
 }
 function endLoop(msg){
   if(!loop)return;
-  clearTimeout(loop.timer);clearInterval(loop.tick);loop=null;
+  clearTimeout(loop.timer);clearInterval(loop.tick);
+  /* The clicks are scheduled ahead, so a cancel stops the ones still to come. Otherwise they play on and stack up with the next run. */
+  for(const s of loop.src){try{s.stop();}catch(e){}}
+  loop=null;
   if(msg){setStatus(msg);$('latMsg').textContent=msg;}
   updateCalUI();syncMicBtn();
 }
