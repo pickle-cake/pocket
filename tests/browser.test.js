@@ -81,6 +81,13 @@ test('starting a run from the welcome closes it, so the results are not hidden',
   assert.deepEqual(p.errors, []);
 });
 
+test('a fresh app starts on 8 passes at 40 BPM with the Easy click; saved settings are kept', async () => {
+  const fresh = await open({});
+  assert.deepEqual(await fresh.evaluate(() => { const S = window.__T.S(); return [S.click, S.eachUnit, S.eachVal, S.bpm]; }), ['strokes', 'pass', 8, 40]);
+  const kept = await open({ click: 'beat', eachUnit: 'min', eachVal: 2, bpm: 90 });
+  assert.deepEqual(await kept.evaluate(() => { const S = window.__T.S(); return [S.click, S.eachUnit, S.eachVal, S.bpm]; }), ['beat', 'min', 2, 90]);
+});
+
 test('a returning visit goes straight to Play', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true });
   assert.equal(await p.evaluate(() => !!document.getElementById('setup').offsetParent), false);

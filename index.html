@@ -2663,7 +2663,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.48';                           /* shown beside the title */
+const VERSION='1.5.49';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -2675,8 +2675,9 @@ const HOSTED={wStarter:['routines/starter.txt','Starter routines'],wRudiments:['
 /* The starter list sits beside the page. A page opened from a preview or from disk has no web address to resolve it against. */
 const hostedHref=path=>{try{return new URL(path,location.href).href;}catch(e){return '';}};
 const hostedLists=()=>Object.keys(HOSTED).map(id=>({url:hostedHref(HOSTED[id][0]),name:HOSTED[id][1],t:0})).filter(l=>l.url);
-const S={mode:'single',routineText:STARTER,eachUnit:'min',eachVal:1,gap:0,pulse:true,startExercise:1,
-  bpm:60,subdiv:4,click:'beat',lastExport:0,expRuns:0,tol:20,sens:-30,settle:40,accent:'',others:'n',noise:null,vol:60,latency:null,latCal:false,input:'mic',editTab:'build',theme:'',palette:'std',libId:''};
+const S={mode:'single',routineText:STARTER,eachUnit:'pass',eachVal:8,gap:0,   /* a fresh app: 8 passes at 40 BPM on the Easy click, so the first exercise is simple */
+  pulse:true,startExercise:1,
+  bpm:40,subdiv:4,click:'strokes',lastExport:0,expRuns:0,tol:20,sens:-30,settle:40,accent:'',others:'n',noise:null,vol:60,latency:null,latCal:false,input:'mic',editTab:'build',theme:'',palette:'std',libId:''};
 let cal={L:[],R:[]},model=null;
 try{
   const o=JSON.parse(localStorage.getItem(KEY)||'null');
