@@ -2709,7 +2709,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.67';                           /* shown beside the title */
+const VERSION='1.5.68';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -3489,6 +3489,10 @@ async function startPlay(){
   if(welcome){welcome=false;syncSetup();}   /* set up and starting: the welcome has done its job */
   showTab('play');
   setStatus('Starting…');
+  /* Every run gets a fresh audio setup, as a page refresh would give it. On an iPhone, audio woken from sleep could come
+     back playing about a beat behind what Safari reports, until the page was reloaded; a new one is always in step.
+     Not while a run is playing, or while audio is still being opened by an earlier tap. */
+  if(ctx&&!(run&&!run.ended)&&!opening)resetAudio();
   if(!(await ensureAudio(S.input==='mic')))return;
   beginRun('play');
 }

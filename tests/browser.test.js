@@ -435,6 +435,30 @@ audioTest('the whole count-in is queued at Start, and clicks queued late are log
   assert.deepEqual(p.errors, []);
 });
 
+audioTest('every Start and Again plays on a fresh audio setup, as a refresh would', async () => {
+  const p = await open({ input: 'kb', bpm: 200, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true });
+  const play = async re => {
+    await press(p, re);
+    await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && !window.__T.run().ended, null, { timeout: 8000 });
+    await p.evaluate(() => { window.__ctxs = (window.__ctxs || []).concat(window.__T.ctx()); });
+    await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } })); });
+    await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 20000 });
+    await p.waitForTimeout(300);
+  };
+  await play(/^Start$/);
+  await play(/^Again$/);
+  await play(/^Again$/);
+  const o = await p.evaluate(() => ({
+    distinct: new Set(window.__ctxs).size,
+    closed: window.__ctxs.slice(0, -1).every(c => c.state === 'closed'),
+    runs: JSON.parse(localStorage.getItem('stick-timing-trainer.v1')).settings.clockLog.slice(0, 3).map(d => d.runs),
+  }));
+  assert.equal(o.distinct, 3, 'three runs, three audio setups');
+  assert.equal(o.closed, true, 'the old ones are closed, not left running');
+  assert.deepEqual(o.runs, [1, 1, 1], 'the timing log shows each run on its own setup');
+  assert.deepEqual(p.errors, []);
+});
+
 audioTest('the first result explains itself once', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true, tol: 30 });
   const play = async () => {
