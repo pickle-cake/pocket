@@ -151,8 +151,8 @@ body[data-run="1"] .notice{display:none}
 #helpNav b{padding:0 var(--s-3) var(--s-2)}
 #helpNav button{border:0;background:none;color:var(--ink);font:600 var(--t-small) var(--font-body);text-align:left;padding:0 var(--s-3);min-height:var(--hit);border-radius:var(--r-md);cursor:pointer}
 #helpNav button:hover{background:var(--surface)}
-#helpNav button[aria-current],.rmenu button[aria-current]{background:var(--surface);box-shadow:inset 3px 0 0 var(--accent)}
-.rmenu button[aria-current]{background:var(--bg)}
+#helpNav button[aria-current],.menu button[aria-current]{background:var(--surface);box-shadow:inset 3px 0 0 var(--accent)}
+.menu button[aria-current]{background:var(--bg)}
 .ttl.hmenu{cursor:pointer}
 :root:not([data-layout=desktop]) .ttl.hmenu::after{content:"";display:inline-block;width:7px;height:7px;margin:0 0 3px 8px;border:solid var(--muted);border-width:0 2px 2px 0;transform:rotate(45deg)}
 :root[data-layout=desktop] #pvStats:not([hidden]),:root[data-layout=desktop] #pvAch:not([hidden]){grid-template-columns:minmax(280px,340px) minmax(0,1fr);column-gap:28px;align-items:start}
@@ -542,10 +542,6 @@ body[data-mode="routine"] .single-only{display:none}
 .b-single .btn.add{margin-top:0}
 .bbtns{display:flex;gap:8px;flex:none}
 .bmeta{display:flex;align-items:center;gap:10px;min-height:48px}
-.bmenu{position:fixed;z-index:60;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;display:grid;min-width:170px}
-.bmenu .btn{border:0;background:transparent;color:var(--ink);text-align:left;justify-content:flex-start;padding:10px;font-size:14px;min-height:40px}
-.bmenu .btn:disabled{opacity:.35}
-.bmenu .btn.del{color:var(--danger)}
 #editList .meta{display:none}
 .bnote{display:flex;align-items:flex-start;gap:10px}
 .bnote .btn{flex:none}
@@ -563,7 +559,7 @@ body[data-mode="routine"] .single-only{display:none}
 .xlist{max-height:40vh;overflow:auto;border-top:1px solid var(--line);margin-left:32px} .xlist .xrow:last-child{border-bottom:0}
 .xrow{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)} .xrow:last-child{border-bottom:0} .xrow input{margin-top:3px;width:20px;height:20px;flex:none} .xrow small{color:var(--muted);font-size:13px}
 .modal{position:fixed;inset:0;z-index:50;background:var(--scrim);display:grid;place-items:center;padding:16px}
-.mbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;width:min(560px,100%);max-height:92vh;display:grid;gap:12px;overflow:hidden}
+.mbox{box-shadow:var(--shadow-pop);width:min(560px,100%);max-height:92vh;display:grid;gap:12px;overflow:hidden}
 .ln{display:flex;align-items:flex-start;border:1px solid var(--line-strong);border-radius:8px;background:var(--bg);overflow:hidden}
 .ln:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 .ln pre{box-sizing:border-box;margin:0;flex:none;min-width:2.4em;padding:10px 8px 26px 6px;overflow:hidden;text-align:right;font:600 16px/1.55 var(--font-data);color:var(--muted);border-right:1px solid var(--line);user-select:none}
@@ -698,7 +694,7 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 :root:not([data-layout=desktop]) body[data-review="1"] #advBtns1{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);margin:0}
 :root:not([data-layout=desktop]) body[data-review="1"] #advBtns1 .btn{min-height:var(--hit-lg)}
 :root:not([data-layout=desktop]) body[data-review="1"] #pagePlay{padding-bottom:120px}
-.res{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+.res{display:grid;gap:10px}
 .res[hidden]{display:none}
 .res .sacc small{display:block;color:var(--muted);font-size:13px}
 .res .slab{margin-bottom:-6px}
@@ -731,11 +727,15 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .btn.icon.down svg{transition:transform .18s}
 :is(.hrow.open>.row,.row.open)>.ra .btn.icon.down svg{transform:rotate(180deg)}   /* an open row's chevron points up */
 .btn.icon.gap{visibility:hidden;pointer-events:none}
-.rmenu{position:fixed;z-index:60;min-width:150px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:4px;box-shadow:var(--shadow-pop);display:grid}
-.rmenu button{border:0;background:none;color:var(--ink);font:600 15px var(--font-body);text-align:left;padding:12px 14px;border-radius:var(--r-md);cursor:pointer;min-height:44px}
-.rmenu button:hover,.rmenu button:focus-visible{background:var(--bg)}
-.rmenu button.danger,.btn.danger{color:var(--danger)}
-button[data-armed],.btn[data-armed],.rmenu button[data-armed]{background:var(--danger);color:var(--on-danger);border:1px solid var(--danger);padding-inline:var(--s-3)}   /* the one armed look, on every kind of button */
+/* A card: the run result, a live readout, menus and dialogs, scrollable data. Everything else is a flat section. */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s-4)}
+/* A menu: a card that pops, with items a full target tall. One at a time, placed by openMenu. */
+.menu{position:fixed;z-index:60;min-width:170px;padding:var(--s-1);box-shadow:var(--shadow-pop);display:grid}
+.menu button{border:0;background:none;color:var(--ink);font:600 var(--t-small) var(--font-body);text-align:left;padding:0 var(--s-3);min-height:var(--hit);border-radius:var(--r-md);cursor:pointer}
+.menu button:hover,.menu button:focus-visible{background:var(--bg)}
+.menu button:disabled{opacity:.4;cursor:not-allowed;background:none}
+.menu button.danger,.btn.danger{color:var(--danger)}
+button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--danger);color:var(--on-danger);border:1px solid var(--danger);padding-inline:var(--s-3)}   /* the one armed look, on every kind of button */
 </style>
 </head>
 <body data-input="mic" data-mode="single" data-tab="pattern" data-state="idle" data-run="0" data-review="0">
@@ -902,7 +902,7 @@ button[data-armed],.btn[data-armed],.rmenu button[data-armed]{background:var(--d
         <button class="btn" id="saveBtn" type="button">Save</button>
         <button class="btn icon dots" id="saveMore" type="button" aria-label="More ways to save" title="More ways to save" aria-haspopup="menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button>
       </div>
-      <div class="bmenu" id="saveMenu" role="menu" hidden><button class="btn" id="saveNew" type="button">Save as new</button><button class="btn" id="saveFile" type="button">Download file</button></div>
+      <div class="card menu" id="saveMenu" role="menu" hidden><button id="saveNew" type="button" role="menuitem">Save as new</button><button id="saveFile" type="button" role="menuitem">Download file</button></div>
       <div class="bmain" id="bMain">
         <section class="panel" aria-label="Editor mode">
           <div class="seg wide" id="bMode" role="group" aria-label="How to enter the strokes">
@@ -936,15 +936,15 @@ button[data-armed],.btn[data-armed],.rmenu button[data-armed]{background:var(--d
               <div class="exercises" id="editList" role="listbox" aria-label="Exercises in this routine. Tap one to edit it."></div>
               <button class="btn link add" id="bAddEx" type="button">+ Add exercise</button>
             </div>
-            <div class="bmenu" id="rowMenu" role="menu" hidden>
-              <button class="btn" id="bAddAbove" type="button">Insert above</button>
-              <button class="btn" id="bAddBelow" type="button">Insert below</button>
-              <button class="btn" id="bDup" type="button">Clone</button>
-              <button class="btn" id="bUp" type="button">Move up</button>
-              <button class="btn" id="bDown" type="button">Move down</button>
-              <button class="btn" id="bTop" type="button">Move to top</button>
-              <button class="btn" id="bBottom" type="button">Move to bottom</button>
-              <button class="btn del" id="bDel" type="button">Delete</button>
+            <div class="card menu" id="exMenu" role="menu" hidden>
+              <button id="bAddAbove" type="button" role="menuitem">Insert above</button>
+              <button id="bAddBelow" type="button" role="menuitem">Insert below</button>
+              <button id="bDup" type="button" role="menuitem">Clone</button>
+              <button id="bUp" type="button" role="menuitem">Move up</button>
+              <button id="bDown" type="button" role="menuitem">Move down</button>
+              <button id="bTop" type="button" role="menuitem">Move to top</button>
+              <button id="bBottom" type="button" role="menuitem">Move to bottom</button>
+              <button class="danger" id="bDel" type="button" role="menuitem">Delete</button>
             </div>
           </div>
           <div class="b-single"><button class="btn link add" id="bAddEx1" type="button">+ Add exercise</button> <span class="hint">A second exercise makes this a routine.</span></div>
@@ -1454,7 +1454,7 @@ RLRR LRLL RLRR LRLL</pre>
 
     <section id="advice" hidden aria-label="Score and tempo">
       <div id="advBadge" hidden></div>
-      <div class="res" id="advRes">
+      <div class="card res" id="advRes">
         <span class="slab">Score</span>
         <div class="shd"><b id="advScore"></b><span id="advMax"></span><em id="advHs" hidden>New high score</em></div>
         <div class="sbar" id="advScoreBar"><i></i><u></u></div>
@@ -1559,7 +1559,7 @@ RLRR LRLL RLRR LRLL</pre>
 </main>
 
 <div class="modal" id="lsModal" role="dialog" aria-modal="true" aria-label="Listen to this exercise" hidden>
-  <div class="mbox">
+  <div class="card mbox">
     <div class="mhead"><h3>Listen</h3><button class="btn" id="lsClose" type="button">Close</button></div>
     <div class="lsstaff" id="lsStaff" aria-hidden="true"></div>
     <div class="bnote">
@@ -1570,14 +1570,14 @@ RLRR LRLL RLRR LRLL</pre>
 </div>
 
 <div class="modal" id="pickModal" role="dialog" aria-modal="true" aria-label="Choose a routine" hidden>
-  <div class="mbox scroll">
+  <div class="card mbox scroll">
     <div class="mhead"><h3>Choose a routine</h3><button class="btn" id="pickClose" type="button">Close</button></div>
     <div id="pickList"></div>
   </div>
 </div>
 
 <div class="modal" id="openModal" role="dialog" aria-modal="true" aria-label="Import a routine" hidden>
-  <div class="mbox scroll">
+  <div class="card mbox scroll">
     <div class="mhead"><h3>Import a routine</h3><button class="btn" id="openClose" type="button">Close</button></div>
     <div class="osec">
       <div class="olbl">File</div>
@@ -1603,7 +1603,7 @@ RLRR LRLL RLRR LRLL</pre>
 </div>
 
 <div class="modal" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="cfTitle" hidden>
-  <div class="mbox">
+  <div class="card mbox">
     <div class="mhead"><!-- [html-validate-disable-next empty-heading: the confirm dialog fills its title when it opens] --><h3 id="cfTitle"></h3></div>
     <p class="hint" id="cfText"></p>
     <div class="btns"><button class="btn" id="cfSave" type="button">Save</button><button class="btn" id="cfDiscard" type="button">Don't save</button><button class="btn" id="cfCancel" type="button">Cancel</button></div>
@@ -1611,7 +1611,7 @@ RLRR LRLL RLRR LRLL</pre>
 </div>
 
 <div class="modal" id="expModal" role="dialog" aria-modal="true" aria-labelledby="exTitle" hidden>
-  <div class="mbox">
+  <div class="card mbox">
     <div class="mhead"><h3 id="exTitle">Export</h3></div>
     <div id="exOpts"></div>
     <div class="btns"><button class="btn" id="exGo" type="button">Export</button><button class="btn" id="exCancel" type="button">Cancel</button></div>
@@ -2674,7 +2674,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.55';                           /* shown beside the title */
+const VERSION='1.5.56';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -5103,10 +5103,7 @@ function openHelpMenu(){
     x.addEventListener('click',()=>{closeRowMenu();s.scrollIntoView({block:'start'});});
     m.appendChild(x);
   });
-  document.body.appendChild(m);
-  const r=t.getBoundingClientRect();
-  m.style.left=Math.max(8,Math.min(r.left,innerWidth-m.offsetWidth-8))+'px';m.style.top=(r.bottom+4)+'px';
-  rowMenu=m;rowMenuBtn=t;t.setAttribute('aria-expanded','true');
+  openMenu(m,t,true);
 }
 function showPage(o){
   stashHelp();
@@ -5321,7 +5318,7 @@ function renderRunPage(r){
   const f=runFigures(r),a=accHtml(f.acc);
   if(!off){   /* the score first, against a flawless run of what was played and the best at this level; the same card as after a run */
     const sc=runScore(r),mx=runMax(r),f0=n=>n.toLocaleString('en-US'),d=scoreBreakdown(r);
-    const card=document.createElement('div');card.className='res';
+    const card=document.createElement('div');card.className='card res';
     const mk=(tag,cls,txt,par)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;(par||card).appendChild(e);return e;};
     mk('span','slab','Score');
     const hd=mk('div','shd');mk('b',null,f0(sc),hd);mk('span',null,'of '+f0(mx),hd);
@@ -6073,16 +6070,28 @@ function textBtn(label,fn,cls){const b=document.createElement('button');b.type='
 /* The Library page: the pad if it holds something unsaved, then every saved routine. */
 const libGrpOpen=new Set();   /* the groups that are open on the Library page */
 /* The ⋮ on a row opens a small menu: its items are buttons, and a destructive one asks for a second tap. */
-let rowMenu=null,rowMenuBtn=null;
+/* Every menu: one open at a time, under (or over) the button that opened it, closed by a tap outside, Escape, a scroll or an item.
+   A menu built on the fly is removed when it closes; a menu written in the page (it has an id) is hidden. */
+let rowMenu=null,rowMenuBtn=null,menuY=0;
 function closeRowMenu(){
-  if(rowMenu){rowMenu.remove();rowMenu=null;}
+  if(rowMenu){if(rowMenu.id)rowMenu.hidden=true;else rowMenu.remove();rowMenu=null;}
   if(rowMenuBtn){rowMenuBtn.setAttribute('aria-expanded','false');rowMenuBtn=null;}
+}
+function openMenu(m,anchor,alignLeft){
+  if(rowMenu===m&&rowMenuBtn===anchor){closeRowMenu();return;}   /* the same button again closes it */
+  closeRowMenu();
+  if(m.isConnected)m.hidden=false;else document.body.appendChild(m);
+  const r=anchor.getBoundingClientRect(),w=m.offsetWidth,h=m.offsetHeight;
+  let top=r.bottom+4;if(top+h>innerHeight-8)top=r.top-h-4;
+  m.style.left=Math.max(8,Math.min(innerWidth-w-8,alignLeft?r.left:r.right-w))+'px';m.style.top=Math.max(8,top)+'px';
+  rowMenu=m;rowMenuBtn=anchor;menuY=scrollY;anchor.setAttribute('aria-expanded','true');
 }
 document.addEventListener('pointerdown',ev=>{if(rowMenu&&!rowMenu.contains(ev.target)&&!(rowMenuBtn&&rowMenuBtn.contains(ev.target)))closeRowMenu();},true);
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&rowMenu)closeRowMenu();});
-window.addEventListener('scroll',closeRowMenu,true);window.addEventListener('resize',closeRowMenu);
+/* a scroll closes it, except a small nudge of the page itself, such as a phone settling as the menu opens */
+window.addEventListener('scroll',ev=>{if(rowMenu&&!(ev.target===document&&Math.abs(scrollY-menuY)<=30))closeRowMenu();},true);window.addEventListener('resize',closeRowMenu);
 function statSpan(n,txt,unit,cls){const e=document.createElement('span');if(cls)e.className=cls;e.textContent=txt;if(unit){const u=document.createElement('small');u.textContent=unit;e.appendChild(u);}n.appendChild(e);}
-const newMenu=()=>{const m=document.createElement('div');m.className='rmenu';m.setAttribute('role','menu');return m;};
+const newMenu=()=>{const m=document.createElement('div');m.className='card menu';m.setAttribute('role','menu');return m;};
 const menuBtn=text=>{const x=document.createElement('button');x.type='button';x.setAttribute('role','menuitem');x.textContent=text;return x;};
 function kebab(label,items){
   const b=iconBtn('kebab',label,()=>{
@@ -6094,11 +6103,7 @@ function kebab(label,items){
       if(it.arm)arm(x,()=>{closeRowMenu();it.fn();});else x.addEventListener('click',()=>{closeRowMenu();it.fn();});
       m.appendChild(x);
     });
-    document.body.appendChild(m);
-    const r=b.getBoundingClientRect(),w=m.offsetWidth,h=m.offsetHeight;
-    let top=r.bottom+4;if(top+h>innerHeight-8)top=r.top-h-4;
-    m.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';m.style.top=Math.max(8,top)+'px';
-    rowMenu=m;rowMenuBtn=b;b.setAttribute('aria-expanded','true');
+    openMenu(m,b);
   });
   b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded','false');
   return b;
@@ -6829,24 +6834,14 @@ function wireBuilder(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('lsModal').hidden)closeListen();});
   document.querySelectorAll('.bkey').forEach(k=>k.addEventListener('click',()=>bEdit(k.dataset.k)));
   [['bTop','top'],['bUp','up'],['bDown','down'],['bBottom','bottom']].forEach(x=>$(x[0]).addEventListener('click',()=>bMoveEx(x[1])));
-  /* menus: one open at a time, placed under the button that opened it, closed by any tap outside or any item */
-  let menuOn=null;
-  const closeMenu=()=>{if(menuOn){menuOn.hidden=true;menuOn=null;}};
-  const openMenu=(menu,anchor)=>{
-    closeMenu();menu.hidden=false;menuOn=menu;menuY=scrollY;
-    const a=anchor.getBoundingClientRect(),w=menu.offsetWidth,h=menu.offsetHeight;
-    menu.style.left=Math.max(8,Math.min(a.right-w,innerWidth-w-8))+'px';
-    menu.style.top=(a.bottom+4+h>innerHeight-8?Math.max(8,a.top-h-4):a.bottom+4)+'px';
-  };
-  document.addEventListener('pointerdown',e=>{if(menuOn&&!menuOn.contains(e.target)&&!e.target.closest('.dots'))closeMenu();});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});
-  let menuY=0;
-  window.addEventListener('scroll',()=>{if(menuOn&&Math.abs(scrollY-menuY)>30)closeMenu();});
-  $('rowMenu').addEventListener('click',e=>{if(e.target.closest('.btn'))closeMenu();});
+  $('exMenu').addEventListener('click',e=>{if(e.target.closest('button'))closeRowMenu();});
   arm($('edDiscard'),()=>{const e=currentEntry();if(e)loadEntry(e);});   /* back to the saved routine */
   $('saveMore').addEventListener('click',()=>openMenu($('saveMenu'),$('saveMore')));
-  $('saveMenu').addEventListener('click',e=>{if(e.target.closest('.btn'))closeMenu();});
-  openRowMenu=idx=>{const b=$('editList').querySelector('.erow[data-idx="'+idx+'"] .dots');if(b)openMenu($('rowMenu'),b);};
+  $('saveMenu').addEventListener('click',e=>{if(e.target.closest('button'))closeRowMenu();});
+  openRowMenu=idx=>{   /* picking the row redraws the list, so the menu remembers its row rather than its button */
+    const m=$('exMenu');if(rowMenu===m&&m.dataset.idx===String(idx)){closeRowMenu();return;}
+    const b=$('editList').querySelector('.erow[data-idx="'+idx+'"] .dots');if(b){m.dataset.idx=idx;openMenu(m,b);}
+  };
   const om=$('openModal');
   openOpen=()=>{if(run&&!run.ended)return;$('openErr').textContent='';om.hidden=false;showCachedList();renderLibrary();$('fileBtn').focus();};
   closeOpen=()=>{if(om.hidden)return;om.hidden=true;$('openBtn').focus({preventScroll:true});};

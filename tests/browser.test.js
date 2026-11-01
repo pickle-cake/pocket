@@ -191,6 +191,28 @@ test('builder: flam holds until a stroke, greys the other keys, and writes fR', 
   assert.deepEqual(p.errors, []);
 });
 
+test('menus: one open at a time, Escape and the same button close it', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, routineText: 'RLRL RLRL\nLRLR LRLR' });
+  await p.click('#editPlay');
+  const open_ = () => p.evaluate(() => [...document.querySelectorAll('.menu')].filter(m => !m.hidden).map(m => m.id));
+  const dots = '#editList .erow:first-child .dots';
+  await p.click(dots);
+  assert.deepEqual(await open_(), ['exMenu']);
+  assert.equal(await p.getAttribute(dots, 'aria-expanded'), 'true');
+  await p.keyboard.press('Escape');
+  assert.deepEqual(await open_(), []);
+  assert.equal(await p.getAttribute(dots, 'aria-expanded'), 'false');
+  await p.click(dots);
+  await p.click(dots);
+  assert.deepEqual(await open_(), [], 'the same button closes it');
+  await p.click(dots);
+  await p.click('#saveMore');
+  assert.deepEqual(await open_(), ['saveMenu'], 'opening another closes the first');
+  await p.click('#saveNew');
+  assert.deepEqual(await open_(), [], 'an item closes it');
+  assert.deepEqual(p.errors, []);
+});
+
 test('editor: Discard puts a saved routine back', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, routineText: 'title: Mine\n8 RLRL RLRL' });
   await p.click('#editPlay');
@@ -242,7 +264,7 @@ test('a stray exercise is deleted from a run, and an unheard one is not scored',
   assert.match(t, /1 not played/);            /* nothing was heard in the last exercise */
   assert.doesNotMatch(t, /dLfR[\s\S]*ACC/);    /* it is not scored, so it cannot be the weakest */
   await p.evaluate(() => { document.querySelector('details').open = true; document.querySelector('details .btn.icon').click(); });
-  const del = () => p.evaluate(() => [...document.querySelectorAll('.rmenu button')].find(x => /^(Delete|Tap again to delete)$/.test(x.textContent)).click());
+  const del = () => p.evaluate(() => [...document.querySelectorAll('.menu:not([hidden]) button')].find(x => /^(Delete|Tap again to delete)$/.test(x.textContent)).click());
   await del(); await del();
   await p.waitForTimeout(300);
   t = await text();
@@ -363,12 +385,12 @@ test('Help: a menu in the title on a phone, a contents list beside the text on d
   assert.equal(await ph.evaluate(() => document.getElementById('pgTtl').textContent), 'Help · How it works');
   assert.equal(await ph.evaluate(() => getComputedStyle(document.getElementById('helpNav')).display), 'none');
   await ph.evaluate(() => document.getElementById('pgTtl').click());
-  const items = await ph.evaluate(() => [...document.querySelectorAll('.rmenu button')].map(b => b.textContent));
+  const items = await ph.evaluate(() => [...document.querySelectorAll('.menu:not([hidden]) button')].map(b => b.textContent));
   assert.equal(items.length, 9);
-  await ph.evaluate(() => [...document.querySelectorAll('.rmenu button')].find(b => b.textContent === 'Scores, tempo and progress').click());
+  await ph.evaluate(() => [...document.querySelectorAll('.menu:not([hidden]) button')].find(b => b.textContent === 'Scores, tempo and progress').click());
   await ph.waitForTimeout(400);
   assert.equal(await ph.evaluate(() => document.getElementById('pgTtl').textContent), 'Help · Scores, tempo and progress');
-  assert.equal(await ph.evaluate(() => document.querySelectorAll('.rmenu').length), 0);
+  assert.equal(await ph.evaluate(() => document.querySelectorAll('.menu:not([hidden])').length), 0);
 
   const dk = await open({ seeded: true, input: 'kb' }, { width: 1440, height: 900 });
   await dk.evaluate(() => document.getElementById('helpBtn').click());
