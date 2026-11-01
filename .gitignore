@@ -2,3 +2,6 @@ node_modules/
 
 # raw records exports: they can hold book content; tests/fixtures/make-seed.js turns one into seed-records.json
 tests/fixtures/*.raw.json
+
+# Claude Code settings for this machine only (permission rules and the like)
+.claude/settings.local.json
