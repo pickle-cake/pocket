@@ -3,7 +3,7 @@
    one must be taken off the list. `npm run style:baseline` takes fixed ones off. It never adds any.
    `node tests/style.js --accept` records the current violations as they are; use it only for a deliberate exception. */
 const fs = require('fs'), path = require('path');
-const { ROOT, html } = require('./helpers');
+const { html } = require('./helpers');
 const BASELINE = path.join(__dirname, 'style-baseline.json');
 
 /* ---- The stylesheet ---- */
