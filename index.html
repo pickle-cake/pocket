@@ -853,6 +853,12 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <p class="hint"><b>Calibrate by playing:</b> hit the pad on each click until the number settles. Use it to fine-tune, or with headphones.</p>
       <p class="hint" id="latMsg">Sound reaches the page late, and the click reaches your ears late. This number removes that delay. The result of a calibration appears here.</p>
     </section>
+    <section class="panel" aria-label="Audio timing">
+      <h3>Audio timing</h3>
+      <p class="hint" id="clkMsg"></p>
+      <div class="btns even"><button class="btn" id="clkReset" type="button">Reset audio</button><button class="btn" id="clkCopy" type="button">Copy timing details</button></div>
+      <p class="hint">If the count-in numbers run ahead of the clicks, Reset audio starts the sound afresh, as reloading the page does. Copy timing details puts the last runs' measurements on the clipboard to send with a report.</p>
+    </section>
 
 
     </div>
@@ -2611,6 +2617,23 @@ function summariseHandTest(results){
   return out;
 }
 /* ---------- latency calibration ---------- */
+/* ---------- audio clock health ---------- */
+/* During a run the audio clock must keep pace with the wall clock. If it runs slow or stalls, the sound falls behind
+   what the screen shows: the count-in numbers lead the clicks. A clock that stops for a moment shows up the same way.
+   clockStep folds in one reading of both clocks, in seconds. clockVerdict says how far the audio has fallen behind
+   (or run ahead), and whether that is too far. The limit allows for clocks that only tick every few tens of
+   milliseconds, as on an iPhone. */
+const CLOCK={maxSlip:0.2};
+function clockStep(st,wall,audio){
+  if(!st)return {w0:wall,a0:audio,w:wall,a:audio};
+  st.w=wall;st.a=audio;
+  return st;
+}
+function clockVerdict(st){
+  if(!st)return {ok:true,span:0,rate:1,slip:0};
+  const span=st.w-st.w0,adv=st.a-st.a0,slip=span-adv;
+  return {ok:Math.abs(slip)<CLOCK.maxSlip,span:span,rate:span>0?adv/span:1,slip:slip};
+}
 /* Calibrate plays a click row on a loop. It ends when the player stops (quiet slots in a row) or presses Stop. */
 const LAT={rounds:40,minHits:80,quiet:8,noHit:16,maxSpread:30,maxDrift:10,steady:2};
 const madSpread=(a,m)=>1.4826*median(a.map(e=>Math.abs(e-m)));
@@ -2685,7 +2708,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.62';                           /* shown beside the title */
+const VERSION='1.5.64';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -2738,7 +2761,8 @@ S.gap=+S.gap===0?0:4;
 S.pulse=S.pulse!==false;
 S.palette=S.palette==='cb'?'cb':'std';
 S.layout=S.layout==='phone'||S.layout==='desktop'?S.layout:'auto';
-S.resultHelp=S.resultHelp===true;               /* the note on reading a result has been shown on this device */
+S.resultHelp=S.resultHelp===true;
+S.clockLog=Array.isArray(S.clockLog)?S.clockLog.filter(d=>d&&typeof d==='object').slice(0,10):[];   /* audio timing of the last runs, on this device */               /* the note on reading a result has been shown on this device */
 if(typeof S.libId!=='string')S.libId='';
 S.startExercise=1;
 const PORTABLE=['bpm','tol','accent','others','vol','click','eachUnit','eachVal','gap','pulse','palette','theme'];   /* settings that travel in an export. Microphone, latency and sensitivity belong to the device and stay out. */
@@ -2951,6 +2975,7 @@ function showMicError(err){
   $('micMsg').textContent=m;
 }
 let audioFresh=false;   /* the output was just started or the microphone just opened, so the first click needs a little more time */
+let ctxBorn=0,ctxRuns=0,ctxMics=0,ctxStates=[];   /* this audio context's age, runs, microphone opens and state changes, for the timing log */
 let ctxOp=null;   /* the output is being put to sleep. Waking it has to wait for that to finish, or it goes back to sleep. */
 let opening=0;   /* a microphone is being opened, so it must not be put away yet */
 /* After the output wakes, the audio clock can run before the device is really playing, and the first clicks of a count-in go into nothing.
@@ -2963,7 +2988,11 @@ async function outputRunning(){
 async function ensureAudio(needMic){
   opening++;
   try{
-    if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
+    if(!ctx){
+      ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
+      ctxBorn=performance.now();ctxRuns=0;ctxMics=0;ctxStates=[];
+      ctx.onstatechange=()=>{if(ctx)ctxStates=ctxStates.concat(ctx.state).slice(-12);};
+    }
     if(ctxOp)await ctxOp;
     let woke=false;
     if(ctx.state!=='running'){await ctx.resume();audioFresh=true;woke=true;if(ctx.state!=='running')await ctx.resume();}   /* a phone can need a second try after a call or a switch of output */
@@ -2971,7 +3000,7 @@ async function ensureAudio(needMic){
     if(woke)await outputRunning();
     /* iPhone lets people mute the microphone from Safari's page menu. The stream stays open but silent, so start again from scratch. */
     if(needMic&&node&&!micLive())micOff(true);
-    if(needMic&&!node){audioFresh=true;
+    if(needMic&&!node){audioFresh=true;ctxMics++;
       if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw {name:'insecure'};
       stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}});
       const src=micSrc=ctx.createMediaStreamSource(stream);
@@ -3155,8 +3184,10 @@ function setMeter(v){
 }
 /* One short tone with a quick attack and decay. */
 const liveTones=new Set();
-/* Clicks are scheduled a little ahead, so pausing must also cancel the ones already queued. */
-function silenceTones(){liveTones.forEach(o=>{try{o.stop();}catch(e){}});liveTones.clear();}
+/* Clicks are scheduled a little ahead, so pausing must also cancel the ones already queued. Each one already has its
+   stop time, and Safari refuses a second stop(), so cutting the sound's last link to the speaker (_out) is what
+   silences it everywhere. Without that, an iPhone kept the queued clicks and played them at the start of the next run. */
+function silenceTones(){liveTones.forEach(o=>{try{o.stop();}catch(e){}try{(o._out||o).disconnect();}catch(e){}});liveTones.clear();}
 function blip(T,type,freq,peak,attack,decay,stop){
   const o=ctx.createOscillator(),g=ctx.createGain();
   liveTones.add(o);o.onended=()=>liveTones.delete(o);
@@ -3164,7 +3195,7 @@ function blip(T,type,freq,peak,attack,decay,stop){
   g.gain.setValueAtTime(0.0001,T);
   g.gain.exponentialRampToValueAtTime(peak,T+attack);
   g.gain.exponentialRampToValueAtTime(0.0001,T+decay);
-  o.connect(g);g.connect(ctx.destination);
+  o.connect(g);g.connect(ctx.destination);o._out=g;
   o.start(T);o.stop(T+stop);
 }
 function click(time,level){
@@ -3182,7 +3213,7 @@ function stick(T,hand,vel){
   src.buffer=noiseBuf;f.type='bandpass';f.frequency.value=hand==='L'?2300:2700;f.Q.value=0.8;
   g.gain.setValueAtTime(0.0001,T);g.gain.exponentialRampToValueAtTime(v,T+0.001);g.gain.exponentialRampToValueAtTime(0.0001,T+0.07);
   liveTones.add(src);src.onended=()=>liveTones.delete(src);
-  src.connect(f);f.connect(g);g.connect(ctx.destination);src.start(T);src.stop(T+0.12);
+  src.connect(f);f.connect(g);g.connect(ctx.destination);src._out=g;src.start(T);src.stop(T+0.12);
   blip(T,'sine',hand==='L'?170:200,v*0.6,0.001,0.06,0.08);
 }
 /* The point on the audio clock that is coming out of the speakers right now. The browser's output timestamp,
@@ -3234,7 +3265,7 @@ function beginRun(mode,only){
     startExercise:only?Math.min.apply(null,only):(S.mode==='routine'?S.startExercise:1)
   };
   if(audioFresh){r.t0+=0.4;audioFresh=false;}
-  run=r;pushDet();initLive(r);
+  run=r;ctxRuns++;pushDet();initLive(r);
   if(!lat){rvModel=null;view=r;r.gridSeg=0;document.body.dataset.state='run';if(S.mode==='routine')markExercises(r);applyLayout(layoutPlan(plan));rowsShown=ROWS;labelsOn=true;labelMode='routine';setRows(plan,0,false);paintRows(r,null);}
   else{
     /* Calibration shows one row with a cursor on the Play page, so there is something to watch as well as hear. */
@@ -3415,7 +3446,7 @@ function resumeRun(){
     r.nextFin=Math.min(r.nextFin,fi);
     for(let k=fi;k<plan.slots.length;k++){r.pending.delete(k);r.res.delete(k);}
   }
-  r.cur=fc-1;r.paused=false;
+  r.cur=fc-1;r.paused=false;r.clk=null;   /* the pause is not a slip: measure afresh */
   for(let j=0;j<cin;j++)click(T+j*beat,j===0?2:(sg.gst.indexOf(j)>=0?1:0));
   startLoops();
   syncRunUI();
@@ -3463,6 +3494,15 @@ function endRun(){
   if(r.mode!=='lat'&&r.dyc)gateDynamics(r);
   stopLoops();
   unlockScreen();
+  logClock(r);
+  if(r.aborted){
+    setRunning(false);
+    $('runInfo').hidden=true;$('live').hidden=true;$('bigCount').hidden=true;
+    rowsShown=ROWS;labelsOn=true;labelMode='routine';refreshPreview();
+    resetAudio();
+    setStatus('The sound fell '+Math.round(Math.abs(r.aborted.slip)*1000)+' ms out of step with the screen, so this run was stopped and not saved. The audio has been reset: press Start to play again.',true);
+    return;
+  }
   if(r.mode==='lat'){
     const res=latencyResult(r.errs,S.latency==null?40:S.latency);
     if(res.ok){setLatency(res.lat);markCal();}
@@ -3535,6 +3575,31 @@ function flashHeard(h){
   const el=$('heard');
   el.textContent=h.det?('Heard '+h.det.hand+' · '+Math.round(h.det.conf*100)+'% sure'):'Heard a hit';
   clearTimeout(heardTimer);heardTimer=setTimeout(()=>{el.textContent='';},900);
+}
+
+/* ---------- audio timing log ---------- */
+/* Every run notes how well the sound kept time with the screen, with what the audio context had been through. The last
+   ten stay on this device, and Settings, under Device, can copy them, so a problem that comes and goes can be pinned down. */
+function logClock(r){
+  const v=clockVerdict(r.clk),ms=x=>x==null?null:Math.round(x*1000);
+  const d={t:Date.now(),ver:VERSION,mode:r.mode,kb:r.kb,ok:!r.aborted&&v.ok,span:+v.span.toFixed(1),rate:+v.rate.toFixed(4),slip:ms(v.slip),
+    speaker:ms(r.og||0),rate0:ctx?ctx.sampleRate:null,base:ctx?ms(ctx.baseLatency):null,out:ctx?ms(ctx.outputLatency):null,
+    age:Math.round((performance.now()-ctxBorn)/1000),runs:ctxRuns,mics:ctxMics,states:ctxStates.join(' ')};
+  S.clockLog=[d].concat(S.clockLog).slice(0,10);save();syncClock();
+}
+function syncClock(){
+  const L=S.clockLog,el=$('clkMsg');if(!el)return;
+  if(!L.length){el.textContent='Each run checks that the sound keeps time with the screen. No runs checked yet.';return;}
+  const bad=L.filter(d=>!d.ok).length,d=L[0];
+  el.textContent=(d.ok?'Last run: the sound kept time with the screen.':'Last run: the sound fell '+Math.abs(d.slip)+' ms out of step with the screen, and the audio was reset.')+(bad&&!(bad===1&&!d.ok)?' '+bad+' of the last '+L.length+' runs slipped.':'');
+}
+/* Throws the audio away so the next Start builds it afresh, as a page refresh would. */
+function resetAudio(){
+  stopListen();if(loop)endLoop('');
+  micOff(true);silenceTones();
+  const c=ctx;ctx=null;
+  if(c){c.onstatechange=null;try{c.close().catch(()=>{});}catch(e){}}
+  workletReady=false;noiseBuf=null;ctxOp=null;audioFresh=false;
 }
 
 /* ---------- auto calibrate (speaker loopback) ---------- */
@@ -5653,7 +5718,7 @@ function clearSelected(){
   if(sel.lib){recs.lib=[];S.libId='';S.routineText=STARTER;S.startExercise=1;S.seeded=false;}   /* back to a first start: the routines that ship with the app are added again */
   if(sel.lists){S.lists=hostedLists();S.listSel='';}
   if(sel.set)PORTABLE.forEach(k=>{delete S[k];});   /* the page reloads, and every one falls back to its starting value */
-  if(sel.dev){micOff(true);S.noise=null;S.latCal=false;S.latency=null;delete S.sens;delete S.settle;delete S.input;cal.L.length=0;cal.R.length=0;}   /* shows the Set up card again */
+  if(sel.dev){micOff(true);S.clockLog=[];S.noise=null;S.latCal=false;S.latency=null;delete S.sens;delete S.settle;delete S.input;cal.L.length=0;cal.R.length=0;}   /* shows the Set up card again */
   save();saveRecs();location.reload();
 }
 
@@ -5702,11 +5767,24 @@ function downloadCsv(){
 
 /* ---------- run display ---------- */
 let lastTimeLeft='';
+/* Each frame reads the audio clock against the wall clock. If the sound has fallen behind the screen, the run's timing
+   is no use: it stops without being saved, and the audio is rebuilt, as a page refresh would. It returns whether it stopped the run. */
+function clockCheck(r){
+  if(ctx.state!=='running'){r.clk=null;return false;}   /* asleep or interrupted: measure again from when it runs */
+  r.clk=clockStep(r.clk,performance.now()/1000,ctx.currentTime);
+  const o=ctx.getOutputTimestamp?ctx.getOutputTimestamp():null;
+  if(o&&o.contextTime>0)r.og=Math.max(r.og||0,ctx.currentTime-o.contextTime);   /* how far behind the clock the speaker reports it is */
+  const v=clockVerdict(r.clk);
+  if(v.ok)return false;
+  r.aborted=v;endRun();
+  return true;
+}
 function frame(){
   const r=run;
   if(!r||r.ended)return;
   raf=requestAnimationFrame(frame);
   const plan=r.plan,segs=plan.segs,cells=plan.cells,play=r.mode==='play';
+  if(clockCheck(r))return;
   const heard=heardNow()-r.t0;
   while(r.cur+1<cells.length&&cells[r.cur+1].t<=heard)r.cur++;
   /* The rows shift up when a pass ends. With a count-in before a new bar they shift as it starts.
@@ -7018,6 +7096,13 @@ function wire(){
   $('exportLib').addEventListener('click',exportLibrary);
   ['micMsg','chkMsg','latMsg'].forEach(id=>setupWatch.observe($(id),{childList:true,characterData:true,subtree:true}));
   document.addEventListener('input',e=>{if(e.target.type==='range')paintRange(e.target);},true);
+  $('clkReset').addEventListener('click',()=>{if(run&&!run.ended)return;resetAudio();setStatus('Audio reset. It starts afresh on the next Start.');});
+  $('clkCopy').addEventListener('click',()=>{
+    const txt=JSON.stringify({app:'Pocket '+VERSION,ua:navigator.userAgent,runs:S.clockLog},null,1);
+    const done=ok=>setStatus(ok?'Timing details copied.':'Could not copy. Your browser blocked the clipboard.');
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>done(true),()=>done(false));else done(false);
+  });
+  syncClock();
   $('setBox').addEventListener('toggle',syncInfo);
   $('libSel').addEventListener('change',()=>{const v=$('libSel').value;if(v==='+'){libMode='add';$('libErr').textContent='';lib={items:[],loaded:false,busy:false,cur:''};renderLibrary();$('libraryUrl').focus();}else pickList(v);});
   $('libraryUrl').addEventListener('input',()=>{suggestName();renderLibrary();});

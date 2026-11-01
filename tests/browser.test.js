@@ -353,6 +353,65 @@ async function runOnce(settings, practice, init) {
   return out;
 }
 
+audioTest('a run whose sound falls behind the screen is stopped, not saved, and the audio rebuilt', async () => {
+  /* The audio clock runs at 80% of real time, as a broken iPhone audio setup might: the clicks fall further and further behind. */
+  const p = await open({ input: 'kb', bpm: 60, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 4, seeded: true }, null, () => {
+    const d = Object.getOwnPropertyDescriptor(BaseAudioContext.prototype, 'currentTime');
+    Object.defineProperty(BaseAudioContext.prototype, 'currentTime', { configurable: true, get() { const t = d.get.call(this); return window.__slow ? t * 0.8 : t; } });
+    window.__slow = true;
+  });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  await p.evaluate(() => { window.__ctx0 = window.__T.ctx(); });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 8000 });
+  assert.match(await p.textContent('#status'), /out of step with the screen, so this run was stopped and not saved/);
+  const after = await p.evaluate(() => ({
+    saved: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).length,
+    rebuilt: window.__T.ctx() !== window.__ctx0,
+    log: JSON.parse(localStorage.getItem('stick-timing-trainer.v1')).settings.clockLog,
+  }));
+  assert.equal(after.saved, 0, 'the run is not saved');
+  assert.equal(after.rebuilt, true, 'the audio context was thrown away');
+  assert.equal(after.log[0].ok, false);
+  assert.ok(after.log[0].slip >= 200, 'slip logged: ' + after.log[0].slip);
+  /* with a healthy clock, the next run plays through and logs as fine */
+  await p.evaluate(() => { window.__slow = false; });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && !window.__T.run().ended, null, { timeout: 8000 });
+  await p.waitForTimeout(2500);
+  assert.equal(await p.evaluate(() => window.__T.run().ended), false, 'a healthy run is not stopped');
+  assert.deepEqual(p.errors, []);
+});
+
+audioTest('Stop cancels the clicks already queued, even where a second stop() is refused, as in Safari', async () => {
+  /* Track every sound: when it was queued to start, whether it was stopped at once, and whether its path to the
+     speaker was cut. A second stop() throws, as WebKit does, so the test catches the iPhone bug in Chromium too. */
+  const p = await open({ input: 'kb', bpm: 220, routineText: 'RLRL RLRL', eachUnit: 'min', eachVal: 1, seeded: true }, null, () => {
+    const tones = window.__tones = [], P = AudioScheduledSourceNode.prototype, start = P.start, stop = P.stop, cut = AudioNode.prototype.disconnect;
+    P.start = function (when) { tones.push({ n: this, T: when || 0, now: false }); return start.apply(this, arguments); };
+    P.stop = function (when) {
+      if (this.__stops) throw new DOMException('cannot call stop more than once', 'InvalidStateError');
+      this.__stops = 1;
+      const out = stop.apply(this, arguments), e = tones.find(x => x.n === this);
+      if (e && !(when > this.context.currentTime)) e.now = true;
+      return out;
+    };
+    AudioNode.prototype.disconnect = function () { this.__cut = true; return cut.apply(this, arguments); };
+  });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && window.__T.ctx().currentTime > window.__T.run().t0 + 1.5, null, { timeout: 10000 });
+  await press(p, /^Stop/);
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 5000 });
+  const left = await p.evaluate(() => {
+    const now = window.__T.ctx().currentTime;
+    const queued = window.__tones.filter(x => x.T > now);
+    return { queued: queued.length, audible: queued.filter(x => !x.now && !x.n.__cut && !(x.n._out && x.n._out.__cut)).length };
+  });
+  assert.ok(left.queued > 0, 'clicks were queued ahead when Stop was pressed: ' + left.queued);
+  assert.equal(left.audible, 0, 'none of them can still sound');
+  assert.deepEqual(p.errors, []);
+});
+
 audioTest('the first result explains itself once', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true, tol: 30 });
   const play = async () => {

@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['parseStrokes', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter']);
+  'graceSlot', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
 
 const runPoints = (codes, lv) => c.scoreParts([[codes, 1]], lv);
 const plan = (text, opt) => {
@@ -223,4 +223,34 @@ test('the on-time window scales points and the maximum alike, so a flawless run 
   assert.equal(c.runMax(run(50)), c.runScore(run(50)), 'a flawless run at ±50 is 100%');
   assert.equal(c.runMax(run(10)), c.runScore(run(10)), 'a flawless run at ±10 is 100%, not 150%');
   assert.equal(c.winMult(undefined), 1, 'a run saved without a window counts once');
+});
+
+/* Readings of both clocks every 1/60 s for `secs`, with the audio clock running at `rate` and ticking every `tick` s. */
+function clockRun(secs, rate, tick, stallAt) {
+  let st = null;
+  for (let w = 0; w <= secs; w += 1 / 60) {
+    let a = Math.floor(w * rate / tick) * tick;
+    if (stallAt != null && w > stallAt) a = Math.min(a, Math.floor(stallAt * rate / tick) * tick + Math.max(0, w - stallAt - 0.5) * rate);
+    st = c.clockStep(st, w, a);
+  }
+  return c.clockVerdict(st);
+}
+
+test('audio clock: a healthy clock passes, even one that only ticks every 85 ms', () => {
+  assert.equal(clockRun(10, 1, 0.003).ok, true);
+  assert.equal(clockRun(10, 1, 0.085).ok, true);
+  assert.equal(c.clockVerdict(null).ok, true);
+});
+
+test('audio clock: a slow clock is caught once the sound is 0.2 s behind', () => {
+  const v = clockRun(3, 0.92, 0.003);   /* a 48 kHz context on 44.1 kHz hardware */
+  assert.equal(v.ok, false);
+  assert.ok(v.slip > 0.2 && Math.abs(v.rate - 0.92) < 0.01, JSON.stringify(v));
+  assert.equal(clockRun(1, 0.92, 0.003).ok, true, 'not before it has slipped 0.2 s');
+});
+
+test('audio clock: a clock that stops for half a second is caught', () => {
+  const v = clockRun(4, 1, 0.003, 1);   /* stops for half a second after 1 s */
+  assert.equal(v.ok, false);
+  assert.ok(v.slip > 0.45, JSON.stringify(v));
 });
