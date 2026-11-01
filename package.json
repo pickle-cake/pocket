@@ -2,7 +2,7 @@
   "name": "pocket-tests",
   "private": true,
   "description": "Tests for Pocket. The app itself is the single file index.html.",
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "scripts": {
     "test": "node --test tests/*.test.js",
     "test:core": "node --test tests/core.test.js tests/libraries.test.js tests/style.test.js tests/lint.test.js",

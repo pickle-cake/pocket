@@ -6,7 +6,9 @@ A timing coach for drummers practising on a pad. It plays a click, listens to ea
 
 ## Licence
 
-MIT: see [LICENSE](LICENSE). The code was written with AI, which learned from the work of countless people who shared theirs freely. It is shared in that spirit: take it, learn from it and build on it.
+Copyright (C) 2026 the Pocket contributors.
+
+Pocket is free software under the GNU General Public License, version 3 or any later version: see [LICENSE](LICENSE). The code was written with AI, which learned from the work of countless people who shared theirs freely. It is shared in that spirit, and it stays that way: you may use, change and share it, and anything built from it must be shared under the same licence, with its source.
 
 ## Tests
 
