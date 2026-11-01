@@ -49,6 +49,17 @@ module.exports = [
     },
   },
   {
+    files: ['sw.js'],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'script', globals: { ...globals.serviceworker } },
+    rules: {
+      'no-undef': 'error',
+      'no-unused-vars': ['error', { args: 'none', caughtErrors: 'none' }],
+      'no-unreachable': 'error',
+      'no-dupe-keys': 'error',
+      'no-self-assign': 'error',
+    },
+  },
+  {
     files: ['tests/**/*.js', 'eslint.config.js'],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'commonjs', globals: { ...globals.node, ...globals.browser, axe: 'readonly' } },   /* page.evaluate callbacks run in the browser */
     rules: {

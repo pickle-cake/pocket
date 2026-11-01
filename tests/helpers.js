@@ -27,7 +27,7 @@ function serve(page) {
     const u = req.url.split('?')[0];
     if (u === '/' || u === '/index.html') { res.setHeader('content-type', 'text/html'); return res.end(page); }
     const f = path.join(ROOT, u);
-    if (f.startsWith(ROOT) && fs.existsSync(f) && fs.statSync(f).isFile()) return res.end(fs.readFileSync(f));
+    if (f.startsWith(ROOT) && fs.existsSync(f) && fs.statSync(f).isFile()) { if (f.endsWith('.js')) res.setHeader('content-type', 'text/javascript'); return res.end(fs.readFileSync(f)); }   /* a service worker must be served as JavaScript */
     res.statusCode = 404; res.end();
   });
   return new Promise(r => server.listen(0, () => r({ server, base: 'http://localhost:' + server.address().port + '/' })));

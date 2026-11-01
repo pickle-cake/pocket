@@ -12,23 +12,26 @@ const { ROOT, html } = require('./helpers');
 const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo()};let heardTimer=0;');
 assert.ok(page !== html, 'the test hook did not attach: has handleHit moved?');
 
-let server, base, browser;
+let server, base, browser, served = 0;
 test.before(async () => {
   server = http.createServer((req, res) => {
     const u = req.url.split('?')[0];
-    if (u === '/' || u === '/index.html') { res.setHeader('content-type', 'text/html'); return res.end(page); }
+    if (u === '/' || u === '/index.html') { res.setHeader('content-type', 'text/html'); res.setHeader('x-served', String(++served)); return res.end(page); }   /* x-served counts, so a test can tell the server from a cache */
     const f = path.join(ROOT, u);
-    if (f.startsWith(ROOT) && fs.existsSync(f) && fs.statSync(f).isFile()) return res.end(fs.readFileSync(f));
+    if (f.startsWith(ROOT) && fs.existsSync(f) && fs.statSync(f).isFile()) { if (f.endsWith('.js')) res.setHeader('content-type', 'text/javascript'); return res.end(fs.readFileSync(f)); }   /* a service worker must be served as JavaScript */
     res.statusCode = 404; res.end();
   });
   await new Promise(r => server.listen(0, r));
   base = 'http://localhost:' + server.address().port + '/';
-  browser = await playwright[ENGINE].launch(ENGINE === 'chromium' ? { args: ['--autoplay-policy=no-user-gesture-required'] } : {});
+  /* Chromium gets a fake microphone that is allowed without asking, so tests can open it. WebKit has no such switch. */
+  browser = await playwright[ENGINE].launch(ENGINE === 'chromium' ? { args: ['--autoplay-policy=no-user-gesture-required', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } : {});
 });
 test.after(async () => { await browser.close(); server.close(); });
 
 /* Tests that play a run need Web Audio. Playwright's WebKit for Windows has none, so there they are skipped. */
 const audioTest = process.env.POCKET_NO_AUDIO ? (name, fn) => test(name, { skip: 'no Web Audio in this WebKit build; CI runs it on Linux' }, fn) : test;
+
+const micTest = ENGINE === 'chromium' ? test : (name, fn) => test(name, { skip: 'needs a fake microphone, which only Chromium has' }, fn);
 
 /* Presses the visible button whose text matches, as a real tap: WebKit only lets audio start from one. */
 const press = (p, re) => p.locator('button:visible').filter({ hasText: re }).first().click();
@@ -98,6 +101,29 @@ audioTest('starting a run from the welcome closes it, so the results are not hid
   assert.deepEqual(p.errors, []);
 });
 
+micTest('cancelling Auto calibrate stops its clicks, so starting again does not stack them', async () => {
+  /* Count the short clicks Auto calibrate schedules, and forget each one once it is stopped or has played. */
+  const p = await open({ seeded: true, noise: -50 }, null, () => {
+    const live = window.__clicks = new Set(), start = AudioBufferSourceNode.prototype.start, stop = AudioBufferSourceNode.prototype.stop;
+    AudioBufferSourceNode.prototype.start = function () { if (this.buffer && Math.abs(this.buffer.duration - 0.012) < 0.001) {   /* Auto calibrate's 12 ms click, not the silent unlock sound */ live.add(this); this.addEventListener('ended', () => live.delete(this)); } return start.apply(this, arguments); };
+    AudioBufferSourceNode.prototype.stop = function () { live.delete(this); return stop.apply(this, arguments); };
+  });
+  const waiting = () => p.evaluate(() => window.__clicks.size);
+  const step = () => p.locator('#setSteps button.primary');
+  await step().click();   /* Auto calibrate */
+  await p.waitForFunction(() => window.__clicks.size >= 10, null, { timeout: 8000 });
+  const n = await waiting();
+  assert.ok(n >= 10, 'clicks scheduled: ' + n);
+  await step().click();   /* Cancel */
+  assert.equal(await waiting(), 0, 'cancelling stops every click still to come');
+  await step().click();   /* Auto calibrate again */
+  await p.waitForFunction(() => window.__clicks.size >= 10, null, { timeout: 8000 });
+  assert.ok(await waiting() <= n, 'starting again schedules one set, not two');
+  await step().click();
+  assert.equal(await waiting(), 0);
+  assert.deepEqual(p.errors, []);
+});
+
 test('a fresh app starts on 8 passes at 40 BPM with the Easy click; saved settings are kept', async () => {
   const fresh = await open({});
   assert.deepEqual(await fresh.evaluate(() => { const S = window.__T.S(); return [S.click, S.eachUnit, S.eachVal, S.bpm]; }), ['strokes', 'pass', 8, 40]);
@@ -114,6 +140,21 @@ test('the microphone level slider moves its trigger line', async () => {
   await p.evaluate(() => { const s = document.getElementById('sens'); s.value = -15; s.dispatchEvent(new Event('input')); });
   assert.equal(Math.round(await left()), 75);
   assert.deepEqual(p.errors, []);
+});
+
+test('after one visit the app opens without a connection, and a new version still arrives online', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true });
+  await p.evaluate(() => navigator.serviceWorker.ready);
+  await p.waitForFunction(async () => !!(await caches.match('./')), null, { timeout: 8000 });
+  await p.context().setOffline(true);
+  await p.reload();
+  await p.waitForTimeout(400);
+  assert.equal(await p.title(), 'Pocket - your pad practice coach');
+  assert.equal(await p.evaluate(() => document.body.dataset.welcome), '', 'the app ran, with its saved settings');
+  await p.context().setOffline(false);
+  const served = () => p.evaluate(async () => +(await fetch(location.pathname, { cache: 'no-cache' })).headers.get('x-served'));
+  const a = await served(), b = await served();
+  assert.ok(b > a, 'online, the page comes from the server each time, not the cache: ' + a + ', ' + b);
 });
 
 test('a returning visit goes straight to Play', async () => {

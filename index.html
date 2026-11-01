@@ -2685,7 +2685,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.58';                           /* shown beside the title */
+const VERSION='1.5.59';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -7202,6 +7202,8 @@ function syncEach(){
 }
 
 function init(){
+  /* sw.js keeps the app working offline. Only a served page can have one: not a file opened from disk. */
+  if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
   $('routineText').value=S.routineText;
   $('bpm').value=S.bpm;
   $('click').value=S.click;$('accent').value=S.accent;$('others').value=S.others;

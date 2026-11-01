@@ -59,7 +59,7 @@ jobs:
       - name: Assemble the site
         run: |
           mkdir site
-          cp index.html site/
+          cp index.html sw.js site/
           cp -r routines site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

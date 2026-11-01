@@ -1,6 +1,6 @@
 # Pocket
 
-A drum practice pad timing trainer. The whole app is the single file `index.html`: CSS in the `<style>` block, the core logic in `<script id="core">`, and the UI in `<script id="app">`. `routines/*.txt` hold the built-in libraries. There is no build step.
+A drum practice pad timing trainer. The whole app is the single file `index.html`: CSS in the `<style>` block, the core logic in `<script id="core">`, and the UI in `<script id="app">`. `routines/*.txt` hold the built-in libraries. `sw.js` is the service worker that keeps the app working offline. There is no build step.
 
 ## Workflow
 
