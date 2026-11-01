@@ -118,7 +118,7 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .tc .tempo{grid-template-columns:36px 1fr 36px;gap:4px}
 .tc .tempo .btn{min-width:0;width:36px}
 #clickPanel{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}   /* the click level needs the wider column */
-#advBtns2{margin-top:var(--s-2)}
+#advBtns2{margin-top:0}
 #lsInfo{flex:1}
 .err{color:var(--danger);font-size:13px;margin:0;min-height:0}
 .panel>p:empty,.panel>ul:empty{display:none}   /* empty message slots would add a grid gap each */
@@ -352,6 +352,12 @@ body[data-tab=pattern] header,body[data-tab=pattern] .tabs{display:none}   /* th
 .rtname b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}.rtname .btn.link{flex:none;margin-block:calc(-1*var(--s-2))}   /* a 44px target that does not make the name's row 44px tall */
 :root:not([data-layout=desktop]) body[data-review="1"] header,:root:not([data-layout=desktop]) body[data-review="1"] .tabs,:root:not([data-layout=desktop]) body[data-review="1"] .cfg,:root:not([data-layout=desktop]) body[data-review="1"] .transport,:root:not([data-layout=desktop]) body[data-review="1"] .notice:not(#advFirst){display:none}
 .advmain{margin-top:10px}
+/* The result's actions: Discard, Done and Again in one row, all the same height, Again the widest. An armed Discard
+   widens so "Tap again to discard" fits. On a phone the row is fixed to the bottom; on desktop it takes Start's place. */
+#advBtns1{display:flex;flex-wrap:nowrap;gap:var(--s-2)}
+#advBtns1>.btn{flex:1 1 0;min-width:0;min-height:var(--hit-lg)}
+#advBtns1>#advAgain{flex-grow:2}
+#advBtns1>[data-armed]{flex-grow:3}
 svg.spark{display:block;overflow:visible}
 .badges{display:grid;gap:22px}   /* one column of badges, also on desktop */
 /* Empty state: centred in the view, a muted line icon, one line, one sentence and one button to the next step. */
@@ -622,7 +628,7 @@ body[data-edit=type] .buildonly{display:none}
 @media (prefers-reduced-motion:no-preference){.live .fire.on .fo{animation:lvflick .45s ease-in-out infinite alternate}.live .fire.on .fn{animation:lvflick .3s ease-in-out infinite alternate-reverse}.live .fire path{transform-box:fill-box;transform-origin:50% 100%}.live em.on{animation:lvfade .7s ease-out forwards}.live .lvm i.on{transition:background var(--dur-1) var(--ease)}}
 @keyframes lvflick{from{transform:scale(1,.9) skewX(-4deg)}to{transform:scale(.94,1.08) skewX(4deg)}}
 @keyframes lvfade{from{opacity:1;transform:translateY(2px)}to{opacity:.15;transform:none}}
-.discrow{border-top:1px solid var(--line);padding:12px 0 4px}
+
 .runinfo{display:grid;gap:6px}
 .progress{height:6px;border-radius:var(--r-full);background:var(--line);overflow:hidden}
 .progress>div{height:100%;width:0;background:var(--fill)}
@@ -693,7 +699,7 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 :root:not([data-layout=desktop]) body[data-run="1"] #runBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 :root:not([data-layout=desktop]) body[data-run="1"] #runBtns .btn{min-height:var(--hit-lg)}
 :root:not([data-layout=desktop]) body[data-run="1"] #pagePlay{padding-bottom:190px}
-:root:not([data-layout=desktop]) body[data-review="1"] #advBtns1{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);margin:0}
+:root:not([data-layout=desktop]) body[data-review="1"] #advBtns1{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);margin:0}
 :root:not([data-layout=desktop]) body[data-review="1"] #advBtns1 .btn{min-height:var(--hit-lg)}
 :root:not([data-layout=desktop]) body[data-review="1"] #pagePlay{padding-bottom:120px}
 .res{display:grid;gap:10px}
@@ -1481,12 +1487,13 @@ RLRR LRLL RLRR LRLL</pre>
       </div>
       <p class="insight" id="advHead"></p>
       <p class="hint" id="advBody"></p>
-      <div class="btns advmain" id="advBtns1">
-        <button class="btn primary" id="advAgain" type="button">Again</button>
-        <button class="btn" id="advDone" type="button" hidden>Done</button>
-      </div>
       <div class="btns" id="advBtns2">
-        <button class="btn" id="advWeak" type="button" hidden></button>
+        <button class="btn link" id="advWeak" type="button" hidden></button>
+      </div>
+      <div class="btns advmain" id="advBtns1">
+        <button class="btn danger" id="advDiscard" type="button" hidden>Discard</button>
+        <button class="btn" id="advDone" type="button" hidden>Done</button>
+        <button class="btn primary" id="advAgain" type="button">Again</button>
       </div>
     </section>
 
@@ -1570,7 +1577,6 @@ RLRR LRLL RLRR LRLL</pre>
     </div>
       </div>
     </details>
-    <div class="discrow" id="advDiscRow" hidden><button class="btn" id="advDiscard" type="button">Discard this run</button></div>
     </div>
   </div>
 </main>
@@ -2708,7 +2714,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.64';                           /* shown beside the title */
+const VERSION='1.5.65';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -3520,18 +3526,22 @@ function endRun(){
   $('bigCount').hidden=true;
   if(r.mode==='lat'){rowsShown=ROWS;labelsOn=true;labelMode='routine';showSetup('dev');refreshPreview();}
   if(view&&r.mode==='play'){
-    document.body.dataset.state='done';
     recordRun(r);
-    renderAll();
-    renderAdvice();
-    if(S.mode==='routine')renderResults(view);
-    /* The review is rebuilt from the saved run, the same way a run's page does it. */
-    rvModel=lastRun&&lastRun.run?reviewModel(lastRun.run):null;
-    if(rvModel)showReview();else{roleRows();paintRows(view,null);}
-    if(lastRun&&!lastRun.discarded)setReview(true);
-    showResult();
+    showRunResult();
   }
   syncInfo();
+}
+/* The last run's result: the score, the review of its strokes, and its actions. Undo after a discard shows it the same way. */
+function showRunResult(){
+  document.body.dataset.state='done';
+  renderAll();
+  renderAdvice();
+  if(S.mode==='routine')renderResults(view);
+  /* The review is rebuilt from the saved run, the same way a run's page does it. */
+  rvModel=lastRun&&lastRun.run?reviewModel(lastRun.run):null;
+  if(rvModel)showReview();else{roleRows();paintRows(view,null);}
+  if(lastRun)setReview(true);
+  showResult();
 }
 function inLead(plan,tc){
   for(const sg of plan.segs)if(sg.lead>0&&tc>=sg.leadStart&&tc<sg.t0)return true;
@@ -4611,7 +4621,7 @@ function recordRun(r){
   if(!scoreOn){const dk=dayKey(run.t);recs.sum.days[dk]=(recs.sum.days[dk]||0)+run.sec;}   /* the time of a practice run still counts toward today and the streak */
   const saved=saveRecs();
   if(scoreOn)askPersist();
-  lastRun={run:run,autoLib:autoLib,only:r.only||null,prevBest:prevBest,newTempo:newTempo,won:won,rows:rows,skipped:skipped,saved:saved,discarded:false,practice:!scoreOn,score:score,share0:share0,hsNew:scoreOn&&score>hs0};
+  lastRun={run:run,autoLib:autoLib,only:r.only||null,prevBest:prevBest,newTempo:newTempo,won:won,rows:rows,skipped:skipped,saved:saved,practice:!scoreOn,score:score,share0:share0,hsNew:scoreOn&&score>hs0};
 }
 /* After a run the score is brought into view. The run layout is still being undone, so the jump repeats once the page has settled. */
 function showResult(){
@@ -4620,19 +4630,12 @@ function showResult(){
 }
 function renderAdvice(){
   const box=$('advice');
-  if(!lastRun){box.hidden=true;$('advDiscRow').hidden=true;return;}
+  if(!lastRun){box.hidden=true;$('advDiscard').hidden=true;return;}
   box.hidden=false;
   $('advFirst').hidden=true;
   const L=lastRun,adv=adviceFor(L.rows.map(x=>({idx:x.idx,pct:x.pct,passes:x.passes})));
-  const disc=$('advDiscRow');
   const tgt=Math.round(TARGET*100)+'%';
-  if(L.discarded){
-    $('advRes').hidden=true;$('advHead').textContent='Run discarded.';
-    $('advBody').textContent='It is not in your records.';
-    $('advBadge').hidden=true;
-    disc.hidden=true;$('advWeak').hidden=true;return;
-  }
-  disc.hidden=!!L.practice;
+  $('advDiscard').hidden=!!L.practice||!L.saved;   /* a practice run, or one the browser would not save, has nothing to discard */
   const n=adv.played,one=n===1;
   let body;
   const played=L.rows.filter(x=>x.passes>=1&&x.due>0),due=played.reduce((t,x)=>t+x.due,0);
@@ -4657,7 +4660,7 @@ function renderAdvice(){
       $('advSub').textContent=nb?nb+(nb===1?' new best':' new bests'):(played.every(x=>pb(x)===null)?'First run at this tempo':'No new bests');
     }
     {   /* how the score came about */
-      const sb=$('scoreBox'),on=!L.practice&&!L.discarded;sb.hidden=!on;
+      const sb=$('scoreBox'),on=!L.practice;sb.hidden=!on;
       if(on){
         const d=scoreBreakdown(L.run),p=LV_PTS[L.run.lv],f=n=>n.toLocaleString('en-US');
         $('bDue').textContent=f(d.due);$('bRestBox').hidden=!d.rest;$('bRest').textContent=f(d.rest);$('bOn').textContent=f(d.on);$('bOff').textContent=f(d.off);$('bMiss').textContent=f(d.miss);$('bBest').textContent=f(d.best);
@@ -4700,15 +4703,27 @@ function renderAdvice(){
   $('advWeak').hidden=S.mode!=='routine'||!L.weakIdx.length;
   $('advWeak').textContent=L.weakIdx.length===1?'Practise exercise '+L.weakIdx[0]+' only':'Practise the '+L.weakIdx.length+' weak exercises';
 }
+/* Discard takes the run out of your records and goes back to the start, as Done does: a discarded run has nothing
+   left to review. Undo in the status line puts the run, and a routine saved with it, back and shows the result again. */
 function discardRun(){
-  if(!lastRun||lastRun.discarded)return;
-  const i=recs.runs.findIndex(x=>x.id===lastRun.run.id);
-  if(i>=0)recs.runs.splice(i,1);
-  const al=lastRun.autoLib;if(al&&!recs.runs.some(x=>x.rk===lastRun.run.rk))removeLibEntry(al);
+  const L=lastRun,V=view;if(!L||L.practice)return;
+  const i=recs.runs.findIndex(x=>x.id===L.run.id),gone=i>=0?recs.runs.splice(i,1)[0]:null;
+  const al=L.autoLib,dropLib=!!(al&&recs.lib.includes(al)&&!recs.runs.some(x=>x.rk===L.run.rk)),wasCur=dropLib&&S.libId===al.id;
+  if(dropLib)removeLibEntry(al);
   saveRecs();
-  lastRun.discarded=true;
-  renderAdvice();
-  if(S.mode==='routine'&&view)renderResults(view);
+  lastRun=null;refreshPreview();renderAdvice();setReview(false);window.scrollTo(0,0);
+  setStatus('Run discarded. It is not in your records. ',true);
+  const u=textBtn('Undo',()=>{
+    u.remove();
+    if(run&&!run.ended)return;
+    if(gone&&!recs.runs.some(x=>x.id===gone.id))recs.runs.splice(Math.min(i,recs.runs.length),0,gone);
+    if(dropLib&&!recs.lib.includes(al)){recs.lib.push(al);if(wasCur){S.libId=al.id;save();}}
+    saveRecs();
+    lastRun=L;view=V;showRunResult();
+    setStatus('Run restored to your records.',true);
+  },'btn link');
+  $('status').appendChild(u);
+  setTimeout(()=>u.remove(),10000);
 }
 /* ---------- progress page ---------- */
 /* A saved key back into text the pattern box understands: the signature stays, /N becomes a name. */
@@ -7054,11 +7069,12 @@ function syncLayout(){
   placeAdv();
   if(!first)window.dispatchEvent(new Event('resize'));
 }
-/* On desktop the result buttons (Again, Done, Discard) sit where Start was; on a phone they follow the result text. */
+/* On desktop the result's actions (Discard, Done, Again) sit where Start was; on a phone they are fixed to the bottom.
+   Practise stays under the advice in both, since it acts on that advice. */
 function placeAdv(){
-  const a=$('advBtns1'),b=$('advBtns2');if(!a||!b)return;
-  if(document.documentElement.dataset.layout==='desktop')$('advBar').append(a,b);
-  else $('advBody').after(a,b);
+  const a=$('advBtns1');if(!a)return;
+  if(document.documentElement.dataset.layout==='desktop')$('advBar').append(a);
+  else $('advBtns2').after(a);
 }
 function applyTheme(){
   const d=S.theme==='dark',b=$('themeBtn');
