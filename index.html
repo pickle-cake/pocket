@@ -123,7 +123,8 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .err{color:var(--danger);font-size:13px;margin:0;min-height:0}
 .panel>p:empty,.panel>ul:empty{display:none}   /* empty message slots would add a grid gap each */
 .hint{font-size:13px;color:var(--muted);margin:0}
-.notice{font-size:14px;margin:8px 0 0;padding:8px 12px;border:1px solid var(--accent);border-left-width:4px;border-radius:8px;background:var(--surface)}
+.notice{margin:var(--s-2) 0 0;padding:var(--s-3);border-left:3px solid var(--accent);font:var(--t-small) var(--font-body)}   /* flat, with an accent rail */
+.notice ul{margin:var(--s-2) 0;padding-left:var(--s-5)}.notice li{margin:var(--s-1) 0}.notice p{margin:0}
 .btn.link{background:none;border-color:transparent;color:var(--accent);padding-inline:var(--s-1);min-width:var(--hit)}   /* tertiary: brass text, no box */
 p.hint .btn.link{font-size:inherit;min-height:0;min-width:0;padding:0;vertical-align:baseline}   /* a link inside a sentence sits on the line */
 body[data-run="1"] .notice{display:none}
@@ -284,6 +285,7 @@ body[data-welcome="1"]:not([data-run="1"]) #pagePlay>:not(#setup){display:none}
 .stat{padding:10px 0;border-top:1px solid var(--line);min-width:0}
 .stat .v{font:600 20px var(--font-data);font-variant-numeric:tabular-nums}
 .insight{font-size:15px;margin:0;min-height:1.5em}
+#advHead:focus{outline:none}   /* focused only so a screen reader announces the result; it is not a control */
 canvas{display:block;width:100%;height:170px}
 
 details{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
@@ -348,7 +350,7 @@ body[data-tab=pattern] header,body[data-tab=pattern] .tabs{display:none}   /* th
 .rtname{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .rtname~.patrow{margin-top:calc(-1*var(--s-1))}   /* the name and its line read as one block */
 .rtname b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}.rtname .btn.link{flex:none;margin-block:calc(-1*var(--s-2))}   /* a 44px target that does not make the name's row 44px tall */
-:root:not([data-layout=desktop]) body[data-review="1"] header,:root:not([data-layout=desktop]) body[data-review="1"] .tabs,:root:not([data-layout=desktop]) body[data-review="1"] .cfg,:root:not([data-layout=desktop]) body[data-review="1"] .transport,:root:not([data-layout=desktop]) body[data-review="1"] .notice{display:none}
+:root:not([data-layout=desktop]) body[data-review="1"] header,:root:not([data-layout=desktop]) body[data-review="1"] .tabs,:root:not([data-layout=desktop]) body[data-review="1"] .cfg,:root:not([data-layout=desktop]) body[data-review="1"] .transport,:root:not([data-layout=desktop]) body[data-review="1"] .notice:not(#advFirst){display:none}
 .advmain{margin-top:10px}
 svg.spark{display:block;overflow:visible}
 .badges{display:grid;gap:22px}   /* one column of badges, also on desktop */
@@ -1461,6 +1463,15 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="scap"><span id="advOfMax"></span><span id="advPrev"></span></div>
         <p class="swin" id="advBonus" hidden></p>
         <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span> &middot; <span id="advSub"></span></small></span></div>
+      </div>
+      <div class="notice" id="advFirst" hidden>
+        <p><b>Reading your result</b></p>
+        <ul>
+          <li><b>On time</b> is the share of strokes that landed within <span id="advFirstTol"></span> of the click. Clear <span id="advFirstTgt"></span> to move the tempo up.</li>
+          <li><b>The staff</b> keeps every stroke. The key under it shows which look means on time, early, late or not heard.</li>
+          <li><b>Score</b> adds points for each stroke: the most for on time, a little for early or late. On-time strokes in a row raise a multiplier.</li>
+        </ul>
+        <button class="btn link" type="button" data-help="help-play">More in Help</button>
       </div>
       <p class="insight" id="advHead"></p>
       <p class="hint" id="advBody"></p>
@@ -2674,7 +2685,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.56';                           /* shown beside the title */
+const VERSION='1.5.57';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -2727,6 +2738,7 @@ S.gap=+S.gap===0?0:4;
 S.pulse=S.pulse!==false;
 S.palette=S.palette==='cb'?'cb':'std';
 S.layout=S.layout==='phone'||S.layout==='desktop'?S.layout:'auto';
+S.resultHelp=S.resultHelp===true;               /* the note on reading a result has been shown on this device */
 if(typeof S.libId!=='string')S.libId='';
 S.startExercise=1;
 const PORTABLE=['bpm','tol','accent','others','vol','click','eachUnit','eachVal','gap','pulse','palette','theme'];   /* settings that travel in an export. Microphone, latency and sensitivity belong to the device and stay out. */
@@ -4545,6 +4557,7 @@ function renderAdvice(){
   const box=$('advice');
   if(!lastRun){box.hidden=true;$('advDiscRow').hidden=true;return;}
   box.hidden=false;
+  $('advFirst').hidden=true;
   const L=lastRun,adv=adviceFor(L.rows.map(x=>({idx:x.idx,pct:x.pct,passes:x.passes})));
   const disc=$('advDiscRow');
   const tgt=Math.round(TARGET*100)+'%';
@@ -4560,6 +4573,11 @@ function renderAdvice(){
   const played=L.rows.filter(x=>x.passes>=1&&x.due>0),due=played.reduce((t,x)=>t+x.due,0);
   $('advRes').hidden=!due;
   if(due){
+    /* The first result a device sees says how to read it, once. The run keeps the flag, so redrawing it keeps the note. */
+    if(L.firstHelp||!S.resultHelp){
+      L.firstHelp=true;if(!S.resultHelp){S.resultHelp=true;save();}
+      $('advFirstTol').textContent='\u00b1'+(L.run&&L.run.tol||S.tol)+' ms';$('advFirstTgt').textContent=tgt;$('advFirst').hidden=false;
+    }
     /* One big result: the share of strokes on time, what it means for the target, and how it compares with your best at this tempo. */
     const pct=Math.round(100*played.reduce((t,x)=>t+x.pct*x.due,0)/due),pb=x=>L.prevBest&&L.prevBest.has(x.key)?L.prevBest.get(x.key):null;
     $('advPct').textContent=pct+'%';

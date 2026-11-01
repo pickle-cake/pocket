@@ -302,6 +302,26 @@ async function runOnce(settings, practice, init) {
   return out;
 }
 
+test('the first result explains itself once', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true, tol: 30 });
+  const play = async () => {
+    await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^(Start|Again)$/.test(b.textContent.trim()) && b.offsetParent).click());
+    await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && !window.__T.run().ended, null, { timeout: 8000 });
+    await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } })); });
+    await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+    await p.waitForTimeout(300);
+  };
+  const note = () => p.evaluate(() => { const n = document.getElementById('advFirst'); return n.offsetParent ? n.innerText : ''; });   /* seen, not just unhidden: phones hide notices during a review */
+  await play();
+  assert.match(await note(), /within ±30 ms/);
+  await play();
+  assert.equal(await note(), '', 'not after the second run');
+  await p.reload();
+  await p.waitForTimeout(400);
+  assert.equal(await note(), '', 'not after a reload');
+  assert.deepEqual(p.errors, []);
+});
+
 test('Master (count-in only) is scored and saved', async () => {
   const o = await runOnce({ click: 'none' }, false);
   assert.deepEqual(o.saved, ['none']);
