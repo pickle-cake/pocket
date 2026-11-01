@@ -1302,7 +1302,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run the app names the weak exercises and suggests staying at that tempo until they settle. Any tempo is always allowed.</li>
-        <li><b>Discard this run</b> removes it from your records, for example after a bad microphone read.</li>
+        <li><b>Discard</b>, under a result, removes the run from your records, for example after a bad microphone read. Undo puts it back.</li>
         <li><b>Progress page:</b> every exercise, sorted by accuracy, with accuracy at your last tempo, trend and early/late bias, grouped by click level. Play loads that exercise. A routine is cleared at a tempo when one run covered every exercise and all reached 90%.</li>
         <li><b>Tempo guidance:</b> each exercise in the start list shows the tempo it has cleared, or "new". The summary shows where the whole routine has been cleared.</li>
         <li><b>Staff of a run:</b> each run keeps the result of every stroke. A run's page has a <b>Staff</b> group showing the notation with each stroke coloured and read out, and the Play page rebuilds its review from the same record.</li>
@@ -2713,7 +2713,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.69';                           /* shown beside the title */
+const VERSION='1.5.70';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -2983,6 +2983,7 @@ let audioFresh=false;   /* the output was just started or the microphone just op
 let ctxBorn=0,ctxRuns=0,ctxMics=0,ctxStates=[];   /* this audio context's age, runs, microphone opens and state changes, for the timing log */
 let ctxOp=null;   /* the output is being put to sleep. Waking it has to wait for that to finish, or it goes back to sleep. */
 let opening=0;   /* a microphone is being opened, so it must not be put away yet */
+let ctxClosing=null;   /* the last audio context is closing. A phone allows only a few at once, so the next one waits for it. */
 /* After the output wakes, the audio clock can run before the device is really playing, and the first clicks of a count-in go into nothing.
    Wait until the device has rendered past the moment of waking, or the clock has clearly moved if the browser cannot say. */
 async function outputRunning(){
@@ -2993,8 +2994,11 @@ async function outputRunning(){
 async function ensureAudio(needMic){
   opening++;
   try{
+    let made=false;
     if(!ctx){
-      ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
+      /* Waits at most 0.2 s, so the new context is still made close to the tap that started it. */
+      if(ctxClosing){const c=ctxClosing;ctxClosing=null;await Promise.race([c,new Promise(r=>setTimeout(r,200))]);}
+      ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});made=true;audioFresh=true;   /* a new device output needs the same warm-up as one woken from sleep */
       ctxBorn=performance.now();ctxRuns=0;ctxMics=0;ctxStates=[];
       ctx.onstatechange=()=>{if(ctx)ctxStates=ctxStates.concat(ctx.state).slice(-12);};
     }
@@ -3002,7 +3006,7 @@ async function ensureAudio(needMic){
     let woke=false;
     if(ctx.state!=='running'){await ctx.resume();audioFresh=true;woke=true;if(ctx.state!=='running')await ctx.resume();}   /* a phone can need a second try after a call or a switch of output */
     try{const z=ctx.createBufferSource();z.buffer=ctx.createBuffer(1,1,ctx.sampleRate);z.connect(ctx.destination);z.start(0);}catch(e){}   /* wakes the output */
-    if(woke)await outputRunning();
+    if(woke||made)await outputRunning();
     /* iPhone lets people mute the microphone from Safari's page menu. The stream stays open but silent, so start again from scratch. */
     if(needMic&&node&&!micLive())micOff(true);
     if(needMic&&!node){audioFresh=true;ctxMics++;
@@ -3463,7 +3467,7 @@ function resumeRun(){
     for(let k=fi;k<plan.slots.length;k++){r.pending.delete(k);r.res.delete(k);}
   }
   r.cur=fc-1;r.paused=false;r.clk=null;   /* the pause is not a slip: measure afresh */
-  for(let j=0;j<cin;j++)click(T+j*beat,j===0?2:(sg.gst.indexOf(j)>=0?1:0));
+  {const now=ctx.currentTime;for(let j=0;j<cin;j++)queueClick(r,T+j*beat,j===0?2:(sg.gst.indexOf(j)>=0?1:0),now);}
   startLoops();
   syncRunUI();
 }
@@ -3474,7 +3478,6 @@ function restartRun(){
   $('bigCount').hidden=true;
   beginRun('play');
 }
-/* Starts a practice run. */
 /* At Start on a phone the page scrolls so the score box is at the top of the window, with the staff and the run controls under it. On desktop, where there is room, or without a score box, it goes to the top of the page. It returns whether the page was scrolled.
    The run layout hides most of the page, and phone browsers then pull the scroll position back on their own and cancel a smooth scroll, so this jumps and jumps again once the page has settled, measuring each time. */
 function revealStaff(){
@@ -3485,6 +3488,7 @@ function revealStaff(){
   go();requestAnimationFrame(()=>{go();requestAnimationFrame(go);});setTimeout(go,120);setTimeout(go,400);
   return true;
 }
+/* Starts a practice run. */
 async function startPlay(){
   if(loop)endLoop('Auto calibrate cancelled.');
   if(calTest)endHandTest('');
@@ -3626,7 +3630,7 @@ function resetAudio(){
   stopListen();if(loop)endLoop('');
   micOff(true);silenceTones();
   const c=ctx;ctx=null;
-  if(c){c.onstatechange=null;try{c.close().catch(()=>{});}catch(e){}}
+  if(c){c.onstatechange=null;try{ctxClosing=c.close().catch(()=>{});}catch(e){}}
   workletReady=false;noiseBuf=null;ctxOp=null;audioFresh=false;
 }
 
@@ -4720,8 +4724,10 @@ function renderAdvice(){
 }
 /* Discard takes the run out of your records and goes back to the start, as Done does: a discarded run has nothing
    left to review. Undo in the status line puts the run, and a routine saved with it, back and shows the result again. */
+/* What the result on screen was drawn for: the mode and every exercise of the routine. */
+const setupSig=()=>S.mode+'|'+allExercises().map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig)).join('|');
 function discardRun(){
-  const L=lastRun,V=view;if(!L||L.practice)return;
+  const L=lastRun,V=view,sig=setupSig();if(!L||L.practice)return;
   const i=recs.runs.findIndex(x=>x.id===L.run.id),gone=i>=0?recs.runs.splice(i,1)[0]:null;
   const al=L.autoLib,dropLib=!!(al&&recs.lib.includes(al)&&!recs.runs.some(x=>x.rk===L.run.rk)),wasCur=dropLib&&S.libId===al.id;
   if(dropLib)removeLibEntry(al);
@@ -4732,13 +4738,16 @@ function discardRun(){
     u.remove();
     if(run&&!run.ended)return;
     if(gone&&!recs.runs.some(x=>x.id===gone.id))recs.runs.splice(Math.min(i,recs.runs.length),0,gone);
-    if(dropLib&&!recs.lib.includes(al)){recs.lib.push(al);if(wasCur){S.libId=al.id;save();}}
+    /* As the Library's own Undo: not if the routine was saved again meanwhile, and the selection only if none was made since. */
+    if(dropLib&&!recs.lib.includes(al)&&!libFor(libKey(al))&&recs.lib.length<MAX_LIB){recs.lib.push(al);if(wasCur&&!S.libId){S.libId=al.id;save();}}
     saveRecs();
-    lastRun=L;view=V;showRunResult();
-    setStatus('Run restored to your records.',true);
+    /* The result is shown again only over the routine it was played on. */
+    if(setupSig()===sig){lastRun=L;view=V;showRunResult();setStatus('Run restored to your records.',true);}
+    else{refreshPreview();setStatus('Run restored to your records. The routine has changed since, so its result is in History.',true);}
   },'btn link');
   $('status').appendChild(u);
-  setTimeout(()=>u.remove(),10000);
+  u.focus();   /* the Discard button is gone, so focus goes to what replaced it */
+  setTimeout(()=>{if(document.activeElement===u)$('startBtn').focus();u.remove();},10000);
 }
 /* ---------- progress page ---------- */
 /* A saved key back into text the pattern box understands: the signature stays, /N becomes a name. */

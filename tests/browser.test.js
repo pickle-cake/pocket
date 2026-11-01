@@ -794,12 +794,23 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   assert.equal(await runsN(), 0);
   assert.equal(await p.evaluate(() => document.body.dataset.state), 'idle', 'back to the start screen');
   assert.match(await p.textContent('#status'), /^Run discarded\./);
+  assert.equal(await p.evaluate(() => document.activeElement.textContent), 'Undo', 'focus moves to Undo, not lost with the Discard button');
   await p.click('#status >> text=Undo');
   await p.waitForTimeout(300);
   assert.equal(await runsN(), 1, 'Undo puts the run back');
   assert.equal(await libN(), n0 + 1, 'and the routine saved with it');
   assert.equal(await p.evaluate(() => document.body.dataset.state), 'done', 'and shows the result again');
   assert.equal(await p.isVisible('#advDiscard'), true);
+  /* discarded again, then the routine changes before Undo: the run comes back, but its result is not drawn over the new routine */
+  await p.click('#advDiscard'); await p.click('#advDiscard');
+  await p.waitForTimeout(300);
+  await p.evaluate(() => { const t = document.getElementById('routineText'); t.value = '8 RRLL RRLL'; t.dispatchEvent(new Event('input', { bubbles: true })); });
+  await p.click('#status >> text=Undo');
+  await p.waitForTimeout(300);
+  assert.equal(await runsN(), 1, 'the run is back in the records');
+  assert.equal(await libN(), n0 + 1, 'and its routine, once');
+  assert.equal(await p.evaluate(() => document.body.dataset.state), 'idle', 'no result over a different routine');
+  assert.match(await p.textContent('#status'), /routine has changed/);
   assert.deepEqual(p.errors, []);
 });
 
