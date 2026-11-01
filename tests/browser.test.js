@@ -612,9 +612,9 @@ test('every badge has one medal, with a written step name, on the Achievements p
   await p.evaluate(() => document.getElementById('pvBtnAch').click());
   await p.waitForTimeout(200);
   const r = await p.evaluate(() => ({ n: document.querySelectorAll('#badges .medal').length, bad: [...document.querySelectorAll('#badges .medal')].filter(m => /undefined|NaN/.test(m.title) || !m.title).length, off: document.querySelectorAll('#badges .medal.off').length }));
-  assert.equal(r.n, 17);
+  assert.equal(r.n, 22);
   assert.equal(r.bad, 0);
-  assert.equal(r.off, 17);
+  assert.equal(r.off, 22);
   const txt = await p.evaluate(() => document.getElementById('badges').innerText);
   assert.doesNotMatch(txt, /undefined|NaN/);
 });

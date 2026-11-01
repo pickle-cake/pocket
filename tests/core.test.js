@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['parseStrokes', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
+  'graceSlot', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
 
 const runPoints = (codes, lv) => c.scoreParts([[codes, 1]], lv);
 const plan = (text, opt) => {
@@ -212,6 +212,28 @@ test('the longest clean run counts strokes, so a short routine counts too', () =
   assert.equal(c.badgeValues([run([32, 32], [32, 20])], c.newSum()).cln, 0, 'one exercise under 90% and the run is not clean');
   const sum = c.newSum(); sum.cs = 3000;
   assert.equal(c.badgeValues([run([32, 32], [32, 32])], sum).cln, 3000, 'an older folded best still stands');
+});
+
+test('achievements: pace, practice time, routines, gold medals, tight window, even strokes, and perfect without extras', () => {
+  const K = 'RLRL RLRL RLRL RLRL';   /* sixteenths: 240 strokes a minute at 60 BPM */
+  const ex = (o = {}) => Object.assign({ k: K, due: 32, within: 32, heard: 32, ls: 2.5 }, o);
+  const run = (o = {}, xs = [ex()]) => Object.assign({ id: 'r' + Math.random(), t: Date.UTC(2026, 0, 5, 12), lv: 'half', bpm: 60, tol: 20, sec: 600, ne: xs.length, exercises: xs }, o);
+  const v = (runs, sum) => c.badgeValues(runs, sum || c.newSum());
+  assert.equal(v([run()]).tmp, 240, 'Fastest clear is in strokes a minute');
+  assert.equal(v([run({ bpm: 60 }, [ex({ k: '/1 RLRL', bpm: 160 })])]).tmp, 160, 'quarter notes at 160 BPM are 160 strokes a minute, under sixteenths at 60');
+  assert.equal(v([run({ sec: 3000 }), run({ sec: 700 })]).min, 1, 'whole hours of practice');
+  { const sum = c.newSum(); sum.days['2025-01-01'] = 7200; assert.equal(v([], sum).min, 2, 'folded days count'); }
+  const rt = (rk, lv, ok) => run({ rk, lv, ne: 2 }, [ex({ k: 'a' + rk }), ex({ k: 'b' + rk, within: ok ? 32 : 10 })]);
+  assert.equal(v([rt('p1', 'half', true), rt('p1', 'half', true), rt('p1', 'beat', true), rt('p2', 'half', false)]).rtn, 2, 'a routine counts once per level, and only when cleared');
+  assert.equal(v([run({ bpm: 60 }), run({ bpm: 50 }, [ex({ k: 'LRLR LRLR LRLR LRLR', bpm: 50 })])]).med, 1, 'Gold is 240 strokes a minute or more');
+  assert.equal(v([run({ tol: 15 }), run({ tol: 20 }, [ex({ k: 'LRLR LRLR LRLR LRLR' })])]).tgt, 1, 'only ±15 ms or tighter');
+  assert.equal(v([run({}, [ex({ ls: 1.8 }), ex({ k: 'LRLR LRLR LRLR LRLR', ls: 2.6 }), ex({ k: 'RRLL RRLL RRLL RRLL', ls: 1.5, within: 20 })])]).evn, 1, 'even and cleared');
+  assert.equal(v([run({}, [ex({ ls: null })])]).evn, 0, 'no levels, as on the keyboard, is not even');
+  assert.equal(v([run({}, [ex(), ex({ k: 'LRLR LRLR LRLR LRLR', ex: 2 })])]).prf, 1, 'an extra hit spoils a perfect exercise');
+  /* the tight and even clears survive folding */
+  const sum = c.newSum(), r1 = run({ tol: 10 }, [ex({ ls: 1.5 })]);
+  c.foldRun(sum, r1);
+  { const o = v([], sum); assert.equal(o.tgt, 1, 'a tight clear survives folding'); assert.equal(o.evn, 1, 'an even clear survives folding'); }
 });
 
 test('the on-time window scales points and the maximum alike, so a flawless run is 100% at any window', () => {
