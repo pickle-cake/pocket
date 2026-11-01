@@ -2663,7 +2663,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.51';                           /* shown beside the title */
+const VERSION='1.5.52';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -5573,11 +5573,11 @@ async function exportRecs(){
   $('recMsg').textContent='Exported '+bits.join(', ')+'.';$('recMsg').classList.add('flash');
 }
 let impPending=null;
+/* The Data page's import message. After an import it is set once the page has redrawn, so the run count does not overwrite it. */
 function sayRec(t){$('recMsg').textContent=t;$('recMsg').classList.add('flash');}
 async function importRecs(file){
   if(!file)return;
-  const say=sayRec;
-  if(file.size>5e6){say('That file is too large.');return;}
+  if(file.size>5e6){sayRec('That file is too large.');return;}
   try{
     const o=JSON.parse(await file.text());
     if(!o||(!Array.isArray(o.runs)&&!Array.isArray(o.lib)&&!Array.isArray(o.lists)&&!(o.settings&&typeof o.settings==='object')))throw 0;
@@ -5585,16 +5585,15 @@ async function importRecs(file){
     const has={hist:u.runs.length+(u.sum.runs||0),lib:u.lib.length,lists:nl,set:o.settings&&typeof o.settings==='object'?1:0};
     const det={hist:()=>pl(has.hist,'run'),lib:()=>pl(has.lib,'routine'),lists:()=>nl+(nl===1?' library':' libraries'),set:()=>'tempo, click, accents, theme'};
     const parts=EXP_PARTS.filter(p=>has[p[0]]).map(p=>[p[0],p[1],det[p[0]]]);
-    if(!parts.length){say('That file has nothing in it.');return;}
+    if(!parts.length){sayRec('That file has nothing in it.');return;}
     impPending={o,u,file};exMode='imp';
     tickDialog('Import','Import',parts,()=>true);
-  }catch(e){say('That file is not a records export.');}
+  }catch(e){sayRec('That file is not a records export.');}
 }
 function importSelected(){
   const sel=readSel();
   $('expModal').hidden=true;
   const {o,u,file}=impPending;impPending=null;
-  const say=sayRec;   /* shown after the page redraws, so it is not overwritten by the run count */
   const fresh=!recs.runs.length&&!recs.sum.runs;
   let add=0,addL=0,addS=0,setN=0,dup=0,savedCopy=false;
   if(sel.hist){
@@ -5616,10 +5615,10 @@ function importSelected(){
   if(sel.set&&o.settings&&typeof o.settings==='object')PORTABLE.forEach(k=>{const v=o.settings[k];if(v!==undefined&&typeof v===typeof S[k]){S[k]=v;setN++;}});
   if(addS||savedCopy||setN)save();
   saveRecs();renderProgress();
-  if(setN){say('Imported settings. Reloading…');setTimeout(()=>location.reload(),900);return;}
+  if(setN){sayRec('Imported settings. Reloading…');setTimeout(()=>location.reload(),900);return;}
   const pl=(n,w)=>n+' '+w+(n===1?'':'s'),bits=[];
   if(add)bits.push(pl(add,'new run'));if(addL)bits.push(pl(addL,'routine'));if(addS)bits.push(pl(addS,'library'));
-  say(bits.length?'Imported '+bits.join(' and ')+(dup?' ('+dup+' already here)':'')+'.':'Nothing new in what you ticked.');
+  sayRec(bits.length?'Imported '+bits.join(' and ')+(dup?' ('+dup+' already here)':'')+'.':'Nothing new in what you ticked.');
 }
 /* The Clear dialog: tick what to wipe. Nothing is ticked to start with, and Clear asks twice. */
 const CLR_PARTS=[EXP_PARTS[0],EXP_PARTS[1],EXP_PARTS[2],EXP_PARTS[3],['dev','Device setup',()=>'microphone level, latency, calibration']];
