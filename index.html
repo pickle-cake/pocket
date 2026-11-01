@@ -2709,7 +2709,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.66';                           /* shown beside the title */
+const VERSION='1.5.67';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -3278,7 +3278,18 @@ function beginRun(mode){
   lockScreen();
   /* The run layout is in place, so the staff is where it will stay. If the page is scrolled down, it goes back to the top and the count-in waits a second for that. */
   if(!lat&&revealStaff())r.t0+=1;
+  /* The count-in is queued now, in full: its clicks are the ones most noticed, so they must not wait on a busy page. */
+  {const now=ctx.currentTime,first=plan.segs[0].t0;while(r.nextClick<plan.clicks.length&&plan.clicks[r.nextClick].t<first-1e-6){const c=plan.clicks[r.nextClick];queueClick(r,r.t0+c.t,c.a,now);r.nextClick++;}}
   setStatus(lat?'Latency calibration. Count in, then hit the pad on every click and keep going. Stop playing when the number settles.':'Count-in…');
+}
+/* Queues one click and notes how much time it had to spare. A click whose time has already passed plays at once,
+   late; one more than 0.1 s past is dropped. Either means the page fell behind, so the timing log counts them. */
+function queueClick(r,T,a,now){
+  const q=r.q||(r.q={n:0,late:0,lost:0,worst:0,spare:Infinity}),head=T-now;
+  q.n++;q.spare=Math.min(q.spare,head);
+  if(head<-0.1){q.lost++;q.worst=Math.max(q.worst,-head);return;}
+  if(head<0){q.late++;q.worst=Math.max(q.worst,-head);}
+  click(T,a);
 }
 function tick(){
   const r=run;if(!r||r.ended)return;
@@ -3286,7 +3297,7 @@ function tick(){
   while(r.nextClick<plan.clicks.length){
     const c=plan.clicks[r.nextClick],T=r.t0+c.t;
     if(T>now+LOOKAHEAD)break;
-    if(T>=now-0.1)click(T,c.a);
+    queueClick(r,T,c.a,now);
     r.nextClick++;
   }
   const L=r.kb?0:latencySec();
@@ -3588,6 +3599,7 @@ function flashHeard(h){
 function logClock(r){
   const v=clockVerdict(r.clk),ms=x=>x==null?null:Math.round(x*1000);
   const d={t:Date.now(),ver:VERSION,mode:r.mode,kb:r.kb,ok:!r.aborted&&v.ok,span:+v.span.toFixed(1),rate:+v.rate.toFixed(4),slip:ms(v.slip),
+    clicks:r.q?r.q.n:0,late:r.q?r.q.late:0,lost:r.q?r.q.lost:0,worst:r.q?ms(r.q.worst):0,spare:r.q&&isFinite(r.q.spare)?ms(r.q.spare):null,
     speaker:ms(r.og||0),rate0:ctx?ctx.sampleRate:null,base:ctx?ms(ctx.baseLatency):null,out:ctx?ms(ctx.outputLatency):null,
     age:Math.round((performance.now()-ctxBorn)/1000),runs:ctxRuns,mics:ctxMics,states:ctxStates.join(' ')};
   S.clockLog=[d].concat(S.clockLog).slice(0,10);save();syncClock();
@@ -3596,7 +3608,10 @@ function syncClock(){
   const L=S.clockLog,el=$('clkMsg');if(!el)return;
   if(!L.length){el.textContent='Each run checks that the sound keeps time with the screen. No runs checked yet.';return;}
   const bad=L.filter(d=>!d.ok).length,d=L[0];
-  el.textContent=(d.ok?'Last run: the sound kept time with the screen.':'Last run: the sound fell '+Math.abs(d.slip)+' ms out of step with the screen, and the audio was reset.')+(bad&&!(bad===1&&!d.ok)?' '+bad+' of the last '+L.length+' runs slipped.':'');
+  const busy=(d.late||0)+(d.lost||0);
+  el.textContent=(d.ok?'Last run: the sound kept time with the screen.':'Last run: the sound fell '+Math.abs(d.slip)+' ms out of step with the screen, and the audio was reset.')
+    +(busy?' The page fell behind, so '+(d.lost?d.lost+(d.lost===1?' click was':' clicks were')+' dropped'+(d.late?' and ':''):'')+(d.late?d.late+(d.late===1?' click was':' clicks were')+' late':'')+' (up to '+d.worst+' ms).':'')
+    +(bad&&!(bad===1&&!d.ok)?' '+bad+' of the last '+L.length+' runs slipped.':'');
 }
 /* Throws the audio away so the next Start builds it afresh, as a page refresh would. */
 function resetAudio(){

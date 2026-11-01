@@ -412,6 +412,29 @@ audioTest('Stop cancels the clicks already queued, even where a second stop() is
   assert.deepEqual(p.errors, []);
 });
 
+audioTest('the whole count-in is queued at Start, and clicks queued late are logged', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL RLRL', eachUnit: 'pass', eachVal: 4, click: 'strokes', seeded: true }, null, () => {
+    const starts = window.__starts = [], start = OscillatorNode.prototype.start;
+    OscillatorNode.prototype.start = function (when) { starts.push(when || 0); return start.apply(this, arguments); };
+  });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  const ci = await p.evaluate(() => { const r = window.__T.run(), first = r.plan.segs[0].t0, cin = r.plan.clicks.filter(c => c.t < first - 1e-6); return { cin: cin.length, queued: window.__starts.filter(t => cin.some(c => Math.abs(r.t0 + c.t - t) < 1e-6)).length, span: first }; });
+  assert.ok(ci.cin >= 4 && ci.span > 0.35, 'a count-in longer than the lookahead: ' + JSON.stringify(ci));
+  assert.equal(ci.queued, ci.cin, 'every count-in click is queued at Start');
+  /* the page goes busy for 0.8 s in the middle of the run: clicks are dropped or late, and the log says so */
+  await p.waitForFunction(() => window.__T.ctx().currentTime > window.__T.run().t0 + window.__T.run().plan.segs[0].t0 + 0.5, null, { timeout: 8000 });
+  await p.evaluate(() => { const end = performance.now() + 800; while (performance.now() < end); });
+  await p.waitForTimeout(400);
+  await press(p, /^Stop/);
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 5000 });
+  const d = await p.evaluate(() => JSON.parse(localStorage.getItem('stick-timing-trainer.v1')).settings.clockLog[0]);
+  assert.ok(d.clicks > 4, 'clicks counted: ' + d.clicks);
+  assert.ok(d.late + d.lost > 0 && d.worst > 100, 'the busy page shows in the log: ' + JSON.stringify(d));
+  assert.match(await p.textContent('#clkMsg'), /The page fell behind/);
+  assert.deepEqual(p.errors, []);
+});
+
 audioTest('the first result explains itself once', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true, tol: 30 });
   const play = async () => {
