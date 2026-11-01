@@ -3,7 +3,7 @@ Drum Practice Pad Timing Trainer
 
 ## Tests
 
-`npm install`, `npx playwright install chromium`, then `npm test`. The core and library checks need only Node and run in a second; the browser tests take about a minute. The tests read `index.html` and `routines/*.txt` as they are, and use no book content.
+`npm install`, `npx playwright install chromium`, then `npm test`. The core and library checks need only Node and run in a second; the browser tests take about a minute. The tests read `index.html` and `routines/*.txt` as they are, and use no book content. `npm run test:webkit` runs the browser tests in WebKit, Safari's engine, as an iPhone (`npx playwright install webkit` first). Pull requests run it in CI. It does not replace checking on a real iPhone: no test can play a pad into a phone's microphone.
 
 ## Where changes go
 

@@ -28,6 +28,21 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
 
+  # The browser tests again in WebKit, Safari's engine, as an iPhone. On pull requests only, so pushes to the fork
+  # stay fast. Linux's WebKit has Web Audio, so every test runs here, including the ones Windows skips.
+  webkit:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps webkit
+      - run: npm run test:webkit
+
   # Only tested code goes live, and only from main. The site is the app and its hosted libraries.
   deploy:
     needs: test
