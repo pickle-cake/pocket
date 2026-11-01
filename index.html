@@ -2708,7 +2708,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.63';                           /* shown beside the title */
+const VERSION='1.5.64';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -3184,8 +3184,10 @@ function setMeter(v){
 }
 /* One short tone with a quick attack and decay. */
 const liveTones=new Set();
-/* Clicks are scheduled a little ahead, so pausing must also cancel the ones already queued. */
-function silenceTones(){liveTones.forEach(o=>{try{o.stop();}catch(e){}});liveTones.clear();}
+/* Clicks are scheduled a little ahead, so pausing must also cancel the ones already queued. Each one already has its
+   stop time, and Safari refuses a second stop(), so cutting the sound's last link to the speaker (_out) is what
+   silences it everywhere. Without that, an iPhone kept the queued clicks and played them at the start of the next run. */
+function silenceTones(){liveTones.forEach(o=>{try{o.stop();}catch(e){}try{(o._out||o).disconnect();}catch(e){}});liveTones.clear();}
 function blip(T,type,freq,peak,attack,decay,stop){
   const o=ctx.createOscillator(),g=ctx.createGain();
   liveTones.add(o);o.onended=()=>liveTones.delete(o);
@@ -3193,7 +3195,7 @@ function blip(T,type,freq,peak,attack,decay,stop){
   g.gain.setValueAtTime(0.0001,T);
   g.gain.exponentialRampToValueAtTime(peak,T+attack);
   g.gain.exponentialRampToValueAtTime(0.0001,T+decay);
-  o.connect(g);g.connect(ctx.destination);
+  o.connect(g);g.connect(ctx.destination);o._out=g;
   o.start(T);o.stop(T+stop);
 }
 function click(time,level){
@@ -3211,7 +3213,7 @@ function stick(T,hand,vel){
   src.buffer=noiseBuf;f.type='bandpass';f.frequency.value=hand==='L'?2300:2700;f.Q.value=0.8;
   g.gain.setValueAtTime(0.0001,T);g.gain.exponentialRampToValueAtTime(v,T+0.001);g.gain.exponentialRampToValueAtTime(0.0001,T+0.07);
   liveTones.add(src);src.onended=()=>liveTones.delete(src);
-  src.connect(f);f.connect(g);g.connect(ctx.destination);src.start(T);src.stop(T+0.12);
+  src.connect(f);f.connect(g);g.connect(ctx.destination);src._out=g;src.start(T);src.stop(T+0.12);
   blip(T,'sine',hand==='L'?170:200,v*0.6,0.001,0.06,0.08);
 }
 /* The point on the audio clock that is coming out of the speakers right now. The browser's output timestamp,

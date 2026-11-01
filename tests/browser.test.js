@@ -383,6 +383,35 @@ audioTest('a run whose sound falls behind the screen is stopped, not saved, and 
   assert.deepEqual(p.errors, []);
 });
 
+audioTest('Stop cancels the clicks already queued, even where a second stop() is refused, as in Safari', async () => {
+  /* Track every sound: when it was queued to start, whether it was stopped at once, and whether its path to the
+     speaker was cut. A second stop() throws, as WebKit does, so the test catches the iPhone bug in Chromium too. */
+  const p = await open({ input: 'kb', bpm: 220, routineText: 'RLRL RLRL', eachUnit: 'min', eachVal: 1, seeded: true }, null, () => {
+    const tones = window.__tones = [], P = AudioScheduledSourceNode.prototype, start = P.start, stop = P.stop, cut = AudioNode.prototype.disconnect;
+    P.start = function (when) { tones.push({ n: this, T: when || 0, now: false }); return start.apply(this, arguments); };
+    P.stop = function (when) {
+      if (this.__stops) throw new DOMException('cannot call stop more than once', 'InvalidStateError');
+      this.__stops = 1;
+      const out = stop.apply(this, arguments), e = tones.find(x => x.n === this);
+      if (e && !(when > this.context.currentTime)) e.now = true;
+      return out;
+    };
+    AudioNode.prototype.disconnect = function () { this.__cut = true; return cut.apply(this, arguments); };
+  });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && window.__T.ctx().currentTime > window.__T.run().t0 + 1.5, null, { timeout: 10000 });
+  await press(p, /^Stop/);
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 5000 });
+  const left = await p.evaluate(() => {
+    const now = window.__T.ctx().currentTime;
+    const queued = window.__tones.filter(x => x.T > now);
+    return { queued: queued.length, audible: queued.filter(x => !x.now && !x.n.__cut && !(x.n._out && x.n._out.__cut)).length };
+  });
+  assert.ok(left.queued > 0, 'clicks were queued ahead when Stop was pressed: ' + left.queued);
+  assert.equal(left.audible, 0, 'none of them can still sound');
+  assert.deepEqual(p.errors, []);
+});
+
 audioTest('the first result explains itself once', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true, tol: 30 });
   const play = async () => {
