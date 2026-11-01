@@ -181,6 +181,10 @@ test('the Library opens sorted by name, with Name first, and Recent puts the new
   assert.deepEqual(await names(), ['8 RLLR RLLR', '8 RLRL RLRL', '8 RRLL RRLL'], 'by name');
   await p.click('#lsRecent');
   assert.deepEqual(await names(), ['8 RLRL RLRL', '8 RLLR RLLR', '8 RRLL RRLL'], 'newest first');
+  await p.reload(); await p.waitForTimeout(300);
+  await p.click('#tabLibrary');
+  assert.deepEqual(await names(), ['8 RLRL RLRL', '8 RLLR RLLR', '8 RRLL RRLL'], 'the choice is remembered');
+  assert.equal(await p.getAttribute('#lsRecent', 'aria-pressed'), 'true');
   assert.deepEqual(p.errors, []);
 });
 
