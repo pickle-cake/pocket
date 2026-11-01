@@ -150,6 +150,26 @@ test('the tempo steps by 10 and 1, stops at 40 and 220, and fits beside a usable
   assert.deepEqual(p.errors, []);
 });
 
+test('Copy timing details says what it did, next to the button, and there is no Reset audio', async () => {
+  const log = [{ t: 1, ver: 'x', ok: true, slip: 0 }, { t: 2, ver: 'x', ok: true, slip: 1 }];
+  const p = await open({ seeded: true, noise: -50, latCal: true, clockLog: log }, null, () => {
+    window.__copied = null;
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window.__copied = t; return Promise.resolve(); } } });
+  });
+  await p.click('#tabSetup');
+  await p.click('#svBtnDev');
+  assert.equal(await p.$('#clkReset'), null);
+  await p.click('#clkCopy');
+  await p.waitForTimeout(100);
+  assert.match(await p.textContent('#clkDone'), /^Copied the last 2 runs\./);
+  assert.equal(JSON.parse(await p.evaluate(() => window.__copied)).runs.length, 2);
+  await p.evaluate(() => { navigator.clipboard.writeText = () => Promise.reject(new Error('no')); });
+  await p.click('#clkCopy');
+  await p.waitForTimeout(100);
+  assert.match(await p.textContent('#clkDone'), /blocked the clipboard/);
+  assert.deepEqual(p.errors, []);
+});
+
 test('the microphone level slider moves its trigger line', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, sens: -30 });
   await p.click('#tabSetup');
@@ -612,9 +632,9 @@ test('every badge has one medal, with a written step name, on the Achievements p
   await p.evaluate(() => document.getElementById('pvBtnAch').click());
   await p.waitForTimeout(200);
   const r = await p.evaluate(() => ({ n: document.querySelectorAll('#badges .medal').length, bad: [...document.querySelectorAll('#badges .medal')].filter(m => /undefined|NaN/.test(m.title) || !m.title).length, off: document.querySelectorAll('#badges .medal.off').length }));
-  assert.equal(r.n, 17);
+  assert.equal(r.n, 22);
   assert.equal(r.bad, 0);
-  assert.equal(r.off, 17);
+  assert.equal(r.off, 22);
   const txt = await p.evaluate(() => document.getElementById('badges').innerText);
   assert.doesNotMatch(txt, /undefined|NaN/);
 });
@@ -794,12 +814,23 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   assert.equal(await runsN(), 0);
   assert.equal(await p.evaluate(() => document.body.dataset.state), 'idle', 'back to the start screen');
   assert.match(await p.textContent('#status'), /^Run discarded\./);
+  assert.equal(await p.evaluate(() => document.activeElement.textContent), 'Undo', 'focus moves to Undo, not lost with the Discard button');
   await p.click('#status >> text=Undo');
   await p.waitForTimeout(300);
   assert.equal(await runsN(), 1, 'Undo puts the run back');
   assert.equal(await libN(), n0 + 1, 'and the routine saved with it');
   assert.equal(await p.evaluate(() => document.body.dataset.state), 'done', 'and shows the result again');
   assert.equal(await p.isVisible('#advDiscard'), true);
+  /* discarded again, then the routine changes before Undo: the run comes back, but its result is not drawn over the new routine */
+  await p.click('#advDiscard'); await p.click('#advDiscard');
+  await p.waitForTimeout(300);
+  await p.evaluate(() => { const t = document.getElementById('routineText'); t.value = '8 RRLL RRLL'; t.dispatchEvent(new Event('input', { bubbles: true })); });
+  await p.click('#status >> text=Undo');
+  await p.waitForTimeout(300);
+  assert.equal(await runsN(), 1, 'the run is back in the records');
+  assert.equal(await libN(), n0 + 1, 'and its routine, once');
+  assert.equal(await p.evaluate(() => document.body.dataset.state), 'idle', 'no result over a different routine');
+  assert.match(await p.textContent('#status'), /routine has changed/);
   assert.deepEqual(p.errors, []);
 });
 
