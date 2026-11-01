@@ -242,7 +242,7 @@ On desktop, Achievements uses the two-column workspace: the streak calendar and 
 - **Case:** Sentence case for everything except the three uppercase roles in §3.
 - **Labels** are nouns ("Click volume"). **Buttons** are verbs ("Calibrate left stick"). **Hints** are one sentence, and anything longer goes to Help with a "Help" link-button.
 - **Numbers** always carry a unit: `60 BPM`, `±20 ms`, `92%`, `1 min`. Put a thin or normal space before the unit and use the same unit spelling everywhere.
-- **Terms:** use the musical words consistently. *Early* and *late* are the states, and *leading* and *dragging* are the explanations. Use *exercise* for a single pattern and *routine* for a set of exercises. Never use "pattern" in UI copy if "exercise" is the term.
+- **Terms:** use the musical words consistently. *Early* and *late* are the only timing words. Do not use *leading*, *dragging*, *lead* or *drag* for timing (a *drag* is still the rudiment). Use *exercise* for a single pattern and *routine* for a set of exercises. Never use "pattern" in UI copy if "exercise" is the term.
 
 ## 9. Accessibility checklist (per change)
 

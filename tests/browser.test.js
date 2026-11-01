@@ -5,7 +5,7 @@ const http = require('http'), fs = require('fs'), path = require('path'), os = r
 const { chromium } = require('playwright');
 const { ROOT, html } = require('./helpers');
 
-const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,run:()=>run,S:()=>S,ctx:()=>ctx};let heardTimer=0;');
+const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo()};let heardTimer=0;');
 assert.ok(page !== html, 'the test hook did not attach: has handleHit moved?');
 
 let server, base, browser;
@@ -44,6 +44,54 @@ test('the page starts with no errors and the right title', async () => {
   assert.deepEqual(p.errors, []);
   assert.match(await p.textContent('.app'), /Set up/);
   assert.equal(await p.isDisabled('#startBtn'), true);   /* Start waits for mic, Mic check and latency */
+});
+
+test('a first visit sees the welcome and nothing else of Play, until Start practising', async () => {
+  const p = await open({ seeded: true });
+  const seen = () => p.evaluate(() => ({ welcome: !!document.getElementById('setup').offsetParent, start: !!document.getElementById('startBtn').offsetParent }));
+  assert.deepEqual(await seen(), { welcome: true, start: false });
+  assert.match(await p.textContent('#setup'), /Welcome to Pocket/);
+  await p.evaluate(() => { const S = window.__T.S(); S.noise = -50; S.latCal = true; window.__T.sync(); });
+  assert.deepEqual(await seen(), { welcome: true, start: false });   /* set up, but still welcoming until the button */
+  await p.click('#tabLibrary');
+  await p.click('#tabPlay');
+  assert.deepEqual(await seen(), { welcome: true, start: false });   /* a first visit's welcome survives a tab change */
+  await p.click('#setup >> text=Start practising');
+  assert.deepEqual(await seen(), { welcome: false, start: true });
+  await p.click('#helpBtn');
+  await p.click('#welcomeAgain');
+  assert.deepEqual(await seen(), { welcome: true, start: false });
+  assert.equal(await p.evaluate(() => document.getElementById('status').parentElement.id), 'setup');   /* messages stay in view */
+  await p.click('#tabLibrary');
+  await p.click('#tabPlay');
+  assert.deepEqual(await seen(), { welcome: false, start: true });   /* leaving Play closes a welcome shown again */
+  assert.equal(await p.evaluate(() => document.getElementById('status').parentElement.id), 'stPlay');
+  assert.deepEqual(p.errors, []);
+});
+
+test('starting a run from the welcome closes it, so the results are not hidden', async () => {
+  const p = await open({ seeded: true, input: 'kb', eachUnit: 'pass', eachVal: 1, bpm: 200 });
+  await p.click('#helpBtn');
+  await p.click('#welcomeAgain');
+  assert.match(await p.textContent('#setSteps'), /not needed with keyboard input/);
+  assert.doesNotMatch(await p.textContent('#setSteps'), /Mic check done/);
+  await p.keyboard.press('Space');
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  assert.equal(await p.evaluate(() => document.body.dataset.welcome), '');
+  assert.deepEqual(p.errors, []);
+});
+
+test('a fresh app starts on 8 passes at 40 BPM with the Easy click; saved settings are kept', async () => {
+  const fresh = await open({});
+  assert.deepEqual(await fresh.evaluate(() => { const S = window.__T.S(); return [S.click, S.eachUnit, S.eachVal, S.bpm]; }), ['strokes', 'pass', 8, 40]);
+  const kept = await open({ click: 'beat', eachUnit: 'min', eachVal: 2, bpm: 90 });
+  assert.deepEqual(await kept.evaluate(() => { const S = window.__T.S(); return [S.click, S.eachUnit, S.eachVal, S.bpm]; }), ['beat', 'min', 2, 90]);
+});
+
+test('a returning visit goes straight to Play', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true });
+  assert.equal(await p.evaluate(() => !!document.getElementById('setup').offsetParent), false);
+  assert.equal(await p.evaluate(() => !!document.getElementById('startBtn').offsetParent), true);
 });
 
 test('Help opens and the Try it buttons load their exercise', async () => {
@@ -107,7 +155,7 @@ test('saved titles survive a reload, including long single exercises', async () 
 });
 
 test('builder: flam holds until a stroke, greys the other keys, and writes fR', async () => {
-  const p = await open({ seeded: true, routineText: '8 RL' });
+  const p = await open({ seeded: true, noise: -50, latCal: true, routineText: '8 RL' });
   await p.click('#editPlay');
   await p.waitForTimeout(300);
   const off = () => p.evaluate(() => [...document.querySelectorAll('.bkey')].filter(k => k.disabled).map(k => k.dataset.k));
@@ -126,7 +174,7 @@ test('builder: flam holds until a stroke, greys the other keys, and writes fR', 
 });
 
 test('editor: Discard puts a saved routine back', async () => {
-  const p = await open({ seeded: true, routineText: 'title: Mine\n8 RLRL RLRL' });
+  const p = await open({ seeded: true, noise: -50, latCal: true, routineText: 'title: Mine\n8 RLRL RLRL' });
   await p.click('#editPlay');
   await p.click('#saveBtn');
   await p.click('.bkey[data-k="flam"]');
@@ -390,8 +438,10 @@ test('rests keep the streak and score nothing unless hit, and a hit on a rest is
 });
 
 test('Play settings sit in aligned columns: Click beside Scoring, tops level', async () => {
-  const p = await open({ seeded: true }, { width: 390, height: 900 });
+  const p = await open({ seeded: true, noise: -50, latCal: true }, { width: 390, height: 900 });
+  await p.evaluate(() => { document.getElementById('setBox').open = true; });   /* closed at phone width */
   const r = await p.evaluate(() => { const a = document.getElementById('click').getBoundingClientRect(), b = document.getElementById('score').getBoundingClientRect(); return { dy: Math.abs(a.top - b.top), side: b.left > a.right - 1 }; });
+  assert.ok(await p.isVisible('#click'), 'Click is visible');
   assert.ok(r.side, 'Scoring is beside Click');
   assert.ok(r.dy < 1, 'tops are level');
 });

@@ -250,11 +250,20 @@ body[data-input="mic"] .kb-only{display:none}
 .g-needle{position:absolute;top:8px;width:4px;height:28px;margin-left:-2px;border-radius:2px;background:var(--fill)}
 .g-ticks{display:grid;grid-template-columns:repeat(5,1fr);font:11px var(--font-data);color:var(--muted)}
 .g-ticks span:nth-child(1){text-align:left}.g-ticks span:nth-child(5){text-align:right}.g-ticks span:nth-child(n+2):nth-child(-n+4){text-align:center}
-.wsteps{margin:0;padding:0;list-style:none;display:grid;gap:10px}
-.wsteps li{display:grid;gap:6px;justify-items:start}
+.wsteps{margin:0;padding:0;list-style:none;display:grid;gap:var(--s-4)}
+.wsteps li{display:grid;gap:var(--s-2);justify-items:start;font:var(--t-body) var(--font-body)}
 .wsteps li.ok{display:block;color:var(--muted)}.wsteps li.ok::before{content:"\2713\00a0";font-weight:700}
+.wsteps li.all{font-weight:600}
+.wsteps li.na{color:var(--muted)}
 body[data-run="1"] #setup{display:none}
-#setup{gap:10px;padding-bottom:16px;border-bottom:1px solid var(--line)}#setup h3,#setup p{margin:0}#setup p{font-size:14.5px;line-height:1.5}
+/* The welcome: a first visit sees what Pocket does and the set-up steps, and nothing else of the Play page, until Start practising. */
+body[data-welcome="1"]:not([data-run="1"]) #pagePlay>:not(#setup){display:none}
+#setup{gap:var(--s-4);padding:var(--s-5) var(--s-4);border-radius:var(--r-lg)}
+#setup h2{margin:0;font:600 var(--t-title) var(--font-body);color:var(--ink)}
+#setup h3{margin:0}
+#setup p:not(.status){margin:0;font:var(--t-body) var(--font-body)}
+#setup p.hint{font:var(--t-caption) var(--font-body)}
+:root[data-layout=desktop] #setup{justify-self:center;width:100%;max-width:760px}
 .hscw{position:relative;min-width:0}
 .hscroll{overflow-x:auto;overscroll-behavior-x:contain;height:170px}
 .hscroll.lv{height:56px}
@@ -1028,7 +1037,7 @@ button[data-armed],.btn[data-armed],.rmenu button[data-armed]{background:var(--d
       <p class="hint hl"><b>BPM</b> the tempo of your latest run</p>
       <p class="hint hl"><b>ACC</b> strokes on time (accuracy). With an accent or ghost rule, they also have to be played as written</p>
       <p class="hint hl"><b>Trend</b> each run at that tempo, with the dotted line at the target</p>
-      <p class="hint hl"><b>ms</b> lead (&minus;) or drag (+), against your usual</p>
+      <p class="hint hl"><b>ms</b> early (&minus;) or late (+), against your usual</p>
       <p class="hint hl"><b>dB</b> loudness spread, lower is more even</p>
     </section>
     </div>
@@ -1060,8 +1069,9 @@ button[data-armed],.btn[data-armed],.rmenu button[data-armed]{background:var(--d
   <div class="page help" id="pageHelp" role="region" aria-label="Help" hidden>
     <section class="panel" id="help-how">
       <h3>How it works</h3>
-      <p>The app plays a click and listens to your pad through the microphone. It matches each hit to the stroke that was due and measures how early (<b>leading</b>) or late (<b>dragging</b>) it was, in milliseconds. Nothing is uploaded. Everything stays in this browser.</p>
+      <p>The app plays a click and listens to your pad through the microphone. It matches each hit to the stroke that was due and measures how early or late it was, in milliseconds. Nothing is uploaded. Everything stays in this browser.</p>
       <p>Pick a sticking, press Start on the Play page and play along with the moving line. The numbers appear when you stop.</p>
+      <div class="btns"><button class="btn" id="welcomeAgain" type="button">Show the welcome again</button></div>
     </section>
 
     <section class="panel" id="help-start">
@@ -1077,10 +1087,10 @@ button[data-armed],.btn[data-armed],.rmenu button[data-armed]{background:var(--d
     <section class="panel" id="help-pages">
       <h3>The four pages and the editor</h3>
       <ul>
-        <li><b>Play:</b> tempo, click level, Start, Pause, Restart and Stop, the notation, the lead/drag gauge and your results.</li>
+        <li><b>Play:</b> tempo, click level, Start, Pause, Restart and Stop, the notation, the early/late gauge and your results.</li>
         <li><b>Library:</b> your saved routines, each with Edit and Play. <b>New</b> starts a routine, <b>Import</b> adds one from a file or a link, and <b>Export</b> saves the whole library as one file that Import reads back (it can also be hosted as a library). A title such as "Rudiment: Single stroke roll" groups the routine under Rudiment. Routines with no group go under Other. The ⋮ on a routine has Download and Delete. Delete asks for a second tap, and Undo follows. The chevron opens a routine to show its exercises.</li>
         <li><b>An unsaved routine</b> is what you are working on. It is kept as you type, but a saved routine changes only when you press Save. The app asks before you open another routine and lose unsaved work. The editor opens full screen from Edit, and Back returns you.</li>
-        <li><b>Progress:</b> <b>History</b> lists your runs by exercise or routine, with Play. <b>Scores</b> shows each exercise (sorted by accuracy) and each routine: tempo, accuracy, trend, lead or drag, and evenness. <b>Achievements</b> shows your practice days for the last four weeks, a streak that forgives one rest day a week, and badges.</li>
+        <li><b>Progress:</b> <b>History</b> lists your runs by exercise or routine, with Play. <b>Scores</b> shows each exercise (sorted by accuracy) and each routine: tempo, accuracy, trend, early or late, and evenness. <b>Achievements</b> shows your practice days for the last four weeks, a streak that forgives one rest day a week, and badges.</li>
         <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours), <b>Device</b> (input, microphone level, stick calibration, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
       </ul>
     </section>
@@ -1092,7 +1102,7 @@ button[data-armed],.btn[data-armed],.rmenu button[data-armed]{background:var(--d
         <li><b>The moving line</b> reaches each note exactly when it is due. Strike as it arrives.</li>
         <li><b>Letter colours:</b> green is on time, blue and slanted is early, pink and underlined is late, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as green.</li>
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but the app heard R. This needs both sticks calibrated.</li>
-        <li><b>The gauge</b> shows your average lead or drag over the last 32 strokes. Left is leading, right is dragging.</li>
+        <li><b>The gauge</b> shows how early or late you played on average over the last 32 strokes. Left is early, right is late.</li>
         <li><b>The level bars</b> appear when a run ends. Each bar is one stroke's loudness against your own typical stroke: the middle is typical, higher is louder, and blue bars are left hand. Scroll sideways for the whole run. The number is the spread in dB, so smaller is more even. With an accent or ghost rule only the normal strokes count, since accents and ghosts are checked separately. A line below says if one hand is quieter. Clipped hits are left out, and keyboard input has no levels.</li>
         <li><b>Narrow screens:</b> a busy pass wraps onto two lines at a barline.</li>
         <li><b>Keys:</b> <b>Space</b> starts, pauses and resumes, <b>Enter</b> plays Again after a run, and <b>Escape</b> stops.</li>
@@ -1232,7 +1242,7 @@ LRLR LRLR LRLR LRLR  x8</pre>
       <h4>Between exercises and the visual pulse</h4>
       <p><b>Between exercises</b> can be a 4-beat count-in or <b>Straight on</b> (the default). Straight on starts the next exercise with no pause, and only the notation marks the change: the rows slide up and the new exercise starts on the next beat.</p>
       <p><b>Visual pulse</b> (Settings &rsaquo; Preferences) swells the moving line on every click, more on the first beat of a pass. Turn it off for a plain line.</p>
-      <p><b>Colours</b> (Settings &rsaquo; Preferences) switches to a colour-blind safe set: blue for leading, orange for dragging, grey for on time. Early notes also lean, late notes are underlined, and results at or above target carry a tick, so colour is never the only signal.</p>
+      <p><b>Colours</b> (Settings &rsaquo; Preferences) switches to a colour-blind safe set: blue for early, orange for late, grey for on time. Early notes also lean, late notes are underlined, and results at or above target carry a tick, so colour is never the only signal.</p>
       <h4>Saving and importing</h4>
       <p><b>Save</b> keeps the routine in <b>your library</b>. If you change only the title, Save renames it. If you change the exercises, Save keeps the original and adds a new routine, so past runs still replay as played. The <b>&#8942;</b> beside Save has <b>Save as new</b> (a copy without changes) and <b>Download file</b> (a .txt to send).</p>
       <p>On the Library page, <b>Import</b> adds a routine from a .txt, .json or .csv file, or opens one from a link in the editor to review and Save. Text with errors opens in the editor to fix. <b>New</b> starts an empty exercise. In History, the bookmark on a routine saves it or deletes it from your library, and <b>In library</b> lists your library, including routines you have not played. A title such as "Rudiment: Single stroke roll" groups it under Rudiment on the Library page.</p>
@@ -1267,7 +1277,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run the app names the weak exercises and suggests staying at that tempo until they settle. Any tempo is always allowed.</li>
         <li><b>Discard this run</b> removes it from your records, for example after a bad microphone read.</li>
-        <li><b>Progress page:</b> every exercise, sorted by accuracy, with accuracy at your last tempo, trend and lead/drag bias, grouped by click level. Play loads that exercise. A routine is cleared at a tempo when one run covered every exercise and all reached 90%.</li>
+        <li><b>Progress page:</b> every exercise, sorted by accuracy, with accuracy at your last tempo, trend and early/late bias, grouped by click level. Play loads that exercise. A routine is cleared at a tempo when one run covered every exercise and all reached 90%.</li>
         <li><b>Practise weak exercises:</b> after a routine run, this plays only the exercises below target. Restart repeats the same ones. A partial run never counts as clearing the routine.</li>
         <li><b>Tempo guidance:</b> each exercise in the start list shows the tempo it has cleared, or "new". The summary shows where the whole routine has been cleared.</li>
         <li><b>Staff of a run:</b> each run keeps the result of every stroke. A run's page has a <b>Staff</b> group showing the notation with each stroke coloured and read out, and the Play page rebuilds its review from the same record.</li>
@@ -1303,9 +1313,12 @@ RLRR LRLL RLRR LRLL</pre>
   </div>
 
   <div class="page" id="pagePlay" role="tabpanel" aria-labelledby="tabPlay" hidden>
-    <section class="panel" id="setup" aria-label="Set up" hidden>
+    <section class="panel" id="setup" aria-labelledby="setTtl" hidden>
+      <h2 id="setTtl">Welcome to Pocket</h2>
+      <p>Pocket is a timing coach for your practice pad. It plays a click, listens to each stroke through the microphone and shows how early or late it landed, in milliseconds.</p>
+      <p><b>You need</b> a practice pad and sticks, and a quiet room for the two set-up steps below. Once you practise, headphones keep the click out of the microphone.</p>
+      <p class="hint">Nothing is uploaded. Everything stays in this browser.</p>
       <h3>Set up <span class="hint" id="setN"></span></h3>
-      <p>Pocket listens to your pad through the microphone and measures how early (<b>leading</b>) or late (<b>dragging</b>) each hit is. Nothing is uploaded. Everything stays in this browser. Bring routines in from <b>Library &rsaquo; Import</b>.</p>
       <ol class="wsteps" id="setSteps"></ol>
     </section>
     <div class="pcol pctl">
@@ -1452,8 +1465,8 @@ RLRR LRLL RLRR LRLL</pre>
     <details id="detBox" class="setbox" open>
       <summary>Details</summary>
       <div class="sbody">
-    <section class="panel" id="leadBox" aria-label="Lead or drag">
-      <h3>Lead or drag, last 32 strokes</h3>
+    <section class="panel" id="leadBox" aria-label="Early or late">
+      <h3>Early or late, last 32 strokes</h3>
       <div class="readout">
         <div class="big"><span id="gVal">—</span><small>ms</small></div>
         <div class="word" id="gWord">Waiting for strokes</div>
@@ -1466,7 +1479,7 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="g-needle" id="gNeedle"></div>
       </div>
       <div class="g-ticks" aria-hidden="true"><span>−40</span><span>−20</span><span>0</span><span>+20</span><span>+40</span></div>
-      <div class="g-ends"><span>◀ early, leading</span><span>late, dragging ▶</span></div>
+      <div class="g-ends"><span>◀ early</span><span>late ▶</span></div>
     </section>
 
 
@@ -2068,7 +2081,7 @@ function adviceFor(exercises){
   const weak=played.filter(b=>b.pct<TARGET);
   return {played:played.length,weak:weak,cleared:!weak.length};
 }
-/* An exercise where fewer than a quarter of the strokes due were heard is mostly noise (a mic left on, a test run), so its lead or drag and loudness are left out of the averages. */
+/* An exercise where fewer than a quarter of the strokes due were heard is mostly noise (a mic left on, a test run), so its early or late average and loudness are left out of the averages. */
 const heardEnough=b=>b.due>0&&(b.heard||0)>=b.due*0.25;
 /* Per pattern: how it is going at the tempo you played it at most recently. */
 function patStats(runs,sum){
@@ -2621,7 +2634,7 @@ function loopResult(clicks,hits){
   }
   if(out.delay>400){out.msg='The delay was over 400 ms, which is more than this page can compensate. The latency is unchanged.';return out;}
   out.ok=true;out.lat=Math.max(0,Math.round(out.delay));
-  out.msg='Auto calibrate: latency set to '+out.lat+' ms (heard '+d.length+' of '+clicks.length+' clicks, ±'+Math.round(out.spread)+' ms). This is the device delay only. Your own lead or drag is not folded in.';
+  out.msg='Auto calibrate: latency set to '+out.lat+' ms (heard '+d.length+' of '+clicks.length+' clicks, ±'+Math.round(out.spread)+' ms). This is the device delay only. Whether you play early or late is not folded in.';
   return out;
 }
 /* ---------- routine library ---------- */
@@ -2650,7 +2663,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.46';                           /* shown beside the title */
+const VERSION='1.5.52';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -2662,8 +2675,9 @@ const HOSTED={wStarter:['routines/starter.txt','Starter routines'],wRudiments:['
 /* The starter list sits beside the page. A page opened from a preview or from disk has no web address to resolve it against. */
 const hostedHref=path=>{try{return new URL(path,location.href).href;}catch(e){return '';}};
 const hostedLists=()=>Object.keys(HOSTED).map(id=>({url:hostedHref(HOSTED[id][0]),name:HOSTED[id][1],t:0})).filter(l=>l.url);
-const S={mode:'single',routineText:STARTER,eachUnit:'min',eachVal:1,gap:0,pulse:true,startExercise:1,
-  bpm:60,subdiv:4,click:'beat',lastExport:0,expRuns:0,tol:20,sens:-30,settle:40,accent:'',others:'n',noise:null,vol:60,latency:null,latCal:false,input:'mic',editTab:'build',theme:'',palette:'std',libId:''};
+const S={mode:'single',routineText:STARTER,eachUnit:'pass',eachVal:8,gap:0,   /* a fresh app: 8 passes at 40 BPM on the Easy click, so the first exercise is simple */
+  pulse:true,startExercise:1,
+  bpm:40,subdiv:4,click:'strokes',lastExport:0,expRuns:0,tol:20,sens:-30,settle:40,accent:'',others:'n',noise:null,vol:60,latency:null,latCal:false,input:'mic',editTab:'build',theme:'',palette:'std',libId:''};
 let cal={L:[],R:[]},model=null;
 try{
   const o=JSON.parse(localStorage.getItem(KEY)||'null');
@@ -3406,6 +3420,7 @@ async function startPlay(only){
   if(calTest)endHandTest('');
   if(calMode){calMode=null;updateCalUI();}
   if(!(only||currentExercises()).length||setupNeeded())return;
+  if(welcome){welcome=false;welcomeAgain=false;syncSetup();}   /* set up and starting: the welcome has done its job */
   showTab('play');
   setStatus('Starting…');
   if(!(await ensureAudio(S.input==='mic')))return;
@@ -3507,15 +3522,16 @@ function loopClick(T){
   for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(0.002*sr));
   const s=ctx.createBufferSource(),g=ctx.createGain();
   s.buffer=buf;g.gain.value=0.8;s.connect(g);g.connect(ctx.destination);s.start(T);
+  return s;
 }
 async function startLoop(){
   closeListen();
   if(loop){endLoop('Auto calibrate cancelled.');return;}
   if(calMode||calTest||chk||(run&&!run.ended)||S.input!=='mic')return;
   if(!(await ensureAudio(true)))return;
-  const t0=ctx.currentTime+1,T=[];
-  for(let k=0;k<LOOP.n;k++){T.push(t0+k*LOOP.gap);loopClick(T[k]);}
-  loop={T:T,hits:[],timer:setTimeout(finishLoop,(1+LOOP.n*LOOP.gap+0.5)*1000)};
+  const t0=ctx.currentTime+1,T=[],src=[];
+  for(let k=0;k<LOOP.n;k++){T.push(t0+k*LOOP.gap);src.push(loopClick(T[k]));}
+  loop={T:T,src:src,hits:[],timer:setTimeout(finishLoop,(1+LOOP.n*LOOP.gap+0.5)*1000)};
   const show=()=>{$('latMsg').textContent='Auto calibrate: playing '+LOOP.n+' clicks through the speakers. Keep quiet and do not play. '+T.filter(t=>t<=ctx.currentTime).length+'/'+LOOP.n;};
   show();loop.tick=setInterval(show,200);
   setStatus('Auto calibrate running.');
@@ -3523,7 +3539,10 @@ async function startLoop(){
 }
 function endLoop(msg){
   if(!loop)return;
-  clearTimeout(loop.timer);clearInterval(loop.tick);loop=null;
+  clearTimeout(loop.timer);clearInterval(loop.tick);
+  /* The clicks are scheduled ahead, so a cancel stops the ones still to come. Otherwise they play on and stack up with the next run. */
+  for(const s of loop.src){try{s.stop();}catch(e){}}
+  loop=null;
   if(msg){setStatus(msg);$('latMsg').textContent=msg;}
   updateCalUI();syncMicBtn();
 }
@@ -4231,6 +4250,8 @@ function editFromPlayPage(){
   if(S.mode==='routine')editExercise(Math.max(1,S.startExercise||1));
   window.scrollTo(0,0);
 }
+/* On Play the message sits under the staff, so the staff never moves. While the welcome covers Play, it sits in the welcome. */
+function placeStatus(){$(curTab!=='play'?'stTop':(welcome&&!(run&&!run.ended)?'setup':'stPlay')).appendChild($('status'));}
 function showTab(t){
   curTab=t;
   if(t!=='setup'&&micTest){micTest=false;syncMicBtn();}
@@ -4245,7 +4266,9 @@ function showTab(t){
   });
   document.body.dataset.tab=t;
   $('status').hidden=statusRun&&t!=='play';
-  ($(t==='play'?'stPlay':'stTop')).appendChild($('status'));   /* on Play the message sits under the staff, so the staff never moves */
+  /* a welcome a set-up user opened from Help closes when they leave Play */
+  if(t!=='play'&&welcome&&welcomeAgain&&!setupNeeded()){welcome=false;welcomeAgain=false;syncSetup();}
+  placeStatus();
   if(t==='play'){drawTrace();winKey='';syncWindow(lastCur);}
   if(t==='progress')renderProgress();
   if(t==='setup')syncData();
@@ -4287,7 +4310,7 @@ function updateGauge(r){
   const m=mean(last),s=sd(last);
   $('gVal').textContent=fmtMs(m,1);
   const cls=m<-2.5?'early':(m>2.5?'late':'ok');
-  $('gWord').textContent=m<-2.5?'Leading, ahead of the beat':(m>2.5?'Dragging, behind the beat':'Right on the beat');
+  $('gWord').textContent=m<-2.5?'Early, ahead of the beat':(m>2.5?'Late, behind the beat':'Right on the beat');
   $('gWord').className='word '+cls;
   $('gNeedle').style.left=(50+clamp(m,-40,40)/80*100)+'%';
   const lo=clamp(m-s,-40,40),hi=clamp(m+s,-40,40);
@@ -4909,14 +4932,14 @@ function renderRoutineRows(routines,replay){
       const shown=rtAll?mine:mine.slice(0,4);
       const list=document.createElement('div');list.className='rtruns';
       shown.forEach(r=>list.appendChild(runBtn(r,'Scores')));
-      if(mine.length>4){const m=document.createElement('button');m.type='button';m.className='btn link rmore';m.textContent=rtAll?'Show fewer':'Show all '+mine.length+' runs';m.addEventListener('click',()=>{rtAll=!rtAll;renderProgress();});list.appendChild(m);}
+      if(mine.length>4)list.appendChild(moreRunsBtn(mine.length,rtAll,()=>{rtAll=!rtAll;renderProgress();}));
       if(x.runs>mine.length){const o=document.createElement('p');o.className='hint';o.textContent='Older runs are summarised and not listed.';list.appendChild(o);}
       row.appendChild(list);
     }
     box.appendChild(row);
   });
 }
-/* Your usual lead or drag: the average bias over the exercises scored. Rows show their bias against it. */
+/* How early or late you usually play: the average bias over the exercises scored. Rows show their bias against it. */
 function scoreUsual(stats){const b=stats.map(x=>x.bias).filter(x=>!isNaN(x));return b.length?b.reduce((a,x)=>a+x,0)/b.length:NaN;}
 function renderScoreSummary(stats){
   const sum=$('scoreSum'),nx=$('scoreNext');
@@ -5013,11 +5036,12 @@ function emptyState(icon,title,text,label,fn){
   const i=document.createElement('span');i.innerHTML=ICON[icon];
   const t=document.createElement('b');t.textContent=title;
   const p=document.createElement('p');p.textContent=text;
-  const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=label;b.addEventListener('click',fn);
-  e.append(i,t,p,b);return e;
+  e.append(i,t,p,textBtn(label,fn));return e;
 }
 /* A row's trailing arrow: › opens a page, the chevron opens the row in place. Decoration only; the row's button carries the action. */
 function rowArrow(kind){const s=document.createElement('span');s.className='ar'+(kind==='up'?' up':'');s.innerHTML=ICON[kind==='up'?'down':kind];s.setAttribute('aria-hidden','true');return s;}
+/* Under a list of runs that shows four: show them all, or go back to four. */
+function moreRunsBtn(n,all,flip){return textBtn(all?'Show fewer':'Show all '+n+' runs',flip,'btn link rmore');}
 function iconBtn(kind,label,fn){
   const b=document.createElement('button');b.type='button';b.className='btn icon '+kind;b.innerHTML=ICON[kind];b.setAttribute('aria-label',label);b.title=label;
   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();fn(b);});return b;
@@ -5159,7 +5183,7 @@ function runMeta(r,withTime,noScore){
   return bits.join(' · ');
 }
 const dyLine=r=>{if(!r.dy)return '';const t=dynText(r.dy);return t.charAt(0).toUpperCase()+t.slice(1);};
-/* A run's overall figures: strokes on time, lead or drag, and loudness spread. */
+/* A run's overall figures: strokes on time, early or late, and loudness spread. */
 function runFigures(r){
   const off=r.lv==='off';let hs=0,sw=0;
   r.exercises.forEach(b=>{if(heardEnough(b)){hs+=b.heard||0;sw+=(b.avg||0)*(b.heard||0);}});
@@ -5190,7 +5214,7 @@ function groupRow(panel,title,mono,sub,dy,pc,runs){   /* runs: newest first; Pla
   if(!open)return;
   const list=document.createElement('div');list.className='rtruns';
   (histAll?runs:runs.slice(0,4)).forEach(r=>list.appendChild(runBtn(r,'History')));
-  if(runs.length>4){const m=document.createElement('button');m.type='button';m.className='btn link rmore';m.textContent=histAll?'Show fewer':'Show all '+runs.length+' runs';m.addEventListener('click',()=>{histAll=!histAll;renderHistory();});list.appendChild(m);}
+  if(runs.length>4)list.appendChild(moreRunsBtn(runs.length,histAll,()=>{histAll=!histAll;renderHistory();}));
   panel.appendChild(list);
 }
 let runBack='History';   /* what the run page's Back says: the list it was opened from */
@@ -5549,10 +5573,11 @@ async function exportRecs(){
   $('recMsg').textContent='Exported '+bits.join(', ')+'.';$('recMsg').classList.add('flash');
 }
 let impPending=null;
+/* The Data page's import message. After an import it is set once the page has redrawn, so the run count does not overwrite it. */
+function sayRec(t){$('recMsg').textContent=t;$('recMsg').classList.add('flash');}
 async function importRecs(file){
   if(!file)return;
-  const say=t=>{$('recMsg').textContent=t;$('recMsg').classList.add('flash');};
-  if(file.size>5e6){say('That file is too large.');return;}
+  if(file.size>5e6){sayRec('That file is too large.');return;}
   try{
     const o=JSON.parse(await file.text());
     if(!o||(!Array.isArray(o.runs)&&!Array.isArray(o.lib)&&!Array.isArray(o.lists)&&!(o.settings&&typeof o.settings==='object')))throw 0;
@@ -5560,16 +5585,15 @@ async function importRecs(file){
     const has={hist:u.runs.length+(u.sum.runs||0),lib:u.lib.length,lists:nl,set:o.settings&&typeof o.settings==='object'?1:0};
     const det={hist:()=>pl(has.hist,'run'),lib:()=>pl(has.lib,'routine'),lists:()=>nl+(nl===1?' library':' libraries'),set:()=>'tempo, click, accents, theme'};
     const parts=EXP_PARTS.filter(p=>has[p[0]]).map(p=>[p[0],p[1],det[p[0]]]);
-    if(!parts.length){say('That file has nothing in it.');return;}
+    if(!parts.length){sayRec('That file has nothing in it.');return;}
     impPending={o,u,file};exMode='imp';
     tickDialog('Import','Import',parts,()=>true);
-  }catch(e){say('That file is not a records export.');}
+  }catch(e){sayRec('That file is not a records export.');}
 }
 function importSelected(){
   const sel=readSel();
   $('expModal').hidden=true;
   const {o,u,file}=impPending;impPending=null;
-  const say=t=>{$('recMsg').textContent=t;$('recMsg').classList.add('flash');};   /* shown after the page redraws, so it is not overwritten by the run count */
   const fresh=!recs.runs.length&&!recs.sum.runs;
   let add=0,addL=0,addS=0,setN=0,dup=0,savedCopy=false;
   if(sel.hist){
@@ -5591,10 +5615,10 @@ function importSelected(){
   if(sel.set&&o.settings&&typeof o.settings==='object')PORTABLE.forEach(k=>{const v=o.settings[k];if(v!==undefined&&typeof v===typeof S[k]){S[k]=v;setN++;}});
   if(addS||savedCopy||setN)save();
   saveRecs();renderProgress();
-  if(setN){say('Imported settings. Reloading…');setTimeout(()=>location.reload(),900);return;}
+  if(setN){sayRec('Imported settings. Reloading…');setTimeout(()=>location.reload(),900);return;}
   const pl=(n,w)=>n+' '+w+(n===1?'':'s'),bits=[];
   if(add)bits.push(pl(add,'new run'));if(addL)bits.push(pl(addL,'routine'));if(addS)bits.push(pl(addS,'library'));
-  say(bits.length?'Imported '+bits.join(' and ')+(dup?' ('+dup+' already here)':'')+'.':'Nothing new in what you ticked.');
+  sayRec(bits.length?'Imported '+bits.join(' and ')+(dup?' ('+dup+' already here)':'')+'.':'Nothing new in what you ticked.');
 }
 /* The Clear dialog: tick what to wipe. Nothing is ticked to start with, and Clear asks twice. */
 const CLR_PARTS=[EXP_PARTS[0],EXP_PARTS[1],EXP_PARTS[2],EXP_PARTS[3],['dev','Device setup',()=>'microphone level, latency, calibration']];
@@ -5636,8 +5660,8 @@ function renderResults(r){
   const parts=[];
   if(rated.length>=2){
     const late=rated.reduce((a,b)=>b.avg>a.avg?b:a),early=rated.reduce((a,b)=>b.avg<a.avg?b:a),loose=rated.reduce((a,b)=>b.spread>a.spread?b:a);
-    if(late.avg>=4)parts.push('Dragged most: exercise '+late.idx+' ('+fmtMs(late.avg)+' ms).');
-    if(early.avg<=-4)parts.push('Led most: exercise '+early.idx+' ('+fmtMs(early.avg)+' ms).');
+    if(late.avg>=4)parts.push('Most late: exercise '+late.idx+' ('+fmtMs(late.avg)+' ms).');
+    if(early.avg<=-4)parts.push('Most early: exercise '+early.idx+' ('+fmtMs(early.avg)+' ms).');
     parts.push('Least even: exercise '+loose.idx+' (spread '+loose.spread.toFixed(1)+' ms).');
   }
   $('resInsight').textContent=parts.join(' ');
@@ -5755,8 +5779,7 @@ function onRoutineChanged(){
   syncPlayName();syncEditorBar();
 }
 function dotsBtn(fn){
-  const d=document.createElement('button');d.type='button';d.className='btn icon dots';d.innerHTML=ICON.kebab;d.setAttribute('aria-label','Exercise actions');d.title='Exercise actions';d.setAttribute('aria-haspopup','menu');
-  d.addEventListener('click',e=>{e.stopPropagation();fn();});
+  const d=iconBtn('kebab','Exercise actions',()=>fn());d.classList.add('dots');d.setAttribute('aria-haspopup','menu');
   return d;
 }
 function fillExerciseList(box,onPick,menu){
@@ -6044,11 +6067,7 @@ function arm(b,fn,label){
   });
   return b;
 }
-function armBtn(label,fn){
-  const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=label;
-  return arm(b,fn);
-}
-const textBtn=(label,fn)=>{const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=label;b.addEventListener('click',fn);return b;};
+function textBtn(label,fn,cls){const b=document.createElement('button');b.type='button';b.className=cls||'btn';b.textContent=label;b.addEventListener('click',fn);return b;}
 /* The Library page: the pad if it holds something unsaved, then every saved routine. */
 const libGrpOpen=new Set();   /* the groups that are open on the Library page */
 /* The ⋮ on a row opens a small menu: its items are buttons, and a destructive one asks for a second tap. */
@@ -6202,7 +6221,6 @@ const NEW={url:'',name:''};
 function renderLinks(){
   const box=$('lnkList');box.textContent='';
   if(lnkEdit&&lnkEdit!==NEW&&!S.lists.includes(lnkEdit))lnkEdit=null;
-  const mk=(t,f)=>{const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=t;b.addEventListener('click',f);return b;};
   const form=l=>{
     const row=document.createElement('div');row.className='lnk';
     const nm=document.createElement('input'),ur=document.createElement('input'),ac=document.createElement('div'),er=document.createElement('p');
@@ -6210,7 +6228,7 @@ function renderLinks(){
     nm.value=l.name||'';nm.placeholder=l===NEW?'Name (optional)':listName(l);nm.maxLength=60;nm.setAttribute('aria-label','Library name');
     ur.value=l.url;ur.inputMode='url';ur.maxLength=500;ur.setAttribute('aria-label','Library address');if(l===NEW)ur.placeholder='https://…';
     er.className='err';er.setAttribute('role','alert');ac.className='btns';
-    ac.append(mk(l===NEW?'Add':'Update',()=>{
+    ac.append(textBtn(l===NEW?'Add':'Update',()=>{
       const u=httpUrl(ur.value.trim());
       if(!u){er.textContent=URL_HINT;return;}
       if((l===NEW||u.href!==l.url)&&S.lists.some(q=>q.url===u.href)){er.textContent='That address is already in the list.';return;}
@@ -6223,7 +6241,7 @@ function renderLinks(){
         if(u.href!==l.url){l.url=u.href;delete l.items;l.t=0;lib={items:[],loaded:false,busy:false,cur:''};}
       }
       lnkEdit=null;save();renderLibrary();
-    }),mk('Cancel',()=>{lnkEdit=null;renderLinks();}));
+    }),textBtn('Cancel',()=>{lnkEdit=null;renderLinks();}));
     row.append(nm,ur,ac,er);
     setTimeout(()=>(l===NEW?ur:nm).focus(),0);
     return row;
@@ -6238,7 +6256,7 @@ function renderLinks(){
     box.appendChild(inner);
   });
   if(lnkEdit===NEW)box.appendChild(form(NEW));
-  else{const ab=document.createElement('div');ab.className='btns';ab.appendChild(mk('Add a link',()=>{lnkEdit=NEW;renderLinks();}));box.appendChild(ab);}
+  else{const ab=document.createElement('div');ab.className='btns';ab.appendChild(textBtn('Add a link',()=>{lnkEdit=NEW;renderLinks();}));box.appendChild(ab);}
 }
 function renderLibrary(){
   renderLinks();
@@ -6420,51 +6438,51 @@ function playsFor(){return ' · plays for '+(S.eachUnit==='pass'?S.eachVal+(S.ea
 function playTime(list){let t=0;list.forEach(b=>{t+=b.secs;});return t+(list.length>1?list.length-1:0)*S.gap*(60/S.bpm)+4*(60/S.bpm);}
 /* Set up: a Mic check (it opens the microphone and records the room noise) and latency calibrated. Start waits for both. A keyboard needs none of them. */
 const setupNeeded=()=>S.input==='mic'&&!(S.noise!==null&&S.latCal);
-let setupWas=false,setupTimer=0;
+let welcome=false,welcomeAgain=false;   /* the welcome is open: from a first visit (or a cleared device) until Start practising, or when Help shows it again (welcomeAgain) */
 function syncSetup(){
   const box=$('setup'),need=setupNeeded();
-  if(!need){
-    if(setupWas){   /* the last step just finished: say so for a few seconds */
-      setupWas=false;box.hidden=false;
-      $('setN').textContent='';$('setSteps').textContent='';
-      const m=document.createElement('li');m.textContent='You\u2019re all set and ready to groove! Pick a routine and press Start.';m.style.fontWeight='700';$('setSteps').appendChild(m);
-      clearTimeout(setupTimer);setupTimer=setTimeout(()=>{box.hidden=true;setupTimer=0;},6000);
-    }else if(!setupTimer)box.hidden=true;
-    return;
-  }
-  setupWas=true;clearTimeout(setupTimer);setupTimer=0;box.hidden=false;
+  if(need)welcome=true;
+  box.hidden=!welcome;
+  document.body.dataset.welcome=welcome?'1':'';
+  placeStatus();
+  if(!welcome)return;
   const steps=[
-    {done:S.noise!==null,ok:'Mic check done',label:'Mic check: stay quiet for two seconds, then hit the pad twelve times.',go:toggleCheck,btn:chk?'Cancel check':'Mic check',msg:()=>$('micMsg').textContent||$('chkMsg').textContent},
-    {done:S.latCal,ok:'Latency set',label:'Calibrate latency. It plays clicks for about 20 seconds, so keep quiet.',go:startLoop,btn:loop?'Cancel':'Auto calibrate',skip:loop?null:()=>{loop&&endLoop('');markCal();setStatus('Latency calibration skipped. Set it by hand in Settings, under Device, if clicks and hits seem off.');},msg:()=>$('latMsg').textContent}
+    {done:S.noise!==null,ok:'Mic check done',name:'Mic check.',label:'Your browser asks to use the microphone. Then stay quiet for two seconds and hit the pad twelve times, so Pocket learns how loud your room and your strokes are.',go:toggleCheck,btn:chk?'Cancel check':'Mic check',msg:()=>$('micMsg').textContent||$('chkMsg').textContent},
+    {done:S.latCal,ok:'Latency set',name:'Latency.',label:'Your device hears sound a little late. Pocket plays clicks through the speakers for about 20 seconds and times when the microphone hears them, so keep quiet and do not play.',go:startLoop,btn:loop?'Cancel':'Auto calibrate',skip:loop?null:()=>{loop&&endLoop('');markCal();setStatus('Latency calibration skipped. Set it by hand in Settings, under Device, if clicks and hits seem off.');},msg:()=>$('latMsg').textContent}
   ];
   const list=$('setSteps');list.textContent='';
   let cur=-1;
   steps.every((st,i)=>{
     const li=document.createElement('li');
     if(st.done){li.className='ok';li.textContent=st.ok;list.appendChild(li);return true;}
+    if(!need){li.className='na';li.textContent=st.name.replace('.','')+': not needed with keyboard input';list.appendChild(li);return true;}
     cur=i;
-    const t=document.createElement('span');t.textContent=st.label;
-    const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=st.btn;b.addEventListener('click',st.go);
-    const sk=st.skip?document.createElement('button'):null;
-    if(sk){sk.type='button';sk.className='btn';sk.textContent='Skip';sk.addEventListener('click',st.skip);}
+    const t=document.createElement('span'),nm=document.createElement('b');nm.textContent=st.name;t.append(nm,' '+st.label);
     const m=document.createElement('p');m.className='hint';m.setAttribute('aria-live','polite');m.textContent=st.msg();
-    const bt=document.createElement('div');bt.className='btns';bt.append(b);if(sk)bt.append(sk);
+    const bt=document.createElement('div');bt.className='btns';bt.append(textBtn(st.btn,st.go,'btn primary'));if(st.skip)bt.append(textBtn('Skip',st.skip));
     li.append(t,bt,m);list.appendChild(li);return false;
   });
-  $('setN').textContent=cur<0?'':'· step '+(cur+1)+' of 2';
+  if(cur<0){   /* every step is done: one button leads on to the Play page */
+    const li=document.createElement('li');li.className='all';
+    const t=document.createElement('span');t.textContent='You\u2019re all set. The loaded exercise is a good first one: press Start, listen to the count-in and play on the moving line.';
+    const bt=document.createElement('div');bt.className='btns';bt.append(textBtn('Start practising',closeWelcome,'btn primary'));
+    li.append(t,bt);list.appendChild(li);
+  }
+  $('setN').textContent=cur<0?'':'\u00b7 step '+(cur+1)+' of 2';
 }
+function closeWelcome(){welcome=false;welcomeAgain=false;syncSetup();scrollTo(0,0);$('startBtn').focus({preventScroll:true});}
+function showWelcome(){welcome=true;welcomeAgain=true;showTab('play');syncSetup();scrollTo(0,0);$('setTtl').tabIndex=-1;$('setTtl').focus();}
 const setupWatch=new MutationObserver(()=>syncSetup());
 function syncInfo(){
   syncSetup();syncPlayName();syncEditorBar();
   const exercises=currentExercises();
+  let ok;   /* there is something to play */
   if(S.mode==='single'){
-    const e0=routineParsed.exercises[0],res=parseExerciseLine(e0&&e0.line!=null?bLines()[e0.line]:bGet()),ok=!!(res&&res.exercise);
+    const e0=routineParsed.exercises[0],res=parseExerciseLine(e0&&e0.line!=null?bLines()[e0.line]:bGet());ok=!!(res&&res.exercise);
     $('patErr').textContent=ok?'':(res&&res.err?'Check the sticking: '+res.err+'.':'');     /* a plain "too short" shows in the status line instead */
-    $('startBtn').disabled=(!ok||setupNeeded())&&!(run&&!run.ended);
   }else{
     const all=allExercises(),n=all.length;
-    const ok=exercises.length>0;
-    $('startBtn').disabled=(!ok||setupNeeded())&&!(run&&!run.ended);
+    ok=exercises.length>0;
     const errs=routineParsed.errors;
     $('routineErr').textContent=n===0&&!S.routineText.trim()?'':(errs.length?errs.slice(0,3).join(' ')+(errs.length>3?' (+'+(errs.length-3)+' more)':''):(n===0?'No exercises found. Type one exercise per line using L and R.':''));
     const total=playTime(exercises);
@@ -6477,11 +6495,11 @@ function syncInfo(){
     $('eachVal').disabled=!!routineParsed.each||(run&&!run.ended);
     $('eachUnit').disabled=!!routineParsed.each||(run&&!run.ended);
   }
+  $('startBtn').disabled=(!ok||setupNeeded())&&!(run&&!run.ended);   /* while set-up is needed the welcome hides Start; disabled still stops the Space shortcut */
   const sum=$('playSummary');
   if(!exercises.length)sum.textContent=S.mode==='single'?'Type an exercise in the editor, then press Start.':'Add some exercises in the editor, then press Start.';
   else if(S.mode==='single'){const b=exercises[0];sum.textContent=S.bpm+' BPM'+pulseNote(exercises)+playsFor();}
   else{const g=routineGuide();sum.textContent=g?'Routine cleared at '+g.split(' at ')[1]:'';}
-  if(setupNeeded()&&!(run&&!run.ended))sum.textContent='Finish set up to start: '+(S.noise===null?'run the mic check.':'calibrate latency, or skip it.');   /* a disabled Start always says why */
   {const b=exercises[0];$('playPat').textContent=exercises.length&&S.mode==='single'?showPattern(b.notes,b.groupStart,b.subs,b.defSub,b.sig,b.src):'';}
   $('bpmOut').textContent=S.bpm+' BPM';
   {   /* what the closed Settings drawer holds, so a setting that matters is never hidden */
@@ -6975,6 +6993,7 @@ function wire(){
   $('libAll').addEventListener('click',importAll);
   $('exportLib').addEventListener('click',exportLibrary);
   ['micMsg','chkMsg','latMsg'].forEach(id=>setupWatch.observe($(id),{childList:true,characterData:true,subtree:true}));
+  $('welcomeAgain').addEventListener('click',showWelcome);
   $('setBox').addEventListener('toggle',syncInfo);
   $('libSel').addEventListener('change',()=>{const v=$('libSel').value;if(v==='+'){libMode='add';$('libErr').textContent='';lib={items:[],loaded:false,busy:false,cur:''};renderLibrary();$('libraryUrl').focus();}else pickList(v);});
   $('libraryUrl').addEventListener('input',()=>{suggestName();renderLibrary();});
