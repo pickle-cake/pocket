@@ -4,6 +4,12 @@ A timing coach for drummers practising on a pad. It plays a click, listens to ea
 
 **Open it:** https://pickle-cake.github.io/pocket/
 
+## Licence
+
+Copyright (C) 2026 the Pocket contributors.
+
+Pocket is free software under the GNU General Public License, version 3 or any later version: see [LICENSE](LICENSE). The code was written with AI, which learned from the work of countless people who shared theirs freely. It is shared in that spirit, and it stays that way: you may use, change and share it, and anything built from it must be shared under the same licence, with its source.
+
 ## Tests
 
 `npm install`, `npx playwright install chromium`, then `npm test`. The core and library checks need only Node and run in a second; the browser tests take about a minute. The tests read `index.html` and `routines/*.txt` as they are, and use no book content. `npm run test:webkit` runs the browser tests in WebKit, Safari's engine, as an iPhone (`npx playwright install webkit` first). Pull requests run it in CI. It does not replace checking on a real iPhone: no test can play a pad into a phone's microphone.
