@@ -131,6 +131,25 @@ test('a fresh app starts on 8 passes at 40 BPM with the Easy click; saved settin
   assert.deepEqual(await kept.evaluate(() => { const S = window.__T.S(); return [S.click, S.eachUnit, S.eachVal, S.bpm]; }), ['beat', 'min', 2, 90]);
 });
 
+test('the tempo steps by 10 and 1, stops at 40 and 220, and fits beside a usable slider on a phone', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, bpm: 40 }, { width: 390, height: 844 });
+  const bpm = () => p.evaluate(() => window.__T.S().bpm);
+  await p.click('#bpmUp10'); await p.click('#bpmUp10');
+  assert.equal(await bpm(), 60, 'two taps from 40 to 60');
+  await p.click('#bpmDown'); assert.equal(await bpm(), 59);
+  await p.click('#bpmUp'); assert.equal(await bpm(), 60);
+  await p.click('#bpmDown10'); await p.click('#bpmDown10'); await p.click('#bpmDown10');
+  assert.equal(await bpm(), 40, 'never below 40');
+  await p.evaluate(() => { const s = document.getElementById('bpm'); s.value = 215; s.dispatchEvent(new Event('input')); });
+  await p.click('#bpmUp10'); assert.equal(await bpm(), 220, 'never above 220');
+  assert.equal(await p.inputValue('#bpm'), '220');
+  const w = await p.evaluate(() => ({ slider: document.getElementById('bpm').getBoundingClientRect().width, page: document.documentElement.scrollWidth, btn: ['bpmDown10', 'bpmDown', 'bpmUp', 'bpmUp10'].map(id => document.getElementById(id).getBoundingClientRect()).map(r => Math.min(r.width, r.height)) }));
+  assert.ok(w.slider >= 100, 'slider still usable: ' + w.slider);
+  assert.ok(w.btn.every(x => x >= 44), 'buttons are 44px targets: ' + w.btn);
+  assert.ok(w.page <= 390, 'no sideways scroll');
+  assert.deepEqual(p.errors, []);
+});
+
 test('the microphone level slider moves its trigger line', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, sens: -30 });
   await p.click('#tabSetup');
@@ -345,7 +364,7 @@ async function runOnce(settings, practice, init) {
   const out = await p.evaluate(() => ({
     saved: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).map(r => r.lv),
     text: document.getElementById('advice').innerText,
-    discard: !document.getElementById('advDiscRow').hidden,
+    discard: !document.getElementById('advDiscard').hidden,
     badge: document.getElementById('advBadge').hidden ? '' : document.getElementById('advBadge').innerText,
     days: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).sum || {}).days || {},
   }));
@@ -409,6 +428,53 @@ audioTest('Stop cancels the clicks already queued, even where a second stop() is
   });
   assert.ok(left.queued > 0, 'clicks were queued ahead when Stop was pressed: ' + left.queued);
   assert.equal(left.audible, 0, 'none of them can still sound');
+  assert.deepEqual(p.errors, []);
+});
+
+audioTest('the whole count-in is queued at Start, and clicks queued late are logged', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL RLRL', eachUnit: 'pass', eachVal: 4, click: 'strokes', seeded: true }, null, () => {
+    const starts = window.__starts = [], start = OscillatorNode.prototype.start;
+    OscillatorNode.prototype.start = function (when) { starts.push(when || 0); return start.apply(this, arguments); };
+  });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  const ci = await p.evaluate(() => { const r = window.__T.run(), first = r.plan.segs[0].t0, cin = r.plan.clicks.filter(c => c.t < first - 1e-6); return { cin: cin.length, queued: window.__starts.filter(t => cin.some(c => Math.abs(r.t0 + c.t - t) < 1e-6)).length, span: first }; });
+  assert.ok(ci.cin >= 4 && ci.span > 0.35, 'a count-in longer than the lookahead: ' + JSON.stringify(ci));
+  assert.equal(ci.queued, ci.cin, 'every count-in click is queued at Start');
+  /* the page goes busy for 0.8 s in the middle of the run: clicks are dropped or late, and the log says so */
+  await p.waitForFunction(() => window.__T.ctx().currentTime > window.__T.run().t0 + window.__T.run().plan.segs[0].t0 + 0.5, null, { timeout: 8000 });
+  await p.evaluate(() => { const end = performance.now() + 800; while (performance.now() < end); });
+  await p.waitForTimeout(400);
+  await press(p, /^Stop/);
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 5000 });
+  const d = await p.evaluate(() => JSON.parse(localStorage.getItem('stick-timing-trainer.v1')).settings.clockLog[0]);
+  assert.ok(d.clicks > 4, 'clicks counted: ' + d.clicks);
+  assert.ok(d.late + d.lost > 0 && d.worst > 100, 'the busy page shows in the log: ' + JSON.stringify(d));
+  assert.match(await p.textContent('#clkMsg'), /The page fell behind/);
+  assert.deepEqual(p.errors, []);
+});
+
+audioTest('every Start and Again plays on a fresh audio setup, as a refresh would', async () => {
+  const p = await open({ input: 'kb', bpm: 200, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true });
+  const play = async re => {
+    await press(p, re);
+    await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && !window.__T.run().ended, null, { timeout: 8000 });
+    await p.evaluate(() => { window.__ctxs = (window.__ctxs || []).concat(window.__T.ctx()); });
+    await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } })); });
+    await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 20000 });
+    await p.waitForTimeout(300);
+  };
+  await play(/^Start$/);
+  await play(/^Again$/);
+  await play(/^Again$/);
+  const o = await p.evaluate(() => ({
+    distinct: new Set(window.__ctxs).size,
+    closed: window.__ctxs.slice(0, -1).every(c => c.state === 'closed'),
+    runs: JSON.parse(localStorage.getItem('stick-timing-trainer.v1')).settings.clockLog.slice(0, 3).map(d => d.runs),
+  }));
+  assert.equal(o.distinct, 3, 'three runs, three audio setups');
+  assert.equal(o.closed, true, 'the old ones are closed, not left running');
+  assert.deepEqual(o.runs, [1, 1, 1], 'the timing log shows each run on its own setup');
   assert.deepEqual(p.errors, []);
 });
 
@@ -586,8 +652,9 @@ audioTest('a scored run shows its score against the maximum, flags a new high sc
   assert.ok(!o.solo);
   assert.match(o.prev, /^First score on Hard at ±20 ms$/);
   assert.equal(await p.evaluate(() => document.querySelector('#advRes .slab').textContent), 'Score');
-  const bd = await p.evaluate(() => ({ shown: !document.getElementById('scoreBox').hidden, on: document.getElementById('bOn').textContent, note: document.getElementById('scoreNote').textContent, discardOutside: !document.querySelector('#detBox #advDiscard') && !!(document.getElementById('detBox').compareDocumentPosition(document.getElementById('advDiscard')) & Node.DOCUMENT_POSITION_FOLLOWING) }));
-  assert.ok(bd.shown); assert.match(bd.on, /^\d+$/); assert.match(bd.note, /Hard: 10 points on time/); assert.ok(bd.discardOutside, 'Discard sits under the Details section, not inside it');
+  const bd = await p.evaluate(() => ({ shown: !document.getElementById('scoreBox').hidden, on: document.getElementById('bOn').textContent, note: document.getElementById('scoreNote').textContent, row: [...document.getElementById('advBtns1').children].filter(b => !b.hidden).map(b => b.id) }));
+  assert.ok(bd.shown); assert.match(bd.on, /^\d+$/); assert.match(bd.note, /Hard: 10 points on time/);
+  assert.deepEqual(bd.row, ['advDiscard', 'advDone', 'advAgain'], 'Discard, Done and Again share one row');
   const p0 = await runOnce({ click: 'half' }, true);
   assert.doesNotMatch(p0.text, /high score/i, 'a practice run is not scored');
 });
@@ -717,9 +784,42 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
   await p.waitForTimeout(300);
   assert.equal(await libN(), n0 + 1, 'the routine joins the library');
-  await p.evaluate(() => { const d = document.getElementById('advDiscard'); d.click(); d.click(); });
+  const runsN = () => p.evaluate(() => (JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || { runs: [] }).runs.length);
+  await p.click('#advDiscard');
+  assert.equal(await p.textContent('#advDiscard'), 'Tap again to discard');
+  assert.equal(await runsN(), 1, 'one tap only arms it');
+  await p.click('#advDiscard');
   await p.waitForTimeout(300);
   assert.equal(await libN(), n0, 'discarding takes it back out');
+  assert.equal(await runsN(), 0);
+  assert.equal(await p.evaluate(() => document.body.dataset.state), 'idle', 'back to the start screen');
+  assert.match(await p.textContent('#status'), /^Run discarded\./);
+  await p.click('#status >> text=Undo');
+  await p.waitForTimeout(300);
+  assert.equal(await runsN(), 1, 'Undo puts the run back');
+  assert.equal(await libN(), n0 + 1, 'and the routine saved with it');
+  assert.equal(await p.evaluate(() => document.body.dataset.state), 'done', 'and shows the result again');
+  assert.equal(await p.isVisible('#advDiscard'), true);
+  assert.deepEqual(p.errors, []);
+});
+
+audioTest('the result\'s actions are in view without scrolling, in one row of equal height, on a phone and on desktop', async () => {
+  for (const size of [{ width: 390, height: 844 }, { width: 1280, height: 900 }]) {
+    const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 2, seeded: true }, size);
+    await press(p, /^Start/);
+    await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+    await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.slice(0, 6).forEach(s => T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } })); });
+    await p.waitForFunction(() => window.__T.ctx().currentTime > window.__T.run().t0 + window.__T.run().plan.slots[6].t, null, { timeout: 10000 });
+    await press(p, /^Stop/);   /* stopped early, after a few strokes: the case where Discard is wanted at once */
+    await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 5000 });
+    await p.waitForTimeout(500);
+    const b = await p.evaluate(() => ['advDiscard', 'advDone', 'advAgain'].map(id => { const r = document.getElementById(id).getBoundingClientRect(); return { id, top: r.top, bottom: r.bottom, h: Math.round(r.height), w: r.width }; }));
+    for (const x of b) assert.ok(x.top >= 0 && x.bottom <= size.height && x.w > 0, size.width + 'px: ' + x.id + ' is in view: ' + JSON.stringify(x));
+    assert.equal(new Set(b.map(x => x.h)).size, 1, size.width + 'px: the same height: ' + JSON.stringify(b));
+    assert.ok(b[0].bottom <= b[1].top + 1 || Math.abs(b[0].top - b[1].top) < 1, 'one row');
+    assert.ok(b[2].w > b[1].w, 'Again is the widest');
+    assert.deepEqual(p.errors, []);
+  }
 });
 
 test('changing the on-time window updates the routine\'s Max score at once', async () => {
