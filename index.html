@@ -118,7 +118,6 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .tc .tempo{grid-template-columns:36px 1fr 36px;gap:4px}
 .tc .tempo .btn{min-width:0;width:36px}
 #clickPanel{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}   /* the click level needs the wider column */
-#advBtns2{margin-top:0}
 #lsInfo{flex:1}
 .err{color:var(--danger);font-size:13px;margin:0;min-height:0}
 .panel>p:empty,.panel>ul:empty{display:none}   /* empty message slots would add a grid gap each */
@@ -1303,7 +1302,6 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run the app names the weak exercises and suggests staying at that tempo until they settle. Any tempo is always allowed.</li>
         <li><b>Discard this run</b> removes it from your records, for example after a bad microphone read.</li>
         <li><b>Progress page:</b> every exercise, sorted by accuracy, with accuracy at your last tempo, trend and early/late bias, grouped by click level. Play loads that exercise. A routine is cleared at a tempo when one run covered every exercise and all reached 90%.</li>
-        <li><b>Practise weak exercises:</b> after a routine run, this plays only the exercises below target. Restart repeats the same ones. A partial run never counts as clearing the routine.</li>
         <li><b>Tempo guidance:</b> each exercise in the start list shows the tempo it has cleared, or "new". The summary shows where the whole routine has been cleared.</li>
         <li><b>Staff of a run:</b> each run keeps the result of every stroke. A run's page has a <b>Staff</b> group showing the notation with each stroke coloured and read out, and the Play page rebuilds its review from the same record.</li>
         <li><b>History:</b> on the Progress page, switch to History for your last 300 runs, by exercise or routine, newest first. Tap a group for its runs and a run for its exercises. <b>Play</b> loads the same routine, tempo, click level and settings, ready to start. <b>Delete</b> deletes the run. The ⋮ beside an exercise deletes just that exercise from the run, for one that was in the editor by mistake. An exercise nothing was heard in is listed as not played and is never scored. An untitled routine is called "Untitled 1", "Untitled 2" and so on. The pencil renames it everywhere, and a title typed in the editor replaces it. Runs beyond 300 are folded into your totals, streaks, achievements and cleared tempos, which are kept for good, but they can no longer be replayed.</li>
@@ -1487,9 +1485,6 @@ RLRR LRLL RLRR LRLL</pre>
       </div>
       <p class="insight" id="advHead"></p>
       <p class="hint" id="advBody"></p>
-      <div class="btns" id="advBtns2">
-        <button class="btn link" id="advWeak" type="button" hidden></button>
-      </div>
       <div class="btns advmain" id="advBtns1">
         <button class="btn danger" id="advDiscard" type="button" hidden>Discard</button>
         <button class="btn" id="advDone" type="button" hidden>Done</button>
@@ -2714,7 +2709,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.65';                           /* shown beside the title */
+const VERSION='1.5.66';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -3253,11 +3248,11 @@ function currentExercises(){
 }
 
 /* ---------- session engine ---------- */
-function beginRun(mode,only){
+function beginRun(mode){
   closeListen();
   const lat=mode==='lat';
   const latNotes='RLRLRLRLRLRLRLRL'.split('');
-  const exercises=lat?[{idx:1,notes:latNotes,groupStart:latNotes.map((_,i)=>i%4===0),subs:latNotes.map(()=>2),defSub:2,bpm:75,passBeats:8,passes:LAT.rounds,secs:6.4*LAT.rounds,passSecs:6.4,own:true}]:(only?allExercises().filter(b=>only.includes(b.idx)):currentExercises());
+  const exercises=lat?[{idx:1,notes:latNotes,groupStart:latNotes.map((_,i)=>i%4===0),subs:latNotes.map(()=>2),defSub:2,bpm:75,passBeats:8,passes:LAT.rounds,secs:6.4*LAT.rounds,passSecs:6.4,own:true}]:currentExercises();
   if(!exercises.length)return;
   const plan=buildPlan(exercises,{gapBeats:S.gap,clickMode:lat?'note':S.click,dyn:lat?null:dynOpt()});
   const r={
@@ -3267,8 +3262,8 @@ function beginRun(mode,only){
     fin:new Set(),paused:false,ci:null,dyc:lat?'':dynCode(),dyl:[],
     seg:plan.segs.map(sg=>({errs:[],lv:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,checked:0,bad:0,sc:[],sm:[],sb:[],sy:[],sw:[],ev:[],da:0,dg:0,
       posSum:new Array(sg.N).fill(0),posCnt:new Array(sg.N).fill(0)})),
-    dirty:true,ended:false,totalExercises:routineParsed.exercises.length,only:only||null,
-    startExercise:only?Math.min.apply(null,only):(S.mode==='routine'?S.startExercise:1)
+    dirty:true,ended:false,totalExercises:routineParsed.exercises.length,
+    startExercise:S.mode==='routine'?S.startExercise:1
   };
   if(audioFresh){r.t0+=0.4;audioFresh=false;}
   run=r;ctxRuns++;pushDet();initLive(r);
@@ -3462,9 +3457,9 @@ function restartRun(){
   stopLoops();
   r.ended=true;unlockScreen();
   $('bigCount').hidden=true;
-  beginRun('play',r.only);
+  beginRun('play');
 }
-/* Starts a practice run. With a list of exercise numbers it plays only those exercises. */
+/* Starts a practice run. */
 /* At Start on a phone the page scrolls so the score box is at the top of the window, with the staff and the run controls under it. On desktop, where there is room, or without a score box, it goes to the top of the page. It returns whether the page was scrolled.
    The run layout hides most of the page, and phone browsers then pull the scroll position back on their own and cancel a smooth scroll, so this jumps and jumps again once the page has settled, measuring each time. */
 function revealStaff(){
@@ -3475,16 +3470,16 @@ function revealStaff(){
   go();requestAnimationFrame(()=>{go();requestAnimationFrame(go);});setTimeout(go,120);setTimeout(go,400);
   return true;
 }
-async function startPlay(only){
+async function startPlay(){
   if(loop)endLoop('Auto calibrate cancelled.');
   if(calTest)endHandTest('');
   if(calMode){calMode=null;updateCalUI();}
-  if(!(only||currentExercises()).length||setupNeeded())return;
+  if(!currentExercises().length||setupNeeded())return;
   if(welcome){welcome=false;syncSetup();}   /* set up and starting: the welcome has done its job */
   showTab('play');
   setStatus('Starting…');
   if(!(await ensureAudio(S.input==='mic')))return;
-  beginRun('play',only);
+  beginRun('play');
 }
 function stopRun(){
   const r=run;if(!r||r.ended)return;
@@ -4575,7 +4570,7 @@ function exerciseGuide(sg){
 function replaySnap(r){
   const x=setHeader(S.routineText,'title','');     /* the name is kept once, by routine, not in each run */
   if(typeof x!=='string'||!x||x.length>MAX_SNAP)return undefined;
-  return {x:x,st:S.startExercise,ev:S.eachVal,eu:S.eachUnit,gp:S.gap,o:r.only||null};
+  return {x:x,st:S.startExercise,ev:S.eachVal,eu:S.eachUnit,gp:S.gap};
 }
 function dynSaved(r,si){   /* accents and ghost notes judged in this exercise: how many, how many were clear, and how even they were */
   const o={};
@@ -4621,7 +4616,7 @@ function recordRun(r){
   if(!scoreOn){const dk=dayKey(run.t);recs.sum.days[dk]=(recs.sum.days[dk]||0)+run.sec;}   /* the time of a practice run still counts toward today and the streak */
   const saved=saveRecs();
   if(scoreOn)askPersist();
-  lastRun={run:run,autoLib:autoLib,only:r.only||null,prevBest:prevBest,newTempo:newTempo,won:won,rows:rows,skipped:skipped,saved:saved,practice:!scoreOn,score:score,share0:share0,hsNew:scoreOn&&score>hs0};
+  lastRun={run:run,autoLib:autoLib,prevBest:prevBest,newTempo:newTempo,won:won,rows:rows,skipped:skipped,saved:saved,practice:!scoreOn,score:score,share0:share0,hsNew:scoreOn&&score>hs0};
 }
 /* After a run the score is brought into view. The run layout is still being undone, so the jump repeats once the page has settled. */
 function showResult(){
@@ -4699,9 +4694,6 @@ function renderAdvice(){
   if(!L.saved)body+=' Your browser would not save the records.';
   if(L.practice)body='Practice run, not saved. Your time still counts today. '+body;
   $('advHead').textContent=fix;$('advBody').textContent=body;
-  L.weakIdx=adv.weak.map(b=>b.idx);
-  $('advWeak').hidden=S.mode!=='routine'||!L.weakIdx.length;
-  $('advWeak').textContent=L.weakIdx.length===1?'Practise exercise '+L.weakIdx[0]+' only':'Practise the '+L.weakIdx.length+' weak exercises';
 }
 /* Discard takes the run out of your records and goes back to the start, as Done does: a discarded run has nothing
    left to review. Undo in the status line puts the run, and a routine saved with it, back and shows the result again. */
@@ -7069,12 +7061,11 @@ function syncLayout(){
   placeAdv();
   if(!first)window.dispatchEvent(new Event('resize'));
 }
-/* On desktop the result's actions (Discard, Done, Again) sit where Start was; on a phone they are fixed to the bottom.
-   Practise stays under the advice in both, since it acts on that advice. */
+/* On desktop the result's actions (Discard, Done, Again) sit where Start was; on a phone they are fixed to the bottom. */
 function placeAdv(){
   const a=$('advBtns1');if(!a)return;
   if(document.documentElement.dataset.layout==='desktop')$('advBar').append(a);
-  else $('advBtns2').after(a);
+  else $('advBody').after(a);
 }
 function applyTheme(){
   const d=S.theme==='dark',b=$('themeBtn');
@@ -7160,7 +7151,7 @@ function wire(){
     if(run&&!run.ended)return;
     guard(()=>{setRoutineText(b.dataset.text);showTab('play');window.scrollTo(0,0);});
   }));
-  $('advAgain').addEventListener('click',()=>startPlay(lastRun&&lastRun.only||undefined));
+  $('advAgain').addEventListener('click',()=>startPlay());
   $('advDone').addEventListener('click',()=>{lastRun=null;refreshPreview();renderAdvice();setReview(false);window.scrollTo(0,0);});   /* done with these results: back to the start screen, the run stays in History */
   arm($('advDiscard'),discardRun);
   $('svBtnPref').addEventListener('click',()=>setSview('pref'));
@@ -7217,7 +7208,6 @@ function wire(){
     startPlay();
   });
   $('editPlay').addEventListener('click',editFromPlayPage);
-  $('advWeak').addEventListener('click',()=>{if(lastRun)startPlay(lastRun.weakIdx);});
   TABS.forEach(n=>{
     const b=tabEl(n);
     b.addEventListener('click',()=>showTab(n));
