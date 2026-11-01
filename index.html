@@ -900,7 +900,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
   <!-- ===== Library: your saved routines, and where routines come from ===== -->
   <div class="page" id="pageLibrary" role="tabpanel" aria-labelledby="tabLibrary" hidden>
     <section class="libsec" aria-label="Your routines">
-      <div class="lhead"><div class="seg hfilter" role="group" aria-label="Sort by"><button class="on" id="lsRecent" type="button" aria-pressed="true">Recent</button><button id="lsName" type="button" aria-pressed="false">Name</button></div><div class="btns"><button class="btn" id="clearRoutine" type="button">New</button><button class="btn" id="openBtn" type="button">Import</button><button class="btn" id="exportLib" type="button">Export</button></div></div>
+      <div class="lhead"><div class="seg hfilter" role="group" aria-label="Sort by"><button class="on" id="lsName" type="button" aria-pressed="true">Name</button><button id="lsRecent" type="button" aria-pressed="false">Recent</button></div><div class="btns"><button class="btn" id="clearRoutine" type="button">New</button><button class="btn" id="openBtn" type="button">Import</button><button class="btn" id="exportLib" type="button">Export</button></div></div>
       <p class="hint" id="libMsg" aria-live="polite"></p>
       <div class="hist" id="libPage"></div>
       <div id="libEmpty" hidden></div>
@@ -2735,7 +2735,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.72';                           /* shown beside the title */
+const VERSION='1.5.73';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -4379,7 +4379,7 @@ function goExercise(i,animate){
   markExercises(null);previewRows(animate);syncInfo();
 }
 const TABS=['play','library','progress','setup'];
-let editFrom='play',libSort='recent';
+let editFrom='play',libSort='name';   /* the Library opens sorted by name */
 const tabEl=n=>$('tab'+n[0].toUpperCase()+n.slice(1));
 /* The Editor is a full-screen view, not a tab. Back returns to the page that opened it. */
 function openEditor(from){
