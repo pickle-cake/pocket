@@ -6,6 +6,7 @@
     "test": "node --test tests/*.test.js",
     "test:core": "node --test tests/core.test.js tests/libraries.test.js tests/style.test.js tests/lint.test.js",
     "test:browser": "node --test tests/browser.test.js tests/a11y.test.js",
+    "test:webkit": "node --test tests/webkit.js",
     "lint": "eslint . && html-validate index.html",
     "style:baseline": "node tests/style.js --update"
   },

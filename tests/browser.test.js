@@ -2,30 +2,43 @@
    feed it hits at exact times instead of playing. Nothing is changed on disk. */
 const test = require('node:test'), assert = require('node:assert/strict');
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
-const { chromium } = require('playwright');
+const playwright = require('playwright');
+/* Chromium by default. `npm run test:webkit` runs the same tests in WebKit, Safari's engine, as an iPhone 13 at
+   phone widths: touch, a mobile user agent and a 3x screen. It is not iOS Safari, but it catches engine differences. */
+const ENGINE = process.env.POCKET_ENGINE || 'chromium';
+const contextFor = viewport => Object.assign(ENGINE === 'webkit' && viewport.width < 720 ? { ...playwright.devices['iPhone 13'] } : {}, { viewport });
 const { ROOT, html } = require('./helpers');
 
 const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo()};let heardTimer=0;');
 assert.ok(page !== html, 'the test hook did not attach: has handleHit moved?');
 
-let server, base, browser;
+let server, base, browser, served = 0;
 test.before(async () => {
   server = http.createServer((req, res) => {
     const u = req.url.split('?')[0];
-    if (u === '/' || u === '/index.html') { res.setHeader('content-type', 'text/html'); return res.end(page); }
+    if (u === '/' || u === '/index.html') { res.setHeader('content-type', 'text/html'); res.setHeader('x-served', String(++served)); return res.end(page); }   /* x-served counts, so a test can tell the server from a cache */
     const f = path.join(ROOT, u);
-    if (f.startsWith(ROOT) && fs.existsSync(f) && fs.statSync(f).isFile()) return res.end(fs.readFileSync(f));
+    if (f.startsWith(ROOT) && fs.existsSync(f) && fs.statSync(f).isFile()) { if (f.endsWith('.js')) res.setHeader('content-type', 'text/javascript'); return res.end(fs.readFileSync(f)); }   /* a service worker must be served as JavaScript */
     res.statusCode = 404; res.end();
   });
   await new Promise(r => server.listen(0, r));
   base = 'http://localhost:' + server.address().port + '/';
-  browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  /* Chromium gets a fake microphone that is allowed without asking, so tests can open it. WebKit has no such switch. */
+  browser = await playwright[ENGINE].launch(ENGINE === 'chromium' ? { args: ['--autoplay-policy=no-user-gesture-required', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } : {});
 });
 test.after(async () => { await browser.close(); server.close(); });
 
+/* Tests that play a run need Web Audio. Playwright's WebKit for Windows has none, so there they are skipped. */
+const audioTest = process.env.POCKET_NO_AUDIO ? (name, fn) => test(name, { skip: 'no Web Audio in this WebKit build; CI runs it on Linux' }, fn) : test;
+
+const micTest = ENGINE === 'chromium' ? test : (name, fn) => test(name, { skip: 'needs a fake microphone, which only Chromium has' }, fn);
+
+/* Presses the visible button whose text matches, as a real tap: WebKit only lets audio start from one. */
+const press = (p, re) => p.locator('button:visible').filter({ hasText: re }).first().click();
+
 /* A fresh browser profile, with settings put in storage before the app starts. */
 async function open(settings, size, init) {
-  const ctx = await browser.newContext({ viewport: size || { width: 390, height: 900 } });
+  const ctx = await browser.newContext(contextFor(size || { width: 390, height: 900 }));
   const p = await ctx.newPage();
   p.errors = [];
   p.on('pageerror', e => p.errors.push(e.message));
@@ -77,7 +90,7 @@ test('clearing Device setup brings the welcome back', async () => {
   assert.match(await p.textContent('#setSteps'), /Mic check/);
 });
 
-test('starting a run from the welcome closes it, so the results are not hidden', async () => {
+audioTest('starting a run from the welcome closes it, so the results are not hidden', async () => {
   const p = await open({ seeded: true, eachUnit: 'pass', eachVal: 1, bpm: 200 });
   await p.evaluate(() => { window.__T.S().input = 'kb'; window.__T.sync(); });   /* switched to keys part-way through set-up */
   assert.match(await p.textContent('#setSteps'), /not needed with keyboard input/);
@@ -85,6 +98,29 @@ test('starting a run from the welcome closes it, so the results are not hidden',
   await p.keyboard.press('Space');
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   assert.equal(await p.evaluate(() => document.body.dataset.welcome), '');
+  assert.deepEqual(p.errors, []);
+});
+
+micTest('cancelling Auto calibrate stops its clicks, so starting again does not stack them', async () => {
+  /* Count the short clicks Auto calibrate schedules, and forget each one once it is stopped or has played. */
+  const p = await open({ seeded: true, noise: -50 }, null, () => {
+    const live = window.__clicks = new Set(), start = AudioBufferSourceNode.prototype.start, stop = AudioBufferSourceNode.prototype.stop;
+    AudioBufferSourceNode.prototype.start = function () { if (this.buffer && Math.abs(this.buffer.duration - 0.012) < 0.001) {   /* Auto calibrate's 12 ms click, not the silent unlock sound */ live.add(this); this.addEventListener('ended', () => live.delete(this)); } return start.apply(this, arguments); };
+    AudioBufferSourceNode.prototype.stop = function () { live.delete(this); return stop.apply(this, arguments); };
+  });
+  const waiting = () => p.evaluate(() => window.__clicks.size);
+  const step = () => p.locator('#setSteps button.primary');
+  await step().click();   /* Auto calibrate */
+  await p.waitForFunction(() => window.__clicks.size >= 10, null, { timeout: 8000 });
+  const n = await waiting();
+  assert.ok(n >= 10, 'clicks scheduled: ' + n);
+  await step().click();   /* Cancel */
+  assert.equal(await waiting(), 0, 'cancelling stops every click still to come');
+  await step().click();   /* Auto calibrate again */
+  await p.waitForFunction(() => window.__clicks.size >= 10, null, { timeout: 8000 });
+  assert.ok(await waiting() <= n, 'starting again schedules one set, not two');
+  await step().click();
+  assert.equal(await waiting(), 0);
   assert.deepEqual(p.errors, []);
 });
 
@@ -106,6 +142,21 @@ test('the microphone level slider moves its trigger line', async () => {
   assert.deepEqual(p.errors, []);
 });
 
+test('after one visit the app opens without a connection, and a new version still arrives online', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true });
+  await p.evaluate(() => navigator.serviceWorker.ready);
+  await p.waitForFunction(async () => !!(await caches.match('./')), null, { timeout: 8000 });
+  await p.context().setOffline(true);
+  await p.reload();
+  await p.waitForTimeout(400);
+  assert.equal(await p.title(), 'Pocket - your pad practice coach');
+  assert.equal(await p.evaluate(() => document.body.dataset.welcome), '', 'the app ran, with its saved settings');
+  await p.context().setOffline(false);
+  const served = () => p.evaluate(async () => +(await fetch(location.pathname, { cache: 'no-cache' })).headers.get('x-served'));
+  const a = await served(), b = await served();
+  assert.ok(b > a, 'online, the page comes from the server each time, not the cache: ' + a + ', ' + b);
+});
+
 test('a returning visit goes straight to Play', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true });
   assert.equal(await p.evaluate(() => !!document.getElementById('setup').offsetParent), false);
@@ -124,7 +175,7 @@ test('Help opens and the Try it buttons load their exercise', async () => {
 /* Plays a routine by calling the hit handler with times relative to the run. */
 async function playScenario(text, bpm, spec) {
   const p = await open({ input: 'kb', bpm, routineText: text, seeded: true });
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(spec => {
     const T = window.__T, r = T.run(), pl = r.plan;
@@ -142,17 +193,17 @@ async function playScenario(text, bpm, spec) {
   return r;
 }
 
-test('flam grace notes are not extras, and the main stroke is scored', async () => {
+audioTest('flam grace notes are not extras, and the main stroke is scored', async () => {
   const r = await playScenario('8 fR fL R L x2', 120, { pre: [0.03] });
   assert.deepEqual(r, { slots: 8, miss: 0, within: 8, extras: 0 });
 });
 
-test('drag grace notes at a fast tempo are not extras', async () => {
+audioTest('drag grace notes at a fast tempo are not extras', async () => {
   const r = await playScenario('16 dR dL R L x2', 120, { pre: [0.1, 0.05] });
   assert.deepEqual(r, { slots: 8, miss: 0, within: 8, extras: 0 });
 });
 
-test('a stray hit before a plain stroke is still an extra', async () => {
+audioTest('a stray hit before a plain stroke is still an extra', async () => {
   const r = await playScenario('8 R L R L x2', 120, { stray: 2 });
   assert.equal(r.extras, 1);
   assert.equal(r.miss, 0);
@@ -191,6 +242,28 @@ test('builder: flam holds until a stroke, greys the other keys, and writes fR', 
   assert.deepEqual(p.errors, []);
 });
 
+test('menus: one open at a time, Escape and the same button close it', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, routineText: 'RLRL RLRL\nLRLR LRLR' });
+  await p.click('#editPlay');
+  const open_ = () => p.evaluate(() => [...document.querySelectorAll('.menu')].filter(m => !m.hidden).map(m => m.id));
+  const dots = '#editList .erow:first-child .dots';
+  await p.click(dots);
+  assert.deepEqual(await open_(), ['exMenu']);
+  assert.equal(await p.getAttribute(dots, 'aria-expanded'), 'true');
+  await p.keyboard.press('Escape');
+  assert.deepEqual(await open_(), []);
+  assert.equal(await p.getAttribute(dots, 'aria-expanded'), 'false');
+  await p.click(dots);
+  await p.click(dots);
+  assert.deepEqual(await open_(), [], 'the same button closes it');
+  await p.click(dots);
+  await p.click('#saveMore');
+  assert.deepEqual(await open_(), ['saveMenu'], 'opening another closes the first');
+  await p.click('#saveNew');
+  assert.deepEqual(await open_(), [], 'an item closes it');
+  assert.deepEqual(p.errors, []);
+});
+
 test('editor: Discard puts a saved routine back', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, routineText: 'title: Mine\n8 RLRL RLRL' });
   await p.click('#editPlay');
@@ -219,7 +292,7 @@ test('Clear asks what to wipe, starts with nothing ticked, and asks twice', asyn
 });
 
 test('a stray exercise is deleted from a run, and an unheard one is not scored', async () => {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+  const ctx = await browser.newContext(contextFor({ width: 390, height: 900 }));
   const p = await ctx.newPage();
   p.errors = [];
   p.on('pageerror', e => p.errors.push(e.message));
@@ -242,7 +315,7 @@ test('a stray exercise is deleted from a run, and an unheard one is not scored',
   assert.match(t, /1 not played/);            /* nothing was heard in the last exercise */
   assert.doesNotMatch(t, /dLfR[\s\S]*ACC/);    /* it is not scored, so it cannot be the weakest */
   await p.evaluate(() => { document.querySelector('details').open = true; document.querySelector('details .btn.icon').click(); });
-  const del = () => p.evaluate(() => [...document.querySelectorAll('.rmenu button')].find(x => /^(Delete|Tap again to delete)$/.test(x.textContent)).click());
+  const del = () => p.evaluate(() => [...document.querySelectorAll('.menu:not([hidden]) button')].find(x => /^(Delete|Tap again to delete)$/.test(x.textContent)).click());
   await del(); await del();
   await p.waitForTimeout(300);
   t = await text();
@@ -258,7 +331,7 @@ test('a stray exercise is deleted from a run, and an unheard one is not scored',
 async function runOnce(settings, practice, init) {
   const p = await open(Object.assign({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true }, settings), null, init);
   if (practice) await p.evaluate(() => { const s = document.getElementById('score'); s.value = '0'; s.dispatchEvent(new Event('change')); });
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(() => {
     const T = window.__T, r = T.run(), pl = r.plan;
@@ -280,25 +353,45 @@ async function runOnce(settings, practice, init) {
   return out;
 }
 
-test('Master (count-in only) is scored and saved', async () => {
+audioTest('the first result explains itself once', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true, tol: 30 });
+  const play = async () => {
+    await press(p, /^(Start|Again)$/);
+    await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && !window.__T.run().ended, null, { timeout: 8000 });
+    await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } })); });
+    await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+    await p.waitForTimeout(300);
+  };
+  const note = () => p.evaluate(() => { const n = document.getElementById('advFirst'); return n.offsetParent ? n.innerText : ''; });   /* seen, not just unhidden: phones hide notices during a review */
+  await play();
+  assert.match(await note(), /within ±30 ms/);
+  await play();
+  assert.equal(await note(), '', 'not after the second run');
+  await p.reload();
+  await p.waitForTimeout(400);
+  assert.equal(await note(), '', 'not after a reload');
+  assert.deepEqual(p.errors, []);
+});
+
+audioTest('Master (count-in only) is scored and saved', async () => {
   const o = await runOnce({ click: 'none' }, false);
   assert.deepEqual(o.saved, ['none']);
   assert.ok(o.discard);
 });
 
-test('a practice run shows its result but saves nothing', async () => {
+audioTest('a practice run shows its result but saves nothing', async () => {
   const o = await runOnce({ click: 'beat' }, true);
   assert.deepEqual(o.saved, []);
   assert.match(o.text, /Practice run, not saved/);
   assert.ok(!o.discard);
 });
 
-test('a practice run still counts its time toward the day', async () => {
+audioTest('a practice run still counts its time toward the day', async () => {
   const o = await runOnce({ click: 'beat' }, true);
   assert.equal(Object.keys(o.days).length, 1);
 });
 
-test('a new badge is announced on the result', async () => {
+audioTest('a new badge is announced on the result', async () => {
   const seed = () => {
     if (localStorage.getItem('seeded-runs')) return;
     localStorage.setItem('seeded-runs', '1');
@@ -363,12 +456,13 @@ test('Help: a menu in the title on a phone, a contents list beside the text on d
   assert.equal(await ph.evaluate(() => document.getElementById('pgTtl').textContent), 'Help · How it works');
   assert.equal(await ph.evaluate(() => getComputedStyle(document.getElementById('helpNav')).display), 'none');
   await ph.evaluate(() => document.getElementById('pgTtl').click());
-  const items = await ph.evaluate(() => [...document.querySelectorAll('.rmenu button')].map(b => b.textContent));
+  const items = await ph.evaluate(() => [...document.querySelectorAll('.menu:not([hidden]) button')].map(b => b.textContent));
   assert.equal(items.length, 9);
-  await ph.evaluate(() => [...document.querySelectorAll('.rmenu button')].find(b => b.textContent === 'Scores, tempo and progress').click());
+  await ph.evaluate(() => [...document.querySelectorAll('.menu:not([hidden]) button')].find(b => b.textContent === 'Scores, tempo and progress').click());
   await ph.waitForTimeout(400);
   assert.equal(await ph.evaluate(() => document.getElementById('pgTtl').textContent), 'Help · Scores, tempo and progress');
-  assert.equal(await ph.evaluate(() => document.querySelectorAll('.rmenu').length), 0);
+  assert.equal(await ph.evaluate(() => document.querySelectorAll('.menu:not([hidden])').length), 0);
+  assert.equal(await ph.getAttribute('#pgTtl', 'role'), 'button', 'on a phone the title opens the contents');
 
   const dk = await open({ seeded: true, input: 'kb' }, { width: 1440, height: 900 });
   await dk.evaluate(() => document.getElementById('helpBtn').click());
@@ -381,6 +475,7 @@ test('Help: a menu in the title on a phone, a contents list beside the text on d
   assert.ok(Math.abs(g.navTop - g.secTop) < 4, 'list and text start together');
   assert.ok(g.wide > 900, 'Help uses the wide page ' + g.wide);
   assert.equal(g.title, 'Help');
+  assert.equal(await dk.getAttribute('#pgTtl', 'role'), null, 'on desktop the title is not a button');
   await dk.evaluate(() => [...document.querySelectorAll('#helpNav button')].find(b => b.textContent === 'If something is off').click());
   await dk.waitForTimeout(400);
   assert.equal(await dk.evaluate(() => document.querySelector('#helpNav button[aria-current]').textContent), 'If something is off');
@@ -418,9 +513,9 @@ test('Import asks what to bring in, offers only what the file holds, and imports
   assert.equal(after.lib, 1);
 });
 
-test('a scored run shows its score against the maximum, flags a new high score, and a practice run has no score', async () => {
+audioTest('a scored run shows its score against the maximum, flags a new high score, and a practice run has no score', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } }); }); });
   await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
@@ -438,9 +533,9 @@ test('a scored run shows its score against the maximum, flags a new high score, 
   assert.doesNotMatch(p0.text, /high score/i, 'a practice run is not scored');
 });
 
-test('rests keep the streak and score nothing unless hit, and a hit on a rest is a miss', async () => {
+audioTest('rests keep the streak and score nothing unless hit, and a hit on a rest is a miss', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'R_L_ R_L_', eachUnit: 'pass', eachVal: 2, seeded: true });
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(() => {
     const T = window.__T, r = T.run(), pl = r.plan, rest = pl.cells.filter(c => c.rest)[1];
@@ -464,11 +559,11 @@ test('Play settings sit in aligned columns: Click beside Scoring, tops level', a
   assert.ok(r.dy < 1, 'tops are level');
 });
 
-test('a routine shows the most a flawless run could score, and a flawless run reaches it', async () => {
+audioTest('a routine shows the most a flawless run could score, and a flawless run reaches it', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL\nLRLR LRLR', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
   const max = await p.evaluate(() => document.getElementById('maxLine').textContent);
   assert.match(max, /^Max score: [\d,]+$/);
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } }); }); });
   await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
@@ -479,10 +574,10 @@ test('a routine shows the most a flawless run could score, and a flawless run re
   assert.equal(mx, '/ ' + sc);
 });
 
-test('the live score counts up as strokes are judged, drops the streak on a slip, matches the final score, and is hidden for practice', async () => {
+audioTest('the live score counts up as strokes are judged, drops the streak on a slip, matches the final score, and is hidden for practice', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL\nLRLR LRLR', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
   assert.equal(await p.evaluate(() => document.getElementById('live').hidden), true, 'hidden before a run');
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach((s, i) => { if (i === 11) return; const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } }); }); });
   await p.waitForFunction(() => window.__T.run().sk >= 4, null, { timeout: 20000 });
@@ -495,25 +590,25 @@ test('the live score counts up as strokes are judged, drops the streak on a slip
   assert.equal(Math.round(end.live).toLocaleString('en-US'), end.score, 'the live score matches the final score');
   const q = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
   await q.evaluate(() => { const s = document.getElementById('score'); s.value = '0'; s.dispatchEvent(new Event('change')); });
-  await q.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(q, /^Start/);
   await q.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   assert.equal(await q.evaluate(() => document.getElementById('live').hidden), true, 'no live score in practice');
 });
 
-test('the audio output wakes when Start resumes a paused run, even if it was put to sleep meanwhile', async () => {
+audioTest('the audio output wakes when Start resumes a paused run, even if it was put to sleep meanwhile', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 3, click: 'half', seeded: true });
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && window.__T.ctx() && window.__T.ctx().state === 'running', null, { timeout: 8000 });
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Pause/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Pause/);
   await p.evaluate(() => window.__T.ctx().suspend());
   assert.equal(await p.evaluate(() => window.__T.ctx().state), 'suspended');
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^(Resume|Start|Continue)/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^(Resume|Start|Continue)/);
   await p.waitForFunction(() => window.__T.ctx().state === 'running' && !window.__T.run().paused, null, { timeout: 5000 });
 });
 
-test('a flame shows in the live header once the streak reaches its best', async () => {
+audioTest('a flame shows in the live header once the streak reaches its best', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL RLRL RLRL RLRL RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } }); }); });
   await p.waitForFunction(() => getComputedStyle(document.getElementById('lvFire')).visibility === 'visible', null, { timeout: 30000 });
@@ -521,9 +616,9 @@ test('a flame shows in the live header once the streak reaches its best', async 
   assert.equal(await p.evaluate(() => getComputedStyle(document.querySelector('#lvFire .fo')).animationName), 'lvflick', 'the flame flickers');
 });
 
-test('Done clears the result and the details, and the run stays in History', async () => {
+audioTest('Done clears the result and the details, and the run stays in History', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } }); }); });
   await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
@@ -537,9 +632,9 @@ test('Done clears the result and the details, and the run stays in History', asy
   assert.equal(o.runs, 1, 'the run is still saved');
 });
 
-test('History shows each run\'s score in the list and on the run page', async () => {
+audioTest('History shows each run\'s score in the list and on the run page', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } }); }); });
   await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
@@ -553,11 +648,11 @@ test('History shows each run\'s score in the list and on the run page', async ()
   assert.match(page, /[\d,]+\s*of [\d,]+/);
 });
 
-test('A kept routine is saved to the library on its own, and discarding the run takes it back out', async () => {
+audioTest('A kept routine is saved to the library on its own, and discarding the run takes it back out', async () => {
   const p = await open({ input: 'kb', bpm: 120, mode: 'routine', routineText: '8 RLRL RLRL\n8 RLLR RLLR', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
   const libN = () => p.evaluate(() => (JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || { lib: [] }).lib.length);
   const n0 = await libN();
-  await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /^Start/.test(b.textContent.trim()) && b.offsetParent).click());
+  await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } }); }); });
   await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });

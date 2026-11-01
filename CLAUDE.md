@@ -1,10 +1,10 @@
 # Pocket
 
-A drum practice pad timing trainer. The whole app is the single file `index.html`: CSS in the `<style>` block, the core logic in `<script id="core">`, and the UI in `<script id="app">`. `routines/*.txt` hold the built-in libraries. There is no build step.
+A drum practice pad timing trainer. The whole app is the single file `index.html`: CSS in the `<style>` block, the core logic in `<script id="core">`, and the UI in `<script id="app">`. `routines/*.txt` hold the built-in libraries. `sw.js` is the service worker that keeps the app working offline. There is no build step.
 
 ## Workflow
 
-- Run tests with `npm test` (first time: `npm install`, then `npx playwright install chromium`). `npm run test:core` takes about a second; the browser tests take about a minute.
+- Run tests with `npm test` (first time: `npm install`, then `npx playwright install chromium`). `npm run test:core` takes about a second; the browser tests take about a minute. `npm run test:webkit` runs the browser tests in WebKit as an iPhone (first: `npx playwright install webkit`); CI runs it on pull requests. On Windows the tests that play a run are skipped there, because that WebKit build has no Web Audio.
 - `tests/lint.test.js` (part of `test:core`) checks that every inline script parses, runs ESLint (`eslint.config.js`: correctness rules only, no formatting) and html-validate (`.htmlvalidate.cjs`). `npm run lint` runs the two linters on their own. Fix what they find. Turn a rule off only for a deliberate exception: in the config with a comment saying why, or with an `eslint-disable-next-line` / `[html-validate-disable-next]` comment that gives the reason.
 - Every change bumps `VERSION` in `index.html` (patch level). The commit message is `<version>: <what changed, in plain words>`, e.g. `1.5.12: the next-to-practise card says lowest accuracy instead of weakest`.
 - See `README.md` for the fork, preview and release flow.
