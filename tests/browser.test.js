@@ -56,23 +56,30 @@ test('a first visit sees the welcome and nothing else of Play, until Start pract
   await p.click('#tabLibrary');
   await p.click('#tabPlay');
   assert.deepEqual(await seen(), { welcome: true, start: false });   /* a first visit's welcome survives a tab change */
+  assert.equal(await p.evaluate(() => document.getElementById('status').parentElement.id), 'setup');   /* messages stay in view */
   await p.click('#setup >> text=Start practising');
   assert.deepEqual(await seen(), { welcome: false, start: true });
-  await p.click('#helpBtn');
-  await p.click('#welcomeAgain');
-  assert.deepEqual(await seen(), { welcome: true, start: false });
-  assert.equal(await p.evaluate(() => document.getElementById('status').parentElement.id), 'setup');   /* messages stay in view */
-  await p.click('#tabLibrary');
-  await p.click('#tabPlay');
-  assert.deepEqual(await seen(), { welcome: false, start: true });   /* leaving Play closes a welcome shown again */
   assert.equal(await p.evaluate(() => document.getElementById('status').parentElement.id), 'stPlay');
   assert.deepEqual(p.errors, []);
 });
 
+test('clearing Device setup brings the welcome back', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true });
+  const welcome = () => p.evaluate(() => document.body.dataset.welcome);
+  assert.equal(await welcome(), '');
+  await p.click('#tabSetup');
+  await p.evaluate(() => document.getElementById('recClear').click());
+  await p.evaluate(() => document.querySelector('#exOpts input[data-k=dev]').click());
+  await p.evaluate(() => { const b = document.getElementById('exGo'); b.click(); b.click(); });
+  await p.waitForTimeout(1500);   /* clearing may reload the page */
+  await p.click('#tabPlay');
+  assert.equal(await welcome(), '1');
+  assert.match(await p.textContent('#setSteps'), /Mic check/);
+});
+
 test('starting a run from the welcome closes it, so the results are not hidden', async () => {
-  const p = await open({ seeded: true, input: 'kb', eachUnit: 'pass', eachVal: 1, bpm: 200 });
-  await p.click('#helpBtn');
-  await p.click('#welcomeAgain');
+  const p = await open({ seeded: true, eachUnit: 'pass', eachVal: 1, bpm: 200 });
+  await p.evaluate(() => { window.__T.S().input = 'kb'; window.__T.sync(); });   /* switched to keys part-way through set-up */
   assert.match(await p.textContent('#setSteps'), /not needed with keyboard input/);
   assert.doesNotMatch(await p.textContent('#setSteps'), /Mic check done/);
   await p.keyboard.press('Space');
@@ -86,6 +93,17 @@ test('a fresh app starts on 8 passes at 40 BPM with the Easy click; saved settin
   assert.deepEqual(await fresh.evaluate(() => { const S = window.__T.S(); return [S.click, S.eachUnit, S.eachVal, S.bpm]; }), ['strokes', 'pass', 8, 40]);
   const kept = await open({ click: 'beat', eachUnit: 'min', eachVal: 2, bpm: 90 });
   assert.deepEqual(await kept.evaluate(() => { const S = window.__T.S(); return [S.click, S.eachUnit, S.eachVal, S.bpm]; }), ['beat', 'min', 2, 90]);
+});
+
+test('the microphone level slider moves its trigger line', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, sens: -30 });
+  await p.click('#tabSetup');
+  await p.click('#svBtnDev');
+  const left = () => p.evaluate(() => parseFloat(document.getElementById('mThr').style.left));
+  assert.equal(Math.round(await left()), 50);   /* -30 dB on a -60..0 scale */
+  await p.evaluate(() => { const s = document.getElementById('sens'); s.value = -15; s.dispatchEvent(new Event('input')); });
+  assert.equal(Math.round(await left()), 75);
+  assert.deepEqual(p.errors, []);
 });
 
 test('a returning visit goes straight to Play', async () => {

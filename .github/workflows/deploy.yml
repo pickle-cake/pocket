@@ -21,9 +21,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci   # exactly the versions in package-lock.json
+      # The fast checks first (logic, libraries, style, syntax, ESLint, html-validate): a mistake fails in seconds,
+      # before the browser is downloaded.
+      - run: npm run test:core
       - run: npx playwright install --with-deps chromium
-      - run: npm test
+      - run: npm run test:browser
 
   # Only tested code goes live, and only from main. The site is the app and its hosted libraries.
   deploy:
