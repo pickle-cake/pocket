@@ -462,6 +462,7 @@ test('Help: a menu in the title on a phone, a contents list beside the text on d
   await ph.waitForTimeout(400);
   assert.equal(await ph.evaluate(() => document.getElementById('pgTtl').textContent), 'Help · Scores, tempo and progress');
   assert.equal(await ph.evaluate(() => document.querySelectorAll('.menu:not([hidden])').length), 0);
+  assert.equal(await ph.getAttribute('#pgTtl', 'role'), 'button', 'on a phone the title opens the contents');
 
   const dk = await open({ seeded: true, input: 'kb' }, { width: 1440, height: 900 });
   await dk.evaluate(() => document.getElementById('helpBtn').click());
@@ -474,6 +475,7 @@ test('Help: a menu in the title on a phone, a contents list beside the text on d
   assert.ok(Math.abs(g.navTop - g.secTop) < 4, 'list and text start together');
   assert.ok(g.wide > 900, 'Help uses the wide page ' + g.wide);
   assert.equal(g.title, 'Help');
+  assert.equal(await dk.getAttribute('#pgTtl', 'role'), null, 'on desktop the title is not a button');
   await dk.evaluate(() => [...document.querySelectorAll('#helpNav button')].find(b => b.textContent === 'If something is off').click());
   await dk.waitForTimeout(400);
   assert.equal(await dk.evaluate(() => document.querySelector('#helpNav button[aria-current]').textContent), 'If something is off');
