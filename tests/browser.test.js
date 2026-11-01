@@ -131,6 +131,25 @@ test('a fresh app starts on 8 passes at 40 BPM with the Easy click; saved settin
   assert.deepEqual(await kept.evaluate(() => { const S = window.__T.S(); return [S.click, S.eachUnit, S.eachVal, S.bpm]; }), ['beat', 'min', 2, 90]);
 });
 
+test('the tempo steps by 10 and 1, stops at 40 and 220, and fits beside a usable slider on a phone', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, bpm: 40 }, { width: 390, height: 844 });
+  const bpm = () => p.evaluate(() => window.__T.S().bpm);
+  await p.click('#bpmUp10'); await p.click('#bpmUp10');
+  assert.equal(await bpm(), 60, 'two taps from 40 to 60');
+  await p.click('#bpmDown'); assert.equal(await bpm(), 59);
+  await p.click('#bpmUp'); assert.equal(await bpm(), 60);
+  await p.click('#bpmDown10'); await p.click('#bpmDown10'); await p.click('#bpmDown10');
+  assert.equal(await bpm(), 40, 'never below 40');
+  await p.evaluate(() => { const s = document.getElementById('bpm'); s.value = 215; s.dispatchEvent(new Event('input')); });
+  await p.click('#bpmUp10'); assert.equal(await bpm(), 220, 'never above 220');
+  assert.equal(await p.inputValue('#bpm'), '220');
+  const w = await p.evaluate(() => ({ slider: document.getElementById('bpm').getBoundingClientRect().width, page: document.documentElement.scrollWidth, btn: ['bpmDown10', 'bpmDown', 'bpmUp', 'bpmUp10'].map(id => document.getElementById(id).getBoundingClientRect()).map(r => Math.min(r.width, r.height)) }));
+  assert.ok(w.slider >= 100, 'slider still usable: ' + w.slider);
+  assert.ok(w.btn.every(x => x >= 44), 'buttons are 44px targets: ' + w.btn);
+  assert.ok(w.page <= 390, 'no sideways scroll');
+  assert.deepEqual(p.errors, []);
+});
+
 test('the microphone level slider moves its trigger line', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, sens: -30 });
   await p.click('#tabSetup');

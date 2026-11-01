@@ -110,6 +110,8 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}   /* fields side by side */
 .tempo{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center}
 .tempo .btn{padding:0;font-size:20px;min-height:var(--hit)}
+.tempo.steps{grid-template-columns:var(--hit) var(--hit) 1fr var(--hit) var(--hit);gap:var(--s-2)}   /* steps of 10 and 1 either side of the slider */
+.tempo.steps .btn{font:600 var(--t-data) var(--font-data)}
 .tc{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.6fr);gap:12px;align-items:start}   /* both columns: a label line, then a 44px control, so the two lines meet */
 .tc .field>label{display:flex;align-items:center;height:20px;line-height:20px;overflow:hidden}
 .tc .field output{line-height:20px}
@@ -1360,10 +1362,12 @@ RLRR LRLL RLRR LRLL</pre>
       <div class="field">
         <label for="bpm">Tempo</label>
         <div class="bigrow"><output id="bpmOut" class="bigbpm"></output><span class="hint routine-only" id="tempoNote"></span></div>
-        <div class="tempo">
-          <button class="btn" id="bpmDown" type="button" aria-label="Slower">&#8722;</button>
+        <div class="tempo steps">
+          <button class="btn" id="bpmDown10" type="button" aria-label="10 BPM slower">&#8722;10</button>
+          <button class="btn" id="bpmDown" type="button" aria-label="1 BPM slower">&#8722;1</button>
           <input type="range" id="bpm" min="40" max="220" step="1">
-          <button class="btn" id="bpmUp" type="button" aria-label="Faster">+</button>
+          <button class="btn" id="bpmUp" type="button" aria-label="1 BPM faster">+1</button>
+          <button class="btn" id="bpmUp10" type="button" aria-label="10 BPM faster">+10</button>
         </div>
       </div>
     </section>
@@ -2709,7 +2713,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.68';                           /* shown beside the title */
+const VERSION='1.5.69';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -6538,7 +6542,7 @@ function showCachedList(){
 }
 
 /* ---------- controls ---------- */
-const LOCKED=['tol','accent','others','pulse','bpm','bpmDown','bpmUp','subdiv','click','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
+const LOCKED=['tol','accent','others','pulse','bpm','bpmDown','bpmUp','bpmDown10','bpmUp10','subdiv','click','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
 function syncRunUI(){
   const on=!!(run&&!run.ended),play=on&&run.mode==='play',paused=on&&!!run.paused;
   const b=$('startBtn');
@@ -7098,6 +7102,8 @@ function wire(){
   $('bpm').addEventListener('input',e=>setBpm(+e.target.value));
   $('bpmDown').addEventListener('click',()=>setBpm(S.bpm-1));
   $('bpmUp').addEventListener('click',()=>setBpm(S.bpm+1));
+  $('bpmDown10').addEventListener('click',()=>setBpm(S.bpm-10));
+  $('bpmUp10').addEventListener('click',()=>setBpm(S.bpm+10));
   $('score').addEventListener('change',e=>{scoreOn=e.target.value==='1';syncInfo();});
   $('click').addEventListener('change',e=>{S.click=e.target.value;save();if(S.mode==='routine')buildExerciseList();syncInfo();});
   const dyChanged=()=>{save();pushDet();refreshPreview();};
