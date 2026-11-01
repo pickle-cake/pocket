@@ -170,6 +170,24 @@ test('Copy timing details says what it did, next to the button, and there is no 
   assert.deepEqual(p.errors, []);
 });
 
+test('the Library opens sorted by name, with Name first, and Recent puts the newest first', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true }, null, () => {
+    if (!localStorage.getItem('stick-timing-trainer.records.v2')) localStorage.setItem('stick-timing-trainer.records.v2', JSON.stringify({ v: 1, names: {}, nu: 1, runs: [], lib: [
+      { id: 'a1', x: '8 RLRL RLRL', t: 3 }, { id: 'a2', x: '8 RRLL RRLL', t: 1 }, { id: 'a3', x: '8 RLLR RLLR', t: 2 }] }));
+  });
+  await p.click('#tabLibrary');
+  const names = () => p.evaluate(() => [...document.querySelectorAll('#pageLibrary .glib .hrow > .row > .rt')].map(e => e.textContent));
+  assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll('#pageLibrary [aria-label="Sort by"] button')].map(b => b.textContent + ':' + b.getAttribute('aria-pressed'))), ['Name:true', 'Recent:false']);
+  assert.deepEqual(await names(), ['8 RLLR RLLR', '8 RLRL RLRL', '8 RRLL RRLL'], 'by name');
+  await p.click('#lsRecent');
+  assert.deepEqual(await names(), ['8 RLRL RLRL', '8 RLLR RLLR', '8 RRLL RRLL'], 'newest first');
+  await p.reload(); await p.waitForTimeout(300);
+  await p.click('#tabLibrary');
+  assert.deepEqual(await names(), ['8 RLRL RLRL', '8 RLLR RLLR', '8 RRLL RRLL'], 'the choice is remembered');
+  assert.equal(await p.getAttribute('#lsRecent', 'aria-pressed'), 'true');
+  assert.deepEqual(p.errors, []);
+});
+
 test('the microphone level slider moves its trigger line', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, sens: -30 });
   await p.click('#tabSetup');

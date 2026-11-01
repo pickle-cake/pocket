@@ -900,7 +900,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
   <!-- ===== Library: your saved routines, and where routines come from ===== -->
   <div class="page" id="pageLibrary" role="tabpanel" aria-labelledby="tabLibrary" hidden>
     <section class="libsec" aria-label="Your routines">
-      <div class="lhead"><div class="seg hfilter" role="group" aria-label="Sort by"><button class="on" id="lsRecent" type="button" aria-pressed="true">Recent</button><button id="lsName" type="button" aria-pressed="false">Name</button></div><div class="btns"><button class="btn" id="clearRoutine" type="button">New</button><button class="btn" id="openBtn" type="button">Import</button><button class="btn" id="exportLib" type="button">Export</button></div></div>
+      <div class="lhead"><div class="seg hfilter" role="group" aria-label="Sort by"><button class="on" id="lsName" type="button" aria-pressed="true">Name</button><button id="lsRecent" type="button" aria-pressed="false">Recent</button></div><div class="btns"><button class="btn" id="clearRoutine" type="button">New</button><button class="btn" id="openBtn" type="button">Import</button><button class="btn" id="exportLib" type="button">Export</button></div></div>
       <p class="hint" id="libMsg" aria-live="polite"></p>
       <div class="hist" id="libPage"></div>
       <div id="libEmpty" hidden></div>
@@ -2735,7 +2735,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.72';                           /* shown beside the title */
+const VERSION='1.5.74';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -2749,7 +2749,7 @@ const hostedHref=path=>{try{return new URL(path,location.href).href;}catch(e){re
 const hostedLists=()=>Object.keys(HOSTED).map(id=>({url:hostedHref(HOSTED[id][0]),name:HOSTED[id][1],t:0})).filter(l=>l.url);
 const S={mode:'single',routineText:STARTER,eachUnit:'pass',eachVal:8,gap:0,   /* a fresh app: 8 passes at 40 BPM on the Easy click, so the first exercise is simple */
   pulse:true,startExercise:1,
-  bpm:40,subdiv:4,click:'strokes',lastExport:0,expRuns:0,tol:20,sens:-30,settle:40,accent:'',others:'n',noise:null,vol:60,latency:null,latCal:false,input:'mic',editTab:'build',theme:'',palette:'std',libId:''};
+  bpm:40,subdiv:4,click:'strokes',lastExport:0,expRuns:0,tol:20,sens:-30,settle:40,accent:'',others:'n',noise:null,vol:60,latency:null,latCal:false,input:'mic',editTab:'build',theme:'',palette:'std',libId:'',libSort:'name'};
 let cal={L:[],R:[]},model=null;
 try{
   const o=JSON.parse(localStorage.getItem(KEY)||'null');
@@ -2763,6 +2763,7 @@ S.mode=S.mode==='routine'?'routine':'single';
 S.seeded=S.seeded===true;                         /* the routines that ship with the app have been added to the Library */
 S.latCal=S.latCal===true;                          /* set once a calibration has run or a number was typed */
 S.editTab=S.editTab==='type'?'type':'build';       /* Build or Type, remembered on each device. Build is first. */
+S.libSort=S.libSort==='recent'?'recent':'name';   /* the Library's sort, remembered on each device. Name is first. */
 S.bpm=clamp(Math.round(+S.bpm)||60,40,220);
 S.subdiv=4;                                        /* strokes with no note code are sixteenths */
 S.tol=[10,15,20,30,40,50].includes(+S.tol)?+S.tol:20;
@@ -4379,7 +4380,7 @@ function goExercise(i,animate){
   markExercises(null);previewRows(animate);syncInfo();
 }
 const TABS=['play','library','progress','setup'];
-let editFrom='play',libSort='recent';
+let editFrom='play';
 const tabEl=n=>$('tab'+n[0].toUpperCase()+n.slice(1));
 /* The Editor is a full-screen view, not a tab. Back returns to the page that opened it. */
 function openEditor(from){
@@ -6291,7 +6292,7 @@ function libGroups(list,byName){
 function openPick(){
   if(run&&!run.ended)return;
   const box=$('pickList');box.textContent='';
-  const byName=libSort==='name';
+  const byName=S.libSort==='name';
   const list=recs.lib.slice().sort(byName?(a,b)=>entryName(a).localeCompare(entryName(b),undefined,{numeric:true,sensitivity:'base'}):(a,b)=>b.t-a.t);
   if(!list.length){
     box.appendChild(emptyState('book','No saved routines yet','Routines you write or import show up here.','Open the Library',()=>{closePick();showTab('library');}));
@@ -6321,7 +6322,7 @@ const closePick=()=>{$('pickModal').hidden=true;$('playChange').focus();};
 function renderLibraryPage(){
   const box=$('libPage');if(!box)return;
   box.textContent='';
-  const byName=libSort==='name';
+  const byName=S.libSort==='name';
   $('lsRecent').classList.toggle('on',!byName);$('lsRecent').setAttribute('aria-pressed',String(!byName));
   $('lsName').classList.toggle('on',byName);$('lsName').setAttribute('aria-pressed',String(byName));
   const list=recs.lib.slice().sort(byName?(a,b)=>entryName(a).localeCompare(entryName(b),undefined,{numeric:true,sensitivity:'base'}):(a,b)=>b.t-a.t),st=scratchState(),locked=!!(run&&!run.ended);
@@ -7175,8 +7176,8 @@ function wire(){
   $('libraryUrl').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();loadLibrary();}});
   $('libName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();loadLibrary();}});
   $('clearRoutine').addEventListener('click',()=>guard(()=>{bLine=0;setRoutineText('');openEditor('library');}));
-  $('lsRecent').addEventListener('click',()=>{libSort='recent';renderLibraryPage();});
-  $('lsName').addEventListener('click',()=>{libSort='name';renderLibraryPage();});
+  $('lsRecent').addEventListener('click',()=>{S.libSort='recent';save();renderLibraryPage();});
+  $('lsName').addEventListener('click',()=>{S.libSort='name';save();renderLibraryPage();});
   $('edBack').addEventListener('click',()=>{showTab(editFrom==='play'?'play':'library');if(editFrom==='import')openOpen();window.scrollTo(0,0);});
   $('playChange').addEventListener('click',openPick);
   $('pickClose').addEventListener('click',closePick);
