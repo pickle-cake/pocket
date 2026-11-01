@@ -863,8 +863,8 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     <section class="panel" aria-label="Audio timing">
       <h3>Audio timing</h3>
       <p class="hint" id="clkMsg"></p>
-      <div class="btns even"><button class="btn" id="clkReset" type="button">Reset audio</button><button class="btn" id="clkCopy" type="button">Copy timing details</button></div>
-      <p class="hint">If the count-in numbers run ahead of the clicks, Reset audio starts the sound afresh, as reloading the page does. Copy timing details puts the last runs' measurements on the clipboard to send with a report.</p>
+      <div class="btns"><button class="btn" id="clkCopy" type="button">Copy timing details</button></div>
+      <p class="hint" id="clkDone" role="status" aria-live="polite">If the clicks sound out of step with the count-in, copy the measurements of your last 10 runs and send them with a report.</p>
     </section>
 
 
@@ -2735,7 +2735,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.71';                           /* shown beside the title */
+const VERSION='1.5.72';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -7163,10 +7163,9 @@ function wire(){
   $('exportLib').addEventListener('click',exportLibrary);
   ['micMsg','chkMsg','latMsg'].forEach(id=>setupWatch.observe($(id),{childList:true,characterData:true,subtree:true}));
   document.addEventListener('input',e=>{if(e.target.type==='range')paintRange(e.target);},true);
-  $('clkReset').addEventListener('click',()=>{if(run&&!run.ended)return;resetAudio();setStatus('Audio reset. It starts afresh on the next Start.');});
   $('clkCopy').addEventListener('click',()=>{
     const txt=JSON.stringify({app:'Pocket '+VERSION,ua:navigator.userAgent,runs:S.clockLog},null,1);
-    const done=ok=>setStatus(ok?'Timing details copied.':'Could not copy. Your browser blocked the clipboard.');
+    const done=ok=>{$('clkDone').textContent=ok?(S.clockLog.length?'Copied the last '+S.clockLog.length+(S.clockLog.length===1?' run':' runs')+'. Paste them into your report.':'Copied, but no runs have been checked yet. Play a run first.'):'Could not copy: the browser blocked the clipboard.';};   /* next to the button: the status line is out of view here */
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>done(true),()=>done(false));else done(false);
   });
   syncClock();

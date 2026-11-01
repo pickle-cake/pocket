@@ -150,6 +150,26 @@ test('the tempo steps by 10 and 1, stops at 40 and 220, and fits beside a usable
   assert.deepEqual(p.errors, []);
 });
 
+test('Copy timing details says what it did, next to the button, and there is no Reset audio', async () => {
+  const log = [{ t: 1, ver: 'x', ok: true, slip: 0 }, { t: 2, ver: 'x', ok: true, slip: 1 }];
+  const p = await open({ seeded: true, noise: -50, latCal: true, clockLog: log }, null, () => {
+    window.__copied = null;
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window.__copied = t; return Promise.resolve(); } } });
+  });
+  await p.click('#tabSetup');
+  await p.click('#svBtnDev');
+  assert.equal(await p.$('#clkReset'), null);
+  await p.click('#clkCopy');
+  await p.waitForTimeout(100);
+  assert.match(await p.textContent('#clkDone'), /^Copied the last 2 runs\./);
+  assert.equal(JSON.parse(await p.evaluate(() => window.__copied)).runs.length, 2);
+  await p.evaluate(() => { navigator.clipboard.writeText = () => Promise.reject(new Error('no')); });
+  await p.click('#clkCopy');
+  await p.waitForTimeout(100);
+  assert.match(await p.textContent('#clkDone'), /blocked the clipboard/);
+  assert.deepEqual(p.errors, []);
+});
+
 test('the microphone level slider moves its trigger line', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, sens: -30 });
   await p.click('#tabSetup');
