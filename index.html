@@ -274,6 +274,7 @@ body[data-welcome="1"]:not([data-run="1"]) #pagePlay>:not(#setup){display:none}
 #setup h3{margin:0}
 #setup p:not(.status){margin:0;font:var(--t-body) var(--font-body)}
 #setup p.hint{font:var(--t-caption) var(--font-body)}
+#setup p.chkmsg{font:600 var(--t-small) var(--font-body);justify-self:stretch}   /* a running step's prompt, as in Settings */
 :root[data-layout=desktop] #setup{justify-self:center;width:100%;max-width:760px}
 .hscw{position:relative;min-width:0}
 .hscroll{overflow-x:auto;overscroll-behavior-x:contain;height:170px}
@@ -2621,7 +2622,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.89';                           /* shown beside the title */
+const VERSION='1.5.90';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -6455,7 +6456,8 @@ function syncSetup(){
     if(!need){li.className='na';li.textContent=st.name.replace('.','')+': not needed with keyboard input';list.appendChild(li);return true;}
     cur=i;
     const t=document.createElement('span'),nm=document.createElement('b');nm.textContent=st.name;t.append(nm,' '+st.label);
-    const m=document.createElement('p');m.className='hint';m.setAttribute('aria-live','polite');m.textContent=st.msg();
+    const m=document.createElement('p');m.setAttribute('aria-live','polite');m.textContent=st.msg();
+    m.className=i===0&&$('micMsg').textContent?'err':((i===0?chk:loop)?'chkmsg':'hint');   /* while a step runs, its prompt is a notice with a rail, as in Settings */
     const bt=document.createElement('div');bt.className='btns';bt.append(textBtn(st.btn,st.go,'btn primary'));if(st.skip)bt.append(textBtn('Skip',st.skip));
     li.append(t,bt,m);list.appendChild(li);return false;
   });
