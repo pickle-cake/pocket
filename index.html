@@ -576,6 +576,8 @@ body[data-mode="routine"] .single-only{display:none}
 .ln pre .bad{color:var(--danger)}
 .ln textarea{display:block;border:0;border-radius:0;flex:1;min-width:0;white-space:pre;overflow:auto;background:transparent;outline:0}
 .mbox.scroll{overflow-y:auto}
+textarea.prose{font:var(--t-body) var(--font-body);letter-spacing:0;min-height:120px;resize:vertical}   /* a message, not a sticking */
+.fbdet{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:var(--t-caption) var(--font-data);color:var(--muted)}
 .nh{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13px;color:var(--muted)}
 .nh code{font:600 13px var(--font-data);color:var(--accent);white-space:nowrap}
 .nh .full{grid-column:1/-1;margin:0}
@@ -864,8 +866,8 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     <section class="panel" aria-label="Audio timing">
       <h3>Audio timing</h3>
       <p class="hint" id="clkMsg"></p>
-      <div class="btns"><button class="btn" id="clkCopy" type="button">Copy timing details</button></div>
-      <p class="hint" id="clkDone" role="status" aria-live="polite">If the clicks sound out of step with the count-in, copy the measurements of your last 10 runs and send them with a report.</p>
+      <div class="btns"><button class="btn" id="clkReport" type="button">Report a timing problem</button></div>
+      <p class="hint">If the clicks sound out of step with the count-in, report it. The timing of your last 10 runs goes with your message.</p>
     </section>
 
 
@@ -1330,10 +1332,16 @@ RLRR LRLL RLRR LRLL</pre>
     <section class="panel" id="help-trouble">
       <h3>If something is off</h3>
       <ul>
-        <li><b>The microphone will not turn on:</b> the page needs a secure address. Opening the file from your computer works in Chrome and Edge. Otherwise serve it with <b>python3 -m http.server</b> or switch Input to Keyboard.</li>
-        <li><b>Every stroke looks late or early:</b> run Calibrate latency.</li>
-        <li><b>Extra hits show up:</b> raise the trigger line, or use headphones for the click.</li>
-        <li><b>Wrong-hand tags look random:</b> calibrate both sticks again on the same spot of the pad.</li>
+        <li><b>The microphone will not turn on:</b> allow it for this page. On an iPhone, open the page menu from Safari's address bar, choose <b>Website Settings…</b> and set <b>Microphone</b> to <b>Allow</b>. On a computer, use the icon beside the address. Close any other app that is using the microphone, such as a call.</li>
+        <li><b>The microphone stopped hearing you:</b> on an iPhone, <b>Stop Using Microphone</b> in Safari's page menu turns it off for the page, and the run stops hearing your strokes. Press Stop, then Start again: the microphone comes back on.</li>
+        <li><b>There is no click:</b> turn the volume up and check <b>Click volume</b> in <b>Settings › Preferences</b>. On an iPhone, Silent mode can mute the page, so turn it off.</li>
+        <li><b>Every stroke looks late or early:</b> run <b>Auto calibrate</b> in <b>Settings › Device › Latency</b>, in a quiet room. With headphones on, use <b>Calibrate by playing</b> there instead.</li>
+        <li><b>Extra hits show up:</b> raise the trigger line in <b>Settings › Device › Microphone level</b>, or use headphones so the microphone does not hear the click.</li>
+        <li><b>Soft strokes are missed:</b> lower the trigger line, or run <b>Mic check</b> in the same place.</li>
+        <li><b>Wrong-hand tags look random:</b> calibrate both sticks again in <b>Settings › Device › Stick calibration</b>, on the same spot of the pad.</li>
+        <li><b>The clicks are out of step with the count-in:</b> press Stop and start again. If it keeps happening, use <b>Report a timing problem</b> in <b>Settings › Device › Audio timing</b>.</li>
+        <li><b>Your runs have gone:</b> on an iPhone, Safari can clear a site's data after about a week without use. Add Pocket to your Home Screen, and keep a copy with <b>Export</b> in <b>Settings › Data</b>.</li>
+        <li><b>Something else:</b> <button class="btn link" id="fbTrouble" type="button">Send feedback</button></li>
       </ul>
     </section>
     <section class="panel" id="help-about">
@@ -1341,7 +1349,8 @@ RLRR LRLL RLRR LRLL</pre>
       <p>Pocket is free, with no ads and no account. It runs in your browser and keeps working offline once it has been opened.</p>
       <p>It is open source under the GNU General Public License, version 3 or later. You may use, change and share it, and anything built from it must be shared the same way, with its source.</p>
       <p>The code was written with AI, which learned from the work of countless people who shared theirs freely. It is shared in that spirit.</p>
-      <div class="btns"><a class="btn link" href="https://github.com/pickle-cake/pocket" target="_blank" rel="noopener">Source code on GitHub</a></div>
+      <p>Found a problem, or have an idea? Feedback is welcome.</p>
+      <div class="btns"><button class="btn" id="fbHelp" type="button">Send feedback</button><a class="btn link" href="https://github.com/pickle-cake/pocket" target="_blank" rel="noopener">Source code on GitHub</a></div>
     </section>
   </div>
 
@@ -1637,6 +1646,19 @@ RLRR LRLL RLRR LRLL</pre>
     <div class="mhead"><!-- [html-validate-disable-next empty-heading: the confirm dialog fills its title when it opens] --><h3 id="cfTitle"></h3></div>
     <p class="hint" id="cfText"></p>
     <div class="btns"><button class="btn" id="cfSave" type="button">Save</button><button class="btn" id="cfDiscard" type="button">Don't save</button><button class="btn" id="cfCancel" type="button">Cancel</button></div>
+  </div>
+</div>
+
+<div class="modal" id="fbModal" role="dialog" aria-modal="true" aria-labelledby="fbTitle" hidden>
+  <div class="card mbox scroll">
+    <div class="mhead"><h3 id="fbTitle">Send feedback</h3></div>
+    <p class="hint">A problem, an idea, or something that works well: it all helps. Your message goes by email from your own mail app, so nothing is sent until you send it.</p>
+    <div class="field"><label for="fbText">Message</label><textarea id="fbText" class="prose" rows="5"></textarea></div>
+    <label class="xrow"><input type="checkbox" id="fbDev"><span>Include device and timing details<br><small>The app version, browser, screen and the timing of your last runs. Nothing personal.</small></span></label>
+    <details class="how" id="fbShow"><summary>What is included</summary><pre class="fbdet" id="fbDet"></pre></details>
+    <p class="hint" id="fbMsg" role="status" aria-live="polite"></p>
+    <div class="btns"><button class="btn" id="fbMail" type="button">Email it</button><button class="btn" id="fbCopy" type="button">Copy</button><button class="btn" id="fbClose" type="button">Close</button></div>
+    <p class="hint">Use GitHub? <a class="btn link" href="https://github.com/pickle-cake/pocket/issues/new" target="_blank" rel="noopener">Report it on GitHub</a></p>
   </div>
 </div>
 
@@ -2743,7 +2765,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.77';                           /* shown beside the title */
+const VERSION='1.5.81';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -3001,10 +3023,10 @@ function setStatus(t,run){statusRun=!!run;$('status').hidden=statusRun&&document
 function showMicError(err){
   const n=err&&(err.name||err.message)||'';
   let m;
-  if(n==='insecure')m='The microphone needs a secure page (https:// or localhost). Host this file or run a local server, or switch Input to Keyboard in Settings, under Device.';
+  if(n==='insecure')m='The microphone needs a secure page. Open Pocket from its web address, starting with https://.';
   else if(n==='NotAllowedError'||n==='SecurityError')m='Microphone blocked. Allow it for this page in your browser settings, then press Start again.';
   else if(n==='NotFoundError')m='No microphone found.';
-  else if(n==='muted')m='The microphone is muted. Unmute it from the browser\u2019s page menu, then press Start again.';
+  else if(n==='muted')m='The microphone is turned off for this page. Turn it back on from the browser\u2019s page menu (on an iPhone, Website Settings\u2026 \u203a Microphone), then press Start again.';
   else m='Could not start audio: '+(err&&err.message?err.message:n);
   setStatus(m);
   if(!setupNeeded())showSetup('dev');
@@ -3655,6 +3677,48 @@ function syncClock(){
   el.textContent=(d.ok?'Last run: the sound kept time with the screen.':'Last run: the sound fell '+Math.abs(d.slip)+' ms out of step with the screen, and the audio was reset.')
     +(busy?' The page fell behind, so '+(d.lost?d.lost+(d.lost===1?' click was':' clicks were')+' dropped'+(d.late?' and ':''):'')+(d.late?d.late+(d.late===1?' click was':' clicks were')+' late':'')+' (up to '+d.worst+' ms).':'')
     +(bad&&!(bad===1&&!d.ok)?' '+bad+' of the last '+L.length+' runs slipped.':'');
+}
+/* ---------- feedback ---------- */
+/* Feedback goes by email from the user's own mail app, or is copied to paste anywhere. Nothing is sent by the page. */
+const FB_TO='pocket@mndlss.com';
+let fbFrom=null;   /* the button that opened the dialog, to return focus to */
+/* The device and timing details: short enough for an email link, one line per run, newest first. */
+function feedbackDetails(){
+  const L=S.clockLog.slice(0,10),de=document.documentElement;
+  const out=['Pocket '+VERSION,navigator.userAgent,'Screen '+screen.width+'×'+screen.height+', '+(de.dataset.layout==='desktop'?'desktop':'phone')+' layout, '+(de.dataset.theme||'auto')+' theme',
+    'Input '+(S.input==='kb'?'keyboard':'microphone')+', latency '+(S.latency==null?'not calibrated':S.latency+' ms')+', click '+(LEVELS.find(l=>l.v===S.click)||{n:S.click}).n+', '+S.bpm+' BPM'];
+  if(!L.length)out.push('No runs timed yet.');
+  else{
+    out.push('Last '+L.length+(L.length===1?' run':' runs')+', newest first, times in UTC:');
+    L.forEach(d=>out.push(new Date(d.t).toISOString().slice(0,16).replace('T',' ')+' '+d.ver+' '+(d.ok?'ok':'slipped')+', slip '+d.slip+' ms, clicks '+(d.clicks||0)+' (late '+(d.late||0)+', dropped '+(d.lost||0)+'), speaker '+(d.speaker||0)+' ms, output '+(d.out||0)+' ms, setup '+(d.age||0)+' s old, run '+(d.runs||0)+', mic opens '+(d.mics||0)+', '+(d.kb?'keyboard':'mic')));
+  }
+  return out.join('\n');
+}
+function feedbackText(){
+  const msg=$('fbText').value.trim();
+  return (msg||'(no message)')+($('fbDev').checked?'\n\n-- Device and timing details --\n'+feedbackDetails():'');
+}
+function syncFeedback(){$('fbShow').hidden=!$('fbDev').checked;$('fbDet').textContent=$('fbDev').checked?feedbackDetails():'';}
+function openFeedback(withDetails,start){
+  fbFrom=document.activeElement;
+  if(start&&!$('fbText').value.trim())$('fbText').value=start;
+  $('fbDev').checked=!!withDetails;$('fbShow').open=false;$('fbMsg').textContent='';
+  syncFeedback();
+  $('fbModal').hidden=false;
+  const t=$('fbText');t.focus();t.setSelectionRange(t.value.length,t.value.length);
+}
+function closeFeedback(){$('fbModal').hidden=true;if(fbFrom&&fbFrom.focus)fbFrom.focus();fbFrom=null;}
+function mailFeedback(){
+  const subj='Pocket feedback ('+VERSION+')';
+  let body=feedbackText();
+  if(body.length>1800)body=body.slice(0,1800)+'\n(cut short: use Copy for the rest)';   /* mail apps refuse very long links */
+  location.href='mailto:'+FB_TO+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
+  $('fbMsg').textContent='Your mail app should open with the message ready to send. If nothing opened, use Copy and paste it into an email to '+FB_TO+'.';
+}
+function copyFeedback(){
+  const txt='To: '+FB_TO+'\n\n'+feedbackText();
+  const done=ok=>{$('fbMsg').textContent=ok?'Copied. Paste it into an email to '+FB_TO+', or any message.':'Could not copy: the browser blocked the clipboard. Select the text and copy it yourself.';};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>done(true),()=>done(false));else done(false);
 }
 /* Throws the audio away so the next Start builds it afresh, as a page refresh would. */
 function resetAudio(){
@@ -7182,11 +7246,16 @@ function wire(){
   $('exportLib').addEventListener('click',exportLibrary);
   ['micMsg','chkMsg','latMsg'].forEach(id=>setupWatch.observe($(id),{childList:true,characterData:true,subtree:true}));
   document.addEventListener('input',e=>{if(e.target.type==='range')paintRange(e.target);},true);
-  $('clkCopy').addEventListener('click',()=>{
-    const txt=JSON.stringify({app:'Pocket '+VERSION,ua:navigator.userAgent,runs:S.clockLog},null,1);
-    const done=ok=>{$('clkDone').textContent=ok?(S.clockLog.length?'Copied the last '+S.clockLog.length+(S.clockLog.length===1?' run':' runs')+'. Paste them into your report.':'Copied, but no runs have been checked yet. Play a run first.'):'Could not copy: the browser blocked the clipboard.';};   /* next to the button: the status line is out of view here */
-    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>done(true),()=>done(false));else done(false);
-  });
+  $('clkReport').addEventListener('click',()=>openFeedback(true,'The clicks were out of step with the count-in. '));
+  $('fbHelp').addEventListener('click',()=>openFeedback(false,''));
+  $('fbTrouble').addEventListener('click',()=>openFeedback(false,''));
+  $('fbDev').addEventListener('change',syncFeedback);
+  $('fbMail').addEventListener('click',mailFeedback);
+  $('fbCopy').addEventListener('click',copyFeedback);
+  $('fbClose').addEventListener('click',closeFeedback);
+  $('fbModal').addEventListener('click',e=>{if(e.target===$('fbModal'))closeFeedback();});
+  /* in the capture phase, so Escape closes the dialog and not the Help page under it */
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('fbModal').hidden){e.stopPropagation();closeFeedback();}},true);
   syncClock();
   $('setBox').addEventListener('toggle',syncInfo);
   $('libSel').addEventListener('change',()=>{const v=$('libSel').value;if(v==='+'){libMode='add';$('libErr').textContent='';lib={items:[],loaded:false,busy:false,cur:''};renderLibrary();$('libraryUrl').focus();}else pickList(v);});

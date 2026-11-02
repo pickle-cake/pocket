@@ -150,23 +150,61 @@ test('the tempo steps by 10 and 1, stops at 40 and 220, and fits beside a usable
   assert.deepEqual(p.errors, []);
 });
 
-test('Copy timing details says what it did, next to the button, and there is no Reset audio', async () => {
-  const log = [{ t: 1, ver: 'x', ok: true, slip: 0 }, { t: 2, ver: 'x', ok: true, slip: 1 }];
+test('Report a timing problem opens feedback with the timing ticked, and Copy and Email it say what they did', async () => {
+  const log = [{ t: 1, ver: 'x', ok: true, slip: 0, clicks: 36, runs: 1, mics: 1 }, { t: 2, ver: 'x', ok: false, slip: 250, clicks: 4, runs: 1, mics: 0, kb: true }];
   const p = await open({ seeded: true, noise: -50, latCal: true, clockLog: log }, null, () => {
     window.__copied = null;
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window.__copied = t; return Promise.resolve(); } } });
   });
   await p.click('#tabSetup');
   await p.click('#svBtnDev');
-  assert.equal(await p.$('#clkReset'), null);
-  await p.click('#clkCopy');
+  assert.equal(await p.$('#clkReset'), null, 'no Reset audio');
+  await p.click('#clkReport');
+  assert.equal(await p.isVisible('#fbModal'), true);
+  assert.equal(await p.isChecked('#fbDev'), true, 'a timing report includes the details');
+  assert.equal(await p.evaluate(() => document.activeElement.id), 'fbText');
+  assert.match(await p.inputValue('#fbText'), /out of step with the count-in/);
+  await p.click('#fbShow summary');
+  const det = await p.textContent('#fbDet');
+  assert.match(det, /^Pocket \d+\.\d+\.\d+\n/);
+  assert.match(det, /Last 2 runs, newest first, times in UTC:/);
+  assert.match(det, /x slipped, slip 250 ms, clicks 4 .* keyboard/);
+  await p.fill('#fbText', 'The first click came late.');
+  await p.click('#fbCopy');
   await p.waitForTimeout(100);
-  assert.match(await p.textContent('#clkDone'), /^Copied the last 2 runs\./);
-  assert.equal(JSON.parse(await p.evaluate(() => window.__copied)).runs.length, 2);
+  assert.match(await p.textContent('#fbMsg'), /^Copied\. Paste it into an email to pocket@mndlss\.com/);
+  const copied = await p.evaluate(() => window.__copied);
+  assert.match(copied, /^To: pocket@mndlss\.com\n\nThe first click came late\.\n\n-- Device and timing details --\nPocket /);
+  /* without the details, only the message */
+  await p.uncheck('#fbDev');
+  assert.equal(await p.isVisible('#fbShow'), false);
+  await p.click('#fbCopy');
+  await p.waitForTimeout(100);
+  assert.equal(await p.evaluate(() => window.__copied), 'To: pocket@mndlss.com\n\nThe first click came late.');
   await p.evaluate(() => { navigator.clipboard.writeText = () => Promise.reject(new Error('no')); });
-  await p.click('#clkCopy');
+  await p.click('#fbCopy');
   await p.waitForTimeout(100);
-  assert.match(await p.textContent('#clkDone'), /blocked the clipboard/);
+  assert.match(await p.textContent('#fbMsg'), /blocked the clipboard/);
+  await p.click('#fbMail');
+  await p.waitForTimeout(200);
+  assert.match(await p.textContent('#fbMsg'), /mail app should open/);
+  assert.deepEqual(p.errors, []);
+});
+
+test('Send feedback in Help: no details by default, and Escape closes the dialog but not Help', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true });
+  await p.click('#helpBtn');
+  await p.waitForTimeout(200);
+  await p.evaluate(() => document.getElementById('help-about').scrollIntoView());
+  await p.click('#fbHelp');
+  assert.equal(await p.isVisible('#fbModal'), true);
+  assert.equal(await p.isChecked('#fbDev'), false);
+  assert.equal(await p.inputValue('#fbText'), '');
+  await p.keyboard.press('Escape');
+  assert.equal(await p.isVisible('#fbModal'), false);
+  assert.equal(await p.isVisible('#pg'), true, 'Help is still open');
+  assert.equal(await p.evaluate(() => document.activeElement.id), 'fbHelp', 'focus goes back to the button');
+  assert.equal(await p.getAttribute('#help-about a[href*="github"]', 'rel'), 'noopener');
   assert.deepEqual(p.errors, []);
 });
 
