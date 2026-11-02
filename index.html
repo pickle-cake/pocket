@@ -850,7 +850,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     </section>
     <section class="panel mic-only" aria-label="Stick calibration">
       <h3>Stick calibration</h3>
-      <label class="xrow flat"><input type="checkbox" id="handDet"><span>Hand detection (experimental)<br><small>Listens for which stick played each stroke. Two sticks often sound alike, so single strokes are never marked. After a run, a note says so only if many strokes sounded like the other stick.</small></span></label>
+      <label class="xrow flat"><input type="checkbox" id="handDet"><span>Hand detection (experimental)<br><small>Learns the sound of each stick. After a run, it notes how many strokes seemed to come from the wrong hand.</small></span></label>
       <div class="handbox" id="handBox" hidden>
       <div class="btns even">
         <button class="btn" id="calL" type="button">Calibrate left stick</button>
@@ -1325,7 +1325,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Trigger line:</b> raise it if room noise counts as hits, lower it if soft strokes are missed.</li>
         <li><b>Settle time:</b> how long the app ignores the pad after a hit. Raise it if one stroke counts twice. Fast playing lowers it automatically so real strokes are not skipped.</li>
         <li><b>Latency:</b> sound reaches the page late, and the click reaches your ears late. Press <b>Auto calibrate</b> once on each device. It plays clicks through the speakers and times when the mic hears them, so you do not play. <b>Calibrate by playing</b> is the second choice: hit on each click, 80 hits or more, until the number settles. It assumes you were on the click on average. You can also type a number.</li>
-        <li><b>Hand detection</b> (experimental, off at first): turn it on under <b>Stick calibration</b>, then hit the same spot with one stick only, at normal strength, until the count finishes. Do both sticks. Two sticks often sound alike, so single strokes are never marked. A note after a run says so only if many more strokes than usual sounded like the other stick.</li>
+        <li><b>Hand detection</b> (experimental, off at first): turn it on under <b>Stick calibration</b>, then hit the same spot with one stick only, at normal strength, until the count finishes. Do both sticks. Sticks often sound alike, so no single stroke is marked. Instead, the notes after a run say when far more strokes than usual seemed to come from the wrong hand.</li>
         <li><b>Test left vs right:</b> after calibrating, hit once with whichever hand is shown, 20 times in a shuffled order. It reports how often the app named the right stick, how each hand did, and how many hits a run would count as the other stick. Below 90% is worth recalibrating.</li>
         <li><b>Accent and Other strokes</b> (Play page) lay accents and ghost notes over the loaded exercise. Accent picks the loud strokes: the first of each group, each beat, each bar, every 2nd to 7th stroke (counted across passes, so it drifts if the count does not divide the pass), or the right or left hand. Rests are never accented. Other strokes can be Normal or Ghost. The staff shows accents with &gt; and ghost notes in brackets.</li>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
@@ -2769,7 +2769,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.86';                           /* shown beside the title */
+const VERSION='1.5.87';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
