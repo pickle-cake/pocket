@@ -127,6 +127,7 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .notice{margin:var(--s-2) 0 0;padding:var(--s-3);border-left:3px solid var(--accent);font:var(--t-small) var(--font-body)}   /* flat, with an accent rail */
 .notice ul{margin:var(--s-2) 0;padding-left:var(--s-5)}.notice li{margin:var(--s-1) 0}.notice p{margin:0}
 .btn.link{background:none;border-color:transparent;color:var(--accent);padding-inline:var(--s-1);min-width:var(--hit)}   /* tertiary: brass text, no box */
+a.btn{display:inline-flex;align-items:center;text-decoration:none}   /* a link styled as a button keeps the button's 44px height */
 p.hint .btn.link{font-size:inherit;min-height:0;min-width:0;padding:0;vertical-align:baseline}   /* a link inside a sentence sits on the line */
 body[data-run="1"] .notice{display:none}
 /* Desktop layout: the Play page puts the controls in a column beside the staff and results. Other pages stay a readable width. */
@@ -1334,6 +1335,13 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Extra hits show up:</b> raise the trigger line, or use headphones for the click.</li>
         <li><b>Wrong-hand tags look random:</b> calibrate both sticks again on the same spot of the pad.</li>
       </ul>
+    </section>
+    <section class="panel" id="help-about">
+      <h3>About Pocket</h3>
+      <p>Pocket <span id="aboutVer"></span> is free, with no ads and no account. It runs in your browser and keeps working offline once it has been opened.</p>
+      <p>It is open source under the GNU General Public License, version 3 or later. You may use, change and share it, and anything built from it must be shared the same way, with its source.</p>
+      <p>The code was written with AI, which learned from the work of countless people who shared theirs freely. It is shared in that spirit.</p>
+      <div class="btns"><a class="btn link" href="https://github.com/pickle-cake/pocket" target="_blank" rel="noopener">Source code on GitHub</a></div>
     </section>
   </div>
 
@@ -2735,7 +2743,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.74';                           /* shown beside the title */
+const VERSION='1.5.75';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -5217,19 +5225,24 @@ function openHelp(id){
   if(!(pgOwner==='help'&&!$('pg').hidden))pgPush();
   helpEl.hidden=false;
   showPage({owner:'help',key:'help',back:'\u2039 Back',title:'Help',body:helpEl});
-  if(id){$(id).scrollIntoView({block:'start'});syncHelpNav();}
+  if(id){jumpHelp($(id));syncHelpNav();}
 }
 const helpSecs=()=>[...$('pageHelp').querySelectorAll(':scope>.panel')];
+/* A section picked from the contents stays the current one while it is on screen, even when the page cannot scroll its heading
+   to the top, as near the end. Scrolling by hand lets the position decide again. */
+let helpPick=null;
+function jumpHelp(s){helpPick=s;s.scrollIntoView({block:'start'});}
 const helpName=s=>s.querySelector('h3').textContent;
 function buildHelpNav(){
   const nav=document.createElement('nav');nav.id='helpNav';nav.setAttribute('aria-label','Help sections');
   const h=document.createElement('b');h.textContent='Contents';nav.appendChild(h);
-  helpSecs().forEach(s=>{const b=document.createElement('button');b.type='button';b.dataset.id=s.id;b.textContent=helpName(s);b.addEventListener('click',()=>{s.scrollIntoView({block:'start'});});nav.appendChild(b);});
+  helpSecs().forEach(s=>{const b=document.createElement('button');b.type='button';b.dataset.id=s.id;b.textContent=helpName(s);b.addEventListener('click',()=>jumpHelp(s));nav.appendChild(b);});
   $('pageHelp').insertBefore(nav,$('pageHelp').firstChild);
 }
 /* The section being read: the last one whose top has reached the top of the page, or the final one at the very bottom. */
 function helpCurrent(){
   const bd=$('pgBody'),top=bd.getBoundingClientRect().top,secs=helpSecs();
+  if(helpPick){const r=helpPick.getBoundingClientRect();if(r.bottom>top&&r.top<top+bd.clientHeight)return helpPick;helpPick=null;}
   if(bd.scrollTop+bd.clientHeight>=bd.scrollHeight-2&&bd.scrollTop>0)return secs[secs.length-1];
   let cur=secs[0];secs.forEach(s=>{if(s.getBoundingClientRect().top-top<=60)cur=s;});
   return cur;
@@ -5256,7 +5269,7 @@ function openHelpMenu(){
   helpSecs().forEach(s=>{
     const x=menuBtn(helpName(s));
     if(s.id===t.dataset.sec)x.setAttribute('aria-current','true');
-    x.addEventListener('click',()=>{closeRowMenu();s.scrollIntoView({block:'start'});});
+    x.addEventListener('click',()=>{closeRowMenu();jumpHelp(s);});
     m.appendChild(x);
   });
   openMenu(m,t,true);
@@ -7206,6 +7219,7 @@ function wire(){
     openHelp(b.dataset.help);
   }));
   $('pgBody').addEventListener('scroll',()=>{if(pgOwner==='help')syncHelpNav();},{passive:true});
+  ['wheel','touchstart','keydown'].forEach(t=>$('pgBody').addEventListener(t,()=>{helpPick=null;},{passive:true}));   /* scrolling by hand */
   buildHelpNav();
   document.querySelectorAll('[data-try]').forEach(b=>b.addEventListener('click',()=>{
     if(run&&!run.ended)return;
@@ -7369,7 +7383,7 @@ function init(){
   $('gap').value=String(S.gap);
   $('pulse').value=S.pulse?'on':'off';$('palette').value=S.palette;$('layout').value=S.layout;
   syncEach();
-  $('ver').textContent='v'+VERSION;
+  $('ver').textContent='v'+VERSION;$('aboutVer').textContent=VERSION;
   renderLibrary();
   $('settle').value=S.settle;$('settleOut').textContent=S.settle+' ms';
   $('sens').value=S.sens;$('sensOut').textContent=S.sens+' dB';placeMeter();
