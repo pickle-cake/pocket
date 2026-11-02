@@ -1332,7 +1332,8 @@ RLRR LRLL RLRR LRLL</pre>
     <section class="panel" id="help-trouble">
       <h3>If something is off</h3>
       <ul>
-        <li><b>The microphone will not turn on:</b> allow it for this page. On an iPhone, tap <b>aA</b> in Safari's address bar, then <b>Website Settings › Microphone › Allow</b>. On a computer, use the icon beside the address. Close any other app that is using the microphone, such as a call.</li>
+        <li><b>The microphone will not turn on:</b> allow it for this page. On an iPhone, open the page menu from Safari's address bar, choose <b>Website Settings…</b> and set <b>Microphone</b> to <b>Allow</b>. On a computer, use the icon beside the address. Close any other app that is using the microphone, such as a call.</li>
+        <li><b>The microphone stopped hearing you:</b> on an iPhone, <b>Stop Using Microphone</b> in Safari's page menu turns it off for the page. Press Start again, and if it stays off, turn it back on in <b>Website Settings…</b> in the same menu.</li>
         <li><b>There is no click:</b> turn the volume up and check <b>Click volume</b> in <b>Settings › Preferences</b>. On an iPhone, Silent mode can mute the page, so turn it off.</li>
         <li><b>Every stroke looks late or early:</b> run <b>Auto calibrate</b> in <b>Settings › Device › Latency</b>, in a quiet room. With headphones on, use <b>Calibrate by playing</b> there instead.</li>
         <li><b>Extra hits show up:</b> raise the trigger line in <b>Settings › Device › Microphone level</b>, or use headphones so the microphone does not hear the click.</li>
@@ -2764,7 +2765,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.79';                           /* shown beside the title */
+const VERSION='1.5.80';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -3025,7 +3026,7 @@ function showMicError(err){
   if(n==='insecure')m='The microphone needs a secure page. Open Pocket from its web address, starting with https://.';
   else if(n==='NotAllowedError'||n==='SecurityError')m='Microphone blocked. Allow it for this page in your browser settings, then press Start again.';
   else if(n==='NotFoundError')m='No microphone found.';
-  else if(n==='muted')m='The microphone is muted. Unmute it from the browser\u2019s page menu, then press Start again.';
+  else if(n==='muted')m='The microphone is turned off for this page. Turn it back on from the browser\u2019s page menu (on an iPhone, Website Settings\u2026 \u203a Microphone), then press Start again.';
   else m='Could not start audio: '+(err&&err.message?err.message:n);
   setStatus(m);
   if(!setupNeeded())showSetup('dev');
