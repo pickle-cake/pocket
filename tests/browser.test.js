@@ -220,7 +220,27 @@ test('a returning visit goes straight to Play', async () => {
   assert.equal(await p.evaluate(() => !!document.getElementById('startBtn').offsetParent), true);
 });
 
-test('Help ends with About: the version, the licence and a link to the source', async () => {
+test('every Help section can scroll its heading to the top, the last ones too, on a phone and on desktop', async () => {
+  for (const size of [{ width: 390, height: 844 }, { width: 1280, height: 900 }]) {
+    const p = await open({ seeded: true, noise: -50, latCal: true }, size);
+    await p.click('#helpBtn');
+    await p.waitForTimeout(200);
+    const off = await p.evaluate(async () => {
+      const bd = document.getElementById('pgBody'), out = [];
+      for (const s of document.querySelectorAll('#pageHelp > section.panel')) {
+        s.scrollIntoView({ block: 'start' });
+        await new Promise(r => requestAnimationFrame(r));
+        out.push([s.id, Math.round(s.getBoundingClientRect().top - bd.getBoundingClientRect().top)]);
+      }
+      return out;
+    });
+    const bad = off.filter(([, d]) => Math.abs(d - off[0][1]) > 2);   /* each lands where the first one does, under the page's own padding */
+    assert.deepEqual(bad, [], size.width + 'px: sections that stop short of the top');
+    assert.deepEqual(p.errors, []);
+  }
+});
+
+test('Help ends with About: the licence and a link to the source', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true });
   await p.click('#helpBtn');
   await p.waitForTimeout(200);
@@ -229,7 +249,7 @@ test('Help ends with About: the version, the licence and a link to the source', 
     return { last: s === [...document.querySelectorAll('#pageHelp > section.panel')].pop(), text: s.textContent, href: a.href, target: a.target, rel: a.rel, h: r.height };
   });
   assert.ok(o.last, 'About is the last section');
-  assert.match(o.text, /Pocket \d+\.\d+\.\d+ is free/);
+  assert.match(o.text, /Pocket is free/, 'no version: Pocket is free, not just this version');
   assert.match(o.text, /GNU General Public License/);
   assert.equal(o.href, 'https://github.com/pickle-cake/pocket');
   assert.equal(o.target, '_blank');
