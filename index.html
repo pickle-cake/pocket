@@ -567,6 +567,7 @@ body[data-mode="routine"] .single-only{display:none}
 .clk i.on{background:var(--fill);border-color:var(--fill)}
 .clc{font-size:13px;color:var(--muted);margin:2px 0 8px}
 .xlist{max-height:40vh;overflow:auto;border-top:1px solid var(--line);margin-left:32px} .xlist .xrow:last-child{border-bottom:0}
+.handbox{display:grid;gap:var(--s-2)} .handbox[hidden]{display:none}
 .xrow{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)} .xrow:last-child{border-bottom:0} .xrow input{margin-top:3px;width:20px;height:20px;flex:none} .xrow small{color:var(--muted);font-size:13px}
 .modal{position:fixed;inset:0;z-index:50;background:var(--scrim);display:grid;place-items:center;padding:16px}
 .mbox{box-shadow:var(--shadow-pop);width:min(560px,100%);max-height:92vh;display:grid;gap:12px;overflow:hidden}
@@ -840,6 +841,8 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
 
     <section class="panel mic-only" aria-label="Stick calibration">
       <h3>Stick calibration</h3>
+      <label class="xrow"><input type="checkbox" id="handDet"><span>Hand detection (experimental)<br><small>Listens for which stick played each stroke. Two sticks often sound alike, so single strokes are never marked. After a run, a note says so only if many strokes sounded like the other stick.</small></span></label>
+      <div class="handbox" id="handBox" hidden>
       <div class="btns even">
         <button class="btn" id="calL" type="button">Calibrate left stick</button>
         <button class="btn" id="calR" type="button">Calibrate right stick</button>
@@ -854,6 +857,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <ul class="chkout" id="calTestOut"></ul>
       <p class="hint">After calibrating both sticks, 20 single hits show how often the app named the right one.</p>
       <p class="hint">Hit the same spot with one stick only, at normal strength, so the app learns each stick&rsquo;s tone.</p>
+      </div>
     </section>
 
     <section class="panel mic-only" aria-label="Latency">
@@ -1107,7 +1111,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     <section class="panel" id="help-start">
       <h3>Quick start</h3>
       <ol>
-        <li><b>Settings:</b> pick a tempo, use headphones for the click, tap Test microphone and hit the pad. The level bar should cross the trigger line on every stroke. Calibrating each stick is optional, but lets the app tell L from R.</li>
+        <li><b>Settings:</b> pick a tempo, use headphones for the click, tap Test microphone and hit the pad. The level bar should cross the trigger line on every stroke. Timing works without calibrating the sticks.</li>
         <li><b>Library:</b> press <b>New</b> to write a routine or <b>Import</b> to bring one in. One exercise plays on its own. Two or more make a routine, played in order.</li>
         <li><b>Play:</b> set the tempo, click level and how long each exercise plays, then press Start. After the count-in, play on the moving line and press Stop when you are done. Your result appears first, with <b>Again</b> and <b>Done</b>. The staff keeps its colours and numbers so you can see which strokes were off. Done brings the controls back.</li>
       </ol>
@@ -1131,7 +1135,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>Each row is one pass</b> of an exercise. The top row is playing and the next passes sit beneath it. Rows slide up as each pass ends.</li>
         <li><b>The moving line</b> reaches each note exactly when it is due. Strike as it arrives.</li>
         <li><b>Letter colours:</b> green is on time, blue and slanted is early, pink and underlined is late, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as green.</li>
-        <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but the app heard R. This needs both sticks calibrated.</li>
+        <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
         <li><b>The gauge</b> shows how early or late you played on average over the last 32 strokes. Left is early, right is late.</li>
         <li><b>The level bars</b> appear when a run ends. Each bar is one stroke's loudness against your own typical stroke: the middle is typical, higher is louder, and blue bars are left hand. Scroll sideways for the whole run. The number is the spread in dB, so smaller is more even. With an accent or ghost rule only the normal strokes count, since accents and ghosts are checked separately. A line below says if one hand is quieter. Clipped hits are left out, and keyboard input has no levels.</li>
         <li><b>Narrow screens:</b> a busy pass wraps onto two lines at a barline.</li>
@@ -1320,8 +1324,8 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Mic check:</b> under Device, press it, stay quiet for two seconds, then hit the pad twelve times. Echo cancellation and noise suppression are switched off for this page so stick attacks stay sharp. It sets the trigger line and settle time, and says if the signal is too quiet, clipping, uneven or double triggering.</li>
         <li><b>Trigger line:</b> raise it if room noise counts as hits, lower it if soft strokes are missed.</li>
         <li><b>Settle time:</b> how long the app ignores the pad after a hit. Raise it if one stroke counts twice. Fast playing lowers it automatically so real strokes are not skipped.</li>
-        <li><b>Stick calibration:</b> hit the same spot with one stick only, at normal strength, until the count finishes. Do both sticks.</li>
-        <li><b>Test left vs right:</b> after calibrating, hit once with whichever hand is shown, 20 times in a shuffled order. It reports how often the app named the right stick, how each hand did, and how many hits a run would tag with the wrong hand. Below 90% is worth recalibrating.</li>
+        <li><b>Hand detection</b> (experimental, off at first): turn it on under <b>Stick calibration</b>, then hit the same spot with one stick only, at normal strength, until the count finishes. Do both sticks. Two sticks often sound alike, so single strokes are never marked. A note after a run says so only if many more strokes than usual sounded like the other stick.</li>
+        <li><b>Test left vs right:</b> after calibrating, hit once with whichever hand is shown, 20 times in a shuffled order. It reports how often the app named the right stick, how each hand did, and how many hits a run would count as the other stick. Below 90% is worth recalibrating.</li>
         <li><b>Latency:</b> sound reaches the page late, and the click reaches your ears late. Press <b>Auto calibrate</b> once on each device. It plays clicks through the speakers and times when the mic hears them, so you do not play. <b>Calibrate by playing</b> is the second choice: hit on each click, 80 hits or more, until the number settles. It assumes you were on the click on average. You can also type a number.</li>
         <li><b>Accent and Other strokes</b> (Play page) lay accents and ghost notes over the loaded exercise. Accent picks the loud strokes: the first of each group, each beat, each bar, every 2nd to 7th stroke (counted across passes, so it drifts if the count does not divide the pass), or the right or left hand. Rests are never accented. Other strokes can be Normal or Ghost. The staff shows accents with &gt; and ghost notes in brackets.</li>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
@@ -1339,7 +1343,6 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Every stroke looks late or early:</b> run <b>Auto calibrate</b> in <b>Settings › Device › Latency</b>, in a quiet room. With headphones on, use <b>Calibrate by playing</b> there instead.</li>
         <li><b>Extra hits show up:</b> raise the trigger line in <b>Settings › Device › Microphone level</b>, or use headphones so the microphone does not hear the click.</li>
         <li><b>Soft strokes are missed:</b> lower the trigger line, or run <b>Mic check</b> in the same place.</li>
-        <li><b>Wrong-hand tags look random:</b> calibrate both sticks again in <b>Settings › Device › Stick calibration</b>, on the same spot of the pad.</li>
         <li><b>The clicks are out of step with the count-in:</b> press Stop and start again. If it keeps happening, use <b>Report a timing problem</b> in <b>Settings › Device › Audio timing</b>.</li>
         <li><b>Your runs have gone:</b> on an iPhone, Safari can clear a site's data after about a week without use. Add Pocket to your Home Screen, and keep a copy with <b>Export</b> in <b>Settings › Data</b>.</li>
         <li><b>Something else:</b> <button class="btn link" id="fbTrouble" type="button">Send feedback</button></li>
@@ -2670,7 +2673,7 @@ function summariseHandTest(results){
     const h=out[k],name=k==='L'?'Left':'Right',other=k==='L'?'right':'left';
     if(h.n)out.lines.push(name+' stick: '+h.ok+' of '+h.n+' right'+(h.to?', '+h.to+' heard as '+other:'')+'.');
   });
-  if(out.falseTags)out.lines.push(out.falseTags+(out.falseTags===1?' hit':' hits')+' would be tagged with the wrong hand in a run (the app was confident and wrong).');
+  if(out.falseTags)out.lines.push(out.falseTags+(out.falseTags===1?' hit':' hits')+' would have counted as the other stick in a run (the app was confident and wrong).');
   if(out.unsure)out.lines.push(out.unsure+(out.unsure===1?' hit was':' hits were')+' too close to call. A run counts those as the expected hand.');
   return out;
 }
@@ -2766,7 +2769,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.83';                           /* shown beside the title */
+const VERSION='1.5.84';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -2794,6 +2797,7 @@ S.mode=S.mode==='routine'?'routine':'single';
 S.seeded=S.seeded===true;                         /* the routines that ship with the app have been added to the Library */
 S.latCal=S.latCal===true;                          /* set once a calibration has run or a number was typed */
 S.editTab=S.editTab==='type'?'type':'build';       /* Build or Type, remembered on each device. Build is first. */
+S.handDet=S.handDet===true;   /* hand detection from the microphone: experimental, off unless turned on */
 S.libSort=S.libSort==='recent'?'recent':'name';   /* the Library's sort, remembered on each device. Name is first. */
 S.bpm=clamp(Math.round(+S.bpm)||60,40,220);
 S.subdiv=4;                                        /* strokes with no note code are sixteenths */
@@ -3235,7 +3239,7 @@ function onNodeMsg(e){
     let f=null,det=null;
     try{
       f=computeFeatures(m.w,ctx.sampleRate);
-      if(model&&model.usable)det=classify(model,f);
+      if(S.handDet&&model&&model.usable)det=classify(model,f);
     }catch(err){}
     handleHit({t:m.t,kb:false,f:f,det:det,pk:m.pk,raw:m.raw});
   }
@@ -3318,7 +3322,7 @@ function beginRun(mode){
   if(!exercises.length)return;
   const plan=buildPlan(exercises,{gapBeats:S.gap,clickMode:lat?'note':S.click,dyn:lat?null:dynOpt()});
   const r={
-    mode:mode,plan:plan,w0:Date.now(),t0:ctx.currentTime+0.25,kb:S.input==='kb',
+    mode:mode,plan:plan,w0:Date.now(),t0:ctx.currentTime+0.25,kb:S.input==='kb',p0:model&&model.acc!=null?Math.max(0.05,1-model.acc):0.05,
     nextClick:0,pulseIdx:-1,nextFin:0,pending:new Map(),cur:-1,showSeg:0,gridSeg:-1,
     errs:[],lv:[],seq:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,streak:0,best:0,checked:0,bad:0,trace:[],res:new Map(),showG:0,missRun:0,trail:[],live:'',pts:0,sk:0,hud:scoreOn&&mode==='play'&&!!LV_PTS[S.click],tm:[],
     fin:new Set(),paused:false,ci:null,dyc:lat?'':dynCode(),dyl:[],
@@ -3443,12 +3447,12 @@ function finalizeSlot(i){
   /* Hits just before the main stroke of a flam or drag are its grace notes, not extras. */
   const ex=hits.length-1-(sl.gr?hits.filter(x=>x!==h&&x.e<h.e&&h.e-x.e<=graceSpan(sl.gr)).length:0);
   const ms=h.e*1000,det=h.det;
-  const sure=!!det&&(h.kb||det.conf>=0.2);
-  const hand=sure?det.hand:exp;
-  const wrong=sure&&det.hand!==exp;
+  const sure=!!det&&(h.kb||det.conf>=SURE);
+  const hand=h.kb&&det?det.hand:exp;   /* a key names the hand for certain; the microphone only adds to the count for the note after the run */
+  const wrong=h.kb&&sure&&det.hand!==exp;
   if(!redo){
     r.extras+=ex;Q.extras+=ex;
-    if(sure){r.checked++;Q.checked++;if(wrong){r.bad++;Q.bad++;}}
+    if(sure){r.checked++;Q.checked++;if(det.hand!==exp){r.bad++;Q.bad++;}}
     r.errs.push(ms);Q.errs.push(ms);r.hand[hand].push(ms);Q.hand[hand].push(ms);
     const db=h.kb?null:strokeDb(h.pk,h.raw);
     if(db!==null){r.lv.push({db:db,hand:hand,dy:sl.dy||''});Q.lv.push({db:db,hand:hand,dy:sl.dy||''});}
@@ -3649,8 +3653,7 @@ function handleHit(h){
   r.pending.set(i,arr);
   /* Show the result straight away. finalizeSlot replaces it once the window has closed. */
   const b=pickBest(arr),exp=hnd(plan.segs[sl.seg].notes[sl.pos]),det=b.det;
-  const sure=!!det&&(b.kb||det.conf>=0.2);
-  r.res.set(i,{ms:b.e*1000,wrong:(sure&&det.hand!==exp)?det.hand:null});
+  r.res.set(i,{ms:b.e*1000,wrong:(b.kb&&det&&det.hand!==exp)?det.hand:null});
 }
 let heardTimer=0;
 function flashHeard(h){
@@ -3790,11 +3793,11 @@ function collectCal(f){
 function calText(){
   if(calMode)return 'Hit the pad '+CAL_N+' times with your '+(calMode==='L'?'LEFT':'RIGHT')+' stick only. '+cal[calMode].length+'/'+CAL_N;
   const nl=cal.L.length,nr=cal.R.length;
-  if(!nl&&!nr)return 'Timing works without it. Calibrating lets the app tell which stick made each hit.';
-  if(nl<6||nr<6)return 'Calibrate both sticks to turn on hand detection.';
+  if(!nl&&!nr)return 'Calibrate both sticks so the app can learn how each one sounds.';
+  if(nl<6||nr<6)return 'Calibrate both sticks to use hand detection.';
   const b=handBand(model.acc);
   return b.word==='Poor'?'Too many hits sound alike to tell the hands apart (it needs 90% or more). Hit the same spot with each stick, or use a different spot per stick, then calibrate again.'
-    :(b.word==='Borderline'?'Detection is on but will sometimes tag the wrong hand. Calibrate again on the same spot to improve it.':'Hand detection is reliable.');
+    :(b.word==='Borderline'?'The sticks sound alike, so the note after a run needs strong evidence. Calibrating again on the same spot may help.':'The sticks are easy to tell apart.');
 }
 /* Status of each stick and of hand detection, as three plain rows. */
 function calStatus(){
@@ -3804,7 +3807,7 @@ function calStatus(){
     if(calMode===h)return row(name,'Calibrating '+n+'/'+CAL_N,'');
     row(name,n>=6?'Calibrated \u00B7 '+n+' hits':(n?'Needs more hits \u00B7 '+n:'Not calibrated'),n>=6?'good':'muted');};
   stick('L','Left stick');stick('R','Right stick');
-  if(model&&!calMode){const b=handBand(model.acc);row('Hand detection',(b.on?'On':'Off')+' \u00B7 '+Math.round(model.acc*100)+'% told apart \u00B7 '+b.word,b.level);}
+  if(model&&!calMode){const b=handBand(model.acc);row('Hand detection',(b.on&&S.handDet?'On':'Off')+' \u00B7 '+Math.round(model.acc*100)+'% told apart \u00B7 '+b.word,b.level);}
   else row('Hand detection','Off','muted');
 }
 /* ---------- left vs right test ---------- */
@@ -4529,13 +4532,20 @@ function updateGauge(r){
   const lo=clamp(m-s,-40,40),hi=clamp(m+s,-40,40);
   $('gBand').style.left=(50+lo/80*100)+'%';$('gBand').style.width=((hi-lo)/80*100)+'%';
 }
+/* Keys name the hand for certain, so 15% wrong is worth a note. The microphone mistakes a share of strokes even when
+   every one is right (p0, from calibration), so it says so only when far more strokes than that sound wrong. */
+function otherStick(r){
+  if(r.kb)return r.checked>=8&&r.bad/r.checked>0.15;
+  const n=r.checked,p=r.p0||0.05;
+  return n>=24&&r.bad/n>=0.15&&r.bad>=n*p+3*Math.sqrt(n*p*(1-p));
+}
 /* What to work on, most important first. */
 function insightParts(r){
   if(!r||!r.errs.length)return [];
   if(r.errs.length<8)return ['Keep going. Notes on your timing appear after a few passes.'];
   const parts=[];
   if(r.slots&&r.miss/r.slots>0.1)parts.push(r.miss+' strokes were not heard. Check the trigger line in Settings, under Device.');
-  if(r.checked>=8&&r.bad/r.checked>0.15)parts.push('The wrong stick seems to have played on '+r.bad+' of '+r.checked+' strokes.');
+  if(otherStick(r))parts.push(r.kb?'The other hand played '+r.bad+' of '+r.checked+' strokes.':r.bad+' of '+r.checked+' strokes sounded like the other stick. Hand detection is experimental, so take this as a hint.');
   if(r.hand.L.length>=4&&r.hand.R.length>=4){
     const d=mean(r.hand.R)-mean(r.hand.L);
     if(Math.abs(d)>=4)parts.push('Your '+(d>0?'right':'left')+' hand lands '+Math.abs(d).toFixed(0)+' ms later than your '+(d>0?'left':'right')+'.');
@@ -4561,7 +4571,7 @@ function updateStats(r){
   $('sHits').textContent=r?r.errs.length+' of '+r.slots:'—';
   $('sL').textContent=r&&r.hand.L.length?fmtMs(mean(r.hand.L),1):'—';
   $('sR').textContent=r&&r.hand.R.length?fmtMs(mean(r.hand.R),1):'—';
-  $('sStick').textContent=r&&r.checked?Math.round((1-r.bad/r.checked)*100)+'%':'off';
+  $('sStick').textContent=r&&r.kb&&r.checked?Math.round((1-r.bad/r.checked)*100)+'%':'—';   /* only keys are sure enough for a figure */
   $('sExtra').textContent=r?String(r.extras):'—';
   const ls=r?levelStats(r.lv):null;
   $('sLevel').textContent=ls&&ls.sd!==null?ls.sd.toFixed(1):'—';
@@ -7338,6 +7348,13 @@ function wire(){
   $('latency').addEventListener('change',e=>{const v=e.target.value;S.latency=v===''?null:clamp(Math.round(+v)||0,0,400);if(v!=='')S.latCal=true;save();syncInfo();});
   $('themeBtn').addEventListener('click',()=>{S.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';applyTheme();save();});
   $('testMic').addEventListener('click',toggleMic);
+  $('handDet').checked=S.handDet;$('handBox').hidden=!S.handDet;
+  $('handDet').addEventListener('change',()=>{
+    S.handDet=$('handDet').checked;$('handBox').hidden=!S.handDet;
+    if(!S.handDet&&calMode)$('cal'+calMode).click();   /* turning it off cancels a calibration in progress */
+    if(!S.handDet&&calTest)startHandTest();   /* and a test */
+    save();updateCalUI();
+  });
   $('calL').addEventListener('click',()=>startCal('L'));
   $('calR').addEventListener('click',()=>startCal('R'));
   $('calReset').addEventListener('click',()=>{cal={L:[],R:[]};rebuildModel();save();$('calTestOut').textContent='';updateCalUI();});

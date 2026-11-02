@@ -231,6 +231,20 @@ test('the Library opens sorted by name, with Name first, and Recent puts the new
   assert.deepEqual(p.errors, []);
 });
 
+test('hand detection is off at first, and turning it on shows stick calibration and is remembered', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true });
+  await p.click('#tabSetup'); await p.click('#svBtnDev');
+  assert.equal(await p.isChecked('#handDet'), false);
+  assert.equal(await p.isVisible('#calL'), false, 'calibration hidden while off');
+  await p.click('#handDet');
+  assert.equal(await p.isVisible('#calL'), true);
+  await p.reload(); await p.waitForTimeout(300);
+  await p.click('#tabSetup'); await p.click('#svBtnDev');
+  assert.equal(await p.isChecked('#handDet'), true, 'the choice is remembered');
+  assert.equal(await p.isVisible('#calR'), true);
+  assert.deepEqual(p.errors, []);
+});
+
 test('the microphone level slider moves its trigger line', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, sens: -30 });
   await p.click('#tabSetup');
