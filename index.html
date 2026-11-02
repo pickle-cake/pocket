@@ -839,6 +839,14 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <p class="hint">Mic check listens to the room, then to twelve strokes, and sets the trigger line and settle time for you.</p>
     </section>
 
+    <section class="panel mic-only" aria-label="Latency">
+      <h3>Latency</h3>
+      <div class="field"><label for="latency">Compensation (ms)</label><input type="number" id="latency" min="0" max="400" step="1" inputmode="numeric" placeholder="auto"></div>
+      <div class="btns even"><button class="btn" id="calLoop" type="button">Auto calibrate</button><button class="btn" id="calLatency" type="button">Calibrate by playing</button></div>
+      <p class="hint"><b>Auto calibrate (recommended):</b> times 12 clicks through the speakers, so keep the room quiet and don't play.</p>
+      <p class="hint"><b>Calibrate by playing:</b> hit the pad on each click until the number settles. Use it to fine-tune, or with headphones.</p>
+      <p class="hint" id="latMsg">Sound reaches the page late, and the click reaches your ears late. This number removes that delay. The result of a calibration appears here.</p>
+    </section>
     <section class="panel mic-only" aria-label="Stick calibration">
       <h3>Stick calibration</h3>
       <label class="xrow"><input type="checkbox" id="handDet"><span>Hand detection (experimental)<br><small>Listens for which stick played each stroke. Two sticks often sound alike, so single strokes are never marked. After a run, a note says so only if many strokes sounded like the other stick.</small></span></label>
@@ -858,15 +866,6 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <p class="hint">After calibrating both sticks, 20 single hits show how often the app named the right one.</p>
       <p class="hint">Hit the same spot with one stick only, at normal strength, so the app learns each stick&rsquo;s tone.</p>
       </div>
-    </section>
-
-    <section class="panel mic-only" aria-label="Latency">
-      <h3>Latency</h3>
-      <div class="field"><label for="latency">Compensation (ms)</label><input type="number" id="latency" min="0" max="400" step="1" inputmode="numeric" placeholder="auto"></div>
-      <div class="btns even"><button class="btn" id="calLoop" type="button">Auto calibrate</button><button class="btn" id="calLatency" type="button">Calibrate by playing</button></div>
-      <p class="hint"><b>Auto calibrate (recommended):</b> times 12 clicks through the speakers, so keep the room quiet and don't play.</p>
-      <p class="hint"><b>Calibrate by playing:</b> hit the pad on each click until the number settles. Use it to fine-tune, or with headphones.</p>
-      <p class="hint" id="latMsg">Sound reaches the page late, and the click reaches your ears late. This number removes that delay. The result of a calibration appears here.</p>
     </section>
     <section class="panel" aria-label="Audio timing">
       <h3>Audio timing</h3>
@@ -1125,7 +1124,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>Library:</b> your saved routines, each with Edit and Play. <b>New</b> starts a routine, <b>Import</b> adds one from a file or a link, and <b>Export</b> saves the whole library as one file that Import reads back (it can also be hosted as a library). A title such as "Rudiment: Single stroke roll" groups the routine under Rudiment. Routines with no group go under Other. The ⋮ on a routine has Download and Delete. Delete asks for a second tap, and Undo follows. The chevron opens a routine to show its exercises.</li>
         <li><b>An unsaved routine</b> is what you are working on. It is kept as you type, but a saved routine changes only when you press Save. The app asks before you open another routine and lose unsaved work. The editor opens full screen from Edit, and Back returns you.</li>
         <li><b>Progress:</b> <b>History</b> lists your runs by exercise or routine, with Play. <b>Scores</b> shows each exercise (sorted by accuracy) and each routine: tempo, accuracy, trend, early or late, and evenness. <b>Achievements</b> shows your practice days for the last four weeks, a streak that forgives one rest day a week, and badges.</li>
-        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours), <b>Device</b> (input, microphone level, stick calibration, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
+        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours), <b>Device</b> (input, microphone level, latency, stick calibration) and <b>Data</b> (export, import, clear, storage, library links).</li>
       </ul>
     </section>
 
@@ -1324,9 +1323,9 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Mic check:</b> under Device, press it, stay quiet for two seconds, then hit the pad twelve times. Echo cancellation and noise suppression are switched off for this page so stick attacks stay sharp. It sets the trigger line and settle time, and says if the signal is too quiet, clipping, uneven or double triggering.</li>
         <li><b>Trigger line:</b> raise it if room noise counts as hits, lower it if soft strokes are missed.</li>
         <li><b>Settle time:</b> how long the app ignores the pad after a hit. Raise it if one stroke counts twice. Fast playing lowers it automatically so real strokes are not skipped.</li>
+        <li><b>Latency:</b> sound reaches the page late, and the click reaches your ears late. Press <b>Auto calibrate</b> once on each device. It plays clicks through the speakers and times when the mic hears them, so you do not play. <b>Calibrate by playing</b> is the second choice: hit on each click, 80 hits or more, until the number settles. It assumes you were on the click on average. You can also type a number.</li>
         <li><b>Hand detection</b> (experimental, off at first): turn it on under <b>Stick calibration</b>, then hit the same spot with one stick only, at normal strength, until the count finishes. Do both sticks. Two sticks often sound alike, so single strokes are never marked. A note after a run says so only if many more strokes than usual sounded like the other stick.</li>
         <li><b>Test left vs right:</b> after calibrating, hit once with whichever hand is shown, 20 times in a shuffled order. It reports how often the app named the right stick, how each hand did, and how many hits a run would count as the other stick. Below 90% is worth recalibrating.</li>
-        <li><b>Latency:</b> sound reaches the page late, and the click reaches your ears late. Press <b>Auto calibrate</b> once on each device. It plays clicks through the speakers and times when the mic hears them, so you do not play. <b>Calibrate by playing</b> is the second choice: hit on each click, 80 hits or more, until the number settles. It assumes you were on the click on average. You can also type a number.</li>
         <li><b>Accent and Other strokes</b> (Play page) lay accents and ghost notes over the loaded exercise. Accent picks the loud strokes: the first of each group, each beat, each bar, every 2nd to 7th stroke (counted across passes, so it drifts if the count does not divide the pass), or the right or left hand. Rests are never accented. Other strokes can be Normal or Ghost. The staff shows accents with &gt; and ghost notes in brackets.</li>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
         <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. Hits just before it (up to 80 ms for a flam, 120 ms for a drag) are its grace notes and are not counted as extras. While an exercise has them, the microphone also accepts a clearly louder strike soon after a hit, so a soft grace does not hide the main stroke. A grace as loud as the main stroke can, so play it softer. Keyboard play has no graces, so use one key per main stroke.</li>
@@ -2769,7 +2768,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.84';                           /* shown beside the title */
+const VERSION='1.5.85';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
