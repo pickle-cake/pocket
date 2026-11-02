@@ -24,7 +24,7 @@ Rules:
 - **Fonts:** Display for hero numbers, the title and navigation; Barlow for text; Mono for tabular numbers and stickings. Only use weights that the Google Fonts link loads.
 - **Reuse components.** Use the guide's button, selection control, row, card, message and overlay patterns. Do not restyle one inside a page-specific selector. Do not position row actions absolutely over fixed padding.
 - **Accessibility:** tap targets at least 44px; text contrast at least 4.5:1 and control edges at least 3:1; every colour-coded state has a second cue; every icon-only button has an `aria-label`; every disabled control says why; animations sit inside `prefers-reduced-motion: no-preference`.
-- **Copy:** sentence case, except for display, navigation and eyebrow labels. Labels are nouns and buttons are verbs. Numbers carry units (`60 BPM`, `±20 ms`). Use *exercise* for a single pattern and *routine* for a set; *early* and *late* for timing.
+- **Copy:** sentence case, except for display, navigation and eyebrow labels. Labels are nouns and buttons are verbs. Numbers carry units (`60 BPM`, `±20 ms`). Use *exercise* for a single pattern and *routine* for a set; *early* and *late* for timing. Australian English spelling (*colour*, *centre*, *-ise*; *practice* the noun, *practise* the verb), in the app and in the docs; `npm test` checks the page and the routines.
 
 Before finishing a UI change, check it in light, dark and colour-blind palettes, at phone width (390px) and desktop width (1280px).
 

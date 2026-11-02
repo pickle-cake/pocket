@@ -220,6 +220,44 @@ test('a returning visit goes straight to Play', async () => {
   assert.equal(await p.evaluate(() => !!document.getElementById('startBtn').offsetParent), true);
 });
 
+test('every Help section can scroll its heading to the top, the last ones too, on a phone and on desktop', async () => {
+  for (const size of [{ width: 390, height: 844 }, { width: 1280, height: 900 }]) {
+    const p = await open({ seeded: true, noise: -50, latCal: true }, size);
+    await p.click('#helpBtn');
+    await p.waitForTimeout(200);
+    const off = await p.evaluate(async () => {
+      const bd = document.getElementById('pgBody'), out = [];
+      for (const s of document.querySelectorAll('#pageHelp > section.panel')) {
+        s.scrollIntoView({ block: 'start' });
+        await new Promise(r => requestAnimationFrame(r));
+        out.push([s.id, Math.round(s.getBoundingClientRect().top - bd.getBoundingClientRect().top)]);
+      }
+      return out;
+    });
+    const bad = off.filter(([, d]) => Math.abs(d - off[0][1]) > 2);   /* each lands where the first one does, under the page's own padding */
+    assert.deepEqual(bad, [], size.width + 'px: sections that stop short of the top');
+    assert.deepEqual(p.errors, []);
+  }
+});
+
+test('Help ends with About: the licence and a link to the source', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true });
+  await p.click('#helpBtn');
+  await p.waitForTimeout(200);
+  const o = await p.evaluate(() => {
+    const s = document.getElementById('help-about'), a = s.querySelector('a'), r = a.getBoundingClientRect();
+    return { last: s === [...document.querySelectorAll('#pageHelp > section.panel')].pop(), text: s.textContent, href: a.href, target: a.target, rel: a.rel, h: r.height };
+  });
+  assert.ok(o.last, 'About is the last section');
+  assert.match(o.text, /Pocket is free/, 'no version: Pocket is free, not just this version');
+  assert.match(o.text, /GNU General Public License/);
+  assert.equal(o.href, 'https://github.com/pickle-cake/pocket');
+  assert.equal(o.target, '_blank');
+  assert.equal(o.rel, 'noopener');
+  assert.ok(o.h >= 44, 'a 44px target: ' + o.h);
+  assert.deepEqual(p.errors, []);
+});
+
 test('Help opens and the Try it buttons load their exercise', async () => {
   const p = await open({ seeded: true });
   await p.click('#helpBtn').catch(async () => { await p.evaluate(() => [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Help').click()); });
@@ -620,7 +658,8 @@ test('Help: a menu in the title on a phone, a contents list beside the text on d
   assert.equal(await ph.evaluate(() => getComputedStyle(document.getElementById('helpNav')).display), 'none');
   await ph.evaluate(() => document.getElementById('pgTtl').click());
   const items = await ph.evaluate(() => [...document.querySelectorAll('.menu:not([hidden]) button')].map(b => b.textContent));
-  assert.equal(items.length, 9);
+  assert.equal(items.length, 10);
+  assert.equal(items[9], 'About Pocket');
   await ph.evaluate(() => [...document.querySelectorAll('.menu:not([hidden]) button')].find(b => b.textContent === 'Scores, tempo and progress').click());
   await ph.waitForTimeout(400);
   assert.equal(await ph.evaluate(() => document.getElementById('pgTtl').textContent), 'Help · Scores, tempo and progress');

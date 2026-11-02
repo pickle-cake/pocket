@@ -46,7 +46,7 @@ Keep the existing palette and add the roles that are missing. **Component CSS ne
   --danger:var(--late);  /* NEW: destructive actions */
   --on-danger:#fff;
   --heat:#E5322B;        /* NEW: streak heat, replaced in the cb palette */
-  --heat-low:#fff;       /* NEW: the streak meter at the first stroke, mixed toward --heat */
+  --heat-low:#fff;       /* NEW: the streak meter at the first stroke, mixed towards --heat */
 }
 ```
 
@@ -239,6 +239,7 @@ On desktop, Achievements uses the two-column workspace: the streak calendar and 
 
 ## 8. Content and voice
 
+- **Spelling:** Australian English everywhere people read it, and in the docs: *colour*, *centre*, *behaviour*, *-ise* (*organise*, *recognise*), *licence* as the noun, *towards*. As in British English, *practice* is the noun (*a practice pad*, *practice time*) and *practise* the verb (*Start practising*, *practise the weak ones*); both are right. Proper names keep their own spelling (*GNU General Public License*). `tests/lint.test.js` checks the page and the routines.
 - **Case:** Sentence case for everything except the three uppercase roles in §3.
 - **Labels** are nouns ("Click volume"). **Buttons** are verbs ("Calibrate left stick"). **Hints** are one sentence, and anything longer goes to Help with a "Help" link-button.
 - **Numbers** always carry a unit: `60 BPM`, `±20 ms`, `92%`, `1 min`. Put a thin or normal space before the unit and use the same unit spelling everywhere.

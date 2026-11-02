@@ -127,6 +127,7 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .notice{margin:var(--s-2) 0 0;padding:var(--s-3);border-left:3px solid var(--accent);font:var(--t-small) var(--font-body)}   /* flat, with an accent rail */
 .notice ul{margin:var(--s-2) 0;padding-left:var(--s-5)}.notice li{margin:var(--s-1) 0}.notice p{margin:0}
 .btn.link{background:none;border-color:transparent;color:var(--accent);padding-inline:var(--s-1);min-width:var(--hit)}   /* tertiary: brass text, no box */
+a.btn{display:inline-flex;align-items:center;text-decoration:none}   /* a link styled as a button keeps the button's 44px height */
 p.hint .btn.link{font-size:inherit;min-height:0;min-width:0;padding:0;vertical-align:baseline}   /* a link inside a sentence sits on the line */
 body[data-run="1"] .notice{display:none}
 /* Desktop layout: the Play page puts the controls in a column beside the staff and results. Other pages stay a readable width. */
@@ -1335,6 +1336,13 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Wrong-hand tags look random:</b> calibrate both sticks again on the same spot of the pad.</li>
       </ul>
     </section>
+    <section class="panel" id="help-about">
+      <h3>About Pocket</h3>
+      <p>Pocket is free, with no ads and no account. It runs in your browser and keeps working offline once it has been opened.</p>
+      <p>It is open source under the GNU General Public License, version 3 or later. You may use, change and share it, and anything built from it must be shared the same way, with its source.</p>
+      <p>The code was written with AI, which learned from the work of countless people who shared theirs freely. It is shared in that spirit.</p>
+      <div class="btns"><a class="btn link" href="https://github.com/pickle-cake/pocket" target="_blank" rel="noopener">Source code on GitHub</a></div>
+    </section>
   </div>
 
   <div class="page" id="pagePlay" role="tabpanel" aria-labelledby="tabPlay" hidden>
@@ -2294,7 +2302,7 @@ function practiceDays(runs,sum){
   runs.forEach(r=>{const k=dayKey(r.t);m.set(k,(m.get(k)||0)+(r.sec||0));});
   return m;
 }
-const STREAK_MIN=300;   /* seconds of practice that make a day count toward the streak */
+const STREAK_MIN=300;   /* seconds of practice that make a day count towards the streak */
 function streakOf(days,now){
   const at=k=>dayKey(new Date(now.getFullYear(),now.getMonth(),now.getDate()-k).getTime());
   const has=k=>(days.get(at(k))||0)>=STREAK_MIN;
@@ -2603,7 +2611,7 @@ function dynStats(list){
   o.a.sd=o.a.d.length>=3?sd(o.a.d):null;o.g.sd=o.g.d.length>=3?sd(o.g.d):null;   /* how even the accents are with each other, and the ghost notes with each other */
   return o;
 }
-/* A stroke counts toward ACC when it is on time and, where the exercise asks for an accent or a ghost note, played as written. Levels are judged against the strokes around each one, so this can only be done once the run is over. */
+/* A stroke counts towards ACC when it is on time and, where the exercise asks for an accent or a ghost note, played as written. Levels are judged against the strokes around each one, so this can only be done once the run is over. */
 function gateDynamics(r){
   dynStats(r.dyl);
   r.dyl.forEach(e=>{
@@ -2735,7 +2743,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.74';                           /* shown beside the title */
+const VERSION='1.5.77';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -4663,7 +4671,7 @@ function recordRun(r){
   if(scoreOn&&rk&&run.rp&&run.rp.x&&!libFor(rk)&&recs.lib.length<MAX_LIB){autoLib={id:libId(),x:run.rp.x,t:Date.now()};recs.lib.push(autoLib);}
   const bv1=badgeValues(recs.runs,recs.sum),won=[];
   BADGES.forEach(b=>b.at.forEach((n,i)=>{if(bv0[b.id]<n&&bv1[b.id]>=n)won.push({id:b.id,i:i,v:bv1[b.id]});}));
-  if(!scoreOn){const dk=dayKey(run.t);recs.sum.days[dk]=(recs.sum.days[dk]||0)+run.sec;}   /* the time of a practice run still counts toward today and the streak */
+  if(!scoreOn){const dk=dayKey(run.t);recs.sum.days[dk]=(recs.sum.days[dk]||0)+run.sec;}   /* the time of a practice run still counts towards today and the streak */
   const saved=saveRecs();
   if(scoreOn)askPersist();
   lastRun={run:run,autoLib:autoLib,prevBest:prevBest,newTempo:newTempo,won:won,rows:rows,skipped:skipped,saved:saved,practice:!scoreOn,score:score,share0:share0,hsNew:scoreOn&&score>hs0};
@@ -5217,14 +5225,24 @@ function openHelp(id){
   if(!(pgOwner==='help'&&!$('pg').hidden))pgPush();
   helpEl.hidden=false;
   showPage({owner:'help',key:'help',back:'\u2039 Back',title:'Help',body:helpEl});
-  if(id){$(id).scrollIntoView({block:'start'});syncHelpNav();}
+  padHelp();
+  if(id){jumpHelp($(id));syncHelpNav();}
 }
 const helpSecs=()=>[...$('pageHelp').querySelectorAll(':scope>.panel')];
+function jumpHelp(s){s.scrollIntoView({block:'start'});}
+/* Space below the last section, just enough for its heading to scroll to the top, so every section can. */
+function padHelp(){
+  const bd=$('pgBody'),secs=helpSecs(),last=secs[secs.length-1];
+  if(pgOwner!=='help'||$('pg').hidden||!last)return;
+  helpEl.style.paddingBottom='0px';
+  const lastTop=last.getBoundingClientRect().top-bd.getBoundingClientRect().top+bd.scrollTop;
+  helpEl.style.paddingBottom=Math.max(0,Math.ceil(bd.clientHeight-(bd.scrollHeight-lastTop)))+'px';
+}
 const helpName=s=>s.querySelector('h3').textContent;
 function buildHelpNav(){
   const nav=document.createElement('nav');nav.id='helpNav';nav.setAttribute('aria-label','Help sections');
   const h=document.createElement('b');h.textContent='Contents';nav.appendChild(h);
-  helpSecs().forEach(s=>{const b=document.createElement('button');b.type='button';b.dataset.id=s.id;b.textContent=helpName(s);b.addEventListener('click',()=>{s.scrollIntoView({block:'start'});});nav.appendChild(b);});
+  helpSecs().forEach(s=>{const b=document.createElement('button');b.type='button';b.dataset.id=s.id;b.textContent=helpName(s);b.addEventListener('click',()=>jumpHelp(s));nav.appendChild(b);});
   $('pageHelp').insertBefore(nav,$('pageHelp').firstChild);
 }
 /* The section being read: the last one whose top has reached the top of the page, or the final one at the very bottom. */
@@ -5256,7 +5274,7 @@ function openHelpMenu(){
   helpSecs().forEach(s=>{
     const x=menuBtn(helpName(s));
     if(s.id===t.dataset.sec)x.setAttribute('aria-current','true');
-    x.addEventListener('click',()=>{closeRowMenu();s.scrollIntoView({block:'start'});});
+    x.addEventListener('click',()=>{closeRowMenu();jumpHelp(s);});
     m.appendChild(x);
   });
   openMenu(m,t,true);
@@ -5573,7 +5591,7 @@ function deleteRun(id){
   if(lastRun&&lastRun.run.id===id){lastRun=null;renderAdvice();}
   renderProgress();
 }
-/* Takes one exercise out of a recorded routine run, for a stray exercise that was in the editor. The run becomes a run of the routine without it, so it counts toward that routine. */
+/* Takes one exercise out of a recorded routine run, for a stray exercise that was in the editor. The run becomes a run of the routine without it, so it counts towards that routine. */
 function dropExercise(r,b){
   const gone=b.i||0,inSk=!!(r.sk&&r.sk.includes(b)),left=inSk?r.exercises:r.exercises.filter(x=>x!==b);
   if(!left.length||!gone){deleteRun(r.id);return;}
@@ -7206,6 +7224,7 @@ function wire(){
     openHelp(b.dataset.help);
   }));
   $('pgBody').addEventListener('scroll',()=>{if(pgOwner==='help')syncHelpNav();},{passive:true});
+  window.addEventListener('resize',padHelp);
   buildHelpNav();
   document.querySelectorAll('[data-try]').forEach(b=>b.addEventListener('click',()=>{
     if(run&&!run.ended)return;
