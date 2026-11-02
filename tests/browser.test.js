@@ -231,17 +231,16 @@ test('the Library opens sorted by name, with Name first, and Recent puts the new
   assert.deepEqual(p.errors, []);
 });
 
-test('hand detection is off at first, and turning it on shows stick calibration and is remembered', async () => {
-  const p = await open({ seeded: true, noise: -50, latCal: true });
+test('Device has no stick calibration, and an old saved one is dropped', async () => {
+  const p = await open(null, null, () => {
+    if (!localStorage.getItem('stick-timing-trainer.v1')) localStorage.setItem('stick-timing-trainer.v1', JSON.stringify({ settings: { seeded: true, noise: -50, latCal: true, handDet: true }, cal: { L: [[1, 2]], R: [[3, 4]] } }));
+  });
   await p.click('#tabSetup'); await p.click('#svBtnDev');
-  assert.equal(await p.isChecked('#handDet'), false);
-  assert.equal(await p.isVisible('#calL'), false, 'calibration hidden while off');
-  await p.click('#handDet');
-  assert.equal(await p.isVisible('#calL'), true);
-  await p.reload(); await p.waitForTimeout(300);
-  await p.click('#tabSetup'); await p.click('#svBtnDev');
-  assert.equal(await p.isChecked('#handDet'), true, 'the choice is remembered');
-  assert.equal(await p.isVisible('#calR'), true);
+  assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll('#svDev h3, [aria-label="Stick calibration"]')].map(e => e.textContent).filter(t => /stick|hand/i.test(t))), []);
+  await p.evaluate(() => document.getElementById('vol').dispatchEvent(new Event('input')));
+  const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('stick-timing-trainer.v1')));
+  assert.equal(saved.cal, undefined);
+  assert.equal(saved.settings.handDet, undefined);
   assert.deepEqual(p.errors, []);
 });
 

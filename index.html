@@ -311,11 +311,7 @@ button.row:disabled{opacity:.4;cursor:not-allowed}
 .row>.rtruns{grid-column:1/-1;margin:var(--s-2) 0 calc(-1*var(--s-3))}
 .rtruns .row{cursor:pointer}
 .rmore{border-top:1px solid var(--line);width:100%;text-align:left;border-radius:0}
-.calst{display:grid;gap:2px;margin:4px 0 8px} .calst .cs{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:14px} .calst .cs:first-child{border-top:0} .calst .good{color:var(--ok)} .calst .warn{color:var(--warn)} .calst .bad{color:var(--danger)} .calst .muted{color:var(--muted)}
 .chkout{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px} .chkout:empty{display:none} .chkout .bad{color:var(--danger)} .chkout .warn{color:var(--warn)} .chkout .good{color:var(--ok)}
-.ctbox{display:grid;gap:6px;justify-items:center;text-align:center}
-.ctp{font:800 var(--t-hero) var(--font-display);color:var(--accent);min-height:76px;display:flex;align-items:center}
-.ctp.hit{opacity:.35}
 .meter{position:relative;height:16px;border-radius:8px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
 .m-fill{height:100%;width:0;background:var(--fill)}
 .m-thr{position:absolute;top:0;bottom:0;width:2px;background:var(--ink)}
@@ -567,8 +563,6 @@ body[data-mode="routine"] .single-only{display:none}
 .clk i.on{background:var(--fill);border-color:var(--fill)}
 .clc{font-size:13px;color:var(--muted);margin:2px 0 8px}
 .xlist{max-height:40vh;overflow:auto;border-top:1px solid var(--line);margin-left:32px} .xlist .xrow:last-child{border-bottom:0}
-.xrow.flat{border-bottom:0}   /* a lone checkbox: the line belongs to what opens below it */
-.handbox{display:grid;gap:var(--s-2);border-top:1px solid var(--line);padding-top:var(--s-3)} .handbox[hidden]{display:none}
 .xrow{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)} .xrow:last-child{border-bottom:0} .xrow input{margin-top:3px;width:20px;height:20px;flex:none} .xrow small{color:var(--muted);font-size:13px}
 .modal{position:fixed;inset:0;z-index:50;background:var(--scrim);display:grid;place-items:center;padding:16px}
 .mbox{box-shadow:var(--shadow-pop);width:min(560px,100%);max-height:92vh;display:grid;gap:12px;overflow:hidden}
@@ -848,26 +842,6 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <p class="hint"><b>Calibrate by playing:</b> hit the pad on each click until the number settles. Use it to fine-tune, or with headphones.</p>
       <p class="hint" id="latMsg">Sound reaches the page late, and the click reaches your ears late. This number removes that delay. The result of a calibration appears here.</p>
     </section>
-    <section class="panel mic-only" aria-label="Stick calibration">
-      <h3>Stick calibration</h3>
-      <label class="xrow flat"><input type="checkbox" id="handDet"><span>Hand detection (experimental)<br><small>Learns the sound of each stick. After a run, it notes how many strokes seemed to come from the wrong hand.</small></span></label>
-      <div class="handbox" id="handBox" hidden>
-      <div class="btns even">
-        <button class="btn" id="calL" type="button">Calibrate left stick</button>
-        <button class="btn" id="calR" type="button">Calibrate right stick</button>
-      </div>
-      <div class="btns even">
-        <button class="btn" id="calTest" type="button" hidden>Test left vs right</button>
-        <button class="btn" id="calReset" type="button">Clear</button>
-      </div>
-      <div class="calst" id="calSt"></div>
-      <p class="hint" id="calInfo"></p>
-      <div class="ctbox" id="calTestBox" hidden><div class="ctp" id="calTestPrompt" aria-live="polite"></div><p class="hint" id="calTestMsg"></p></div>
-      <ul class="chkout" id="calTestOut"></ul>
-      <p class="hint">After calibrating both sticks, 20 single hits show how often the app named the right one.</p>
-      <p class="hint">Hit the same spot with one stick only, at normal strength, so the app learns each stick&rsquo;s tone.</p>
-      </div>
-    </section>
     <section class="panel" aria-label="Audio timing">
       <h3>Audio timing</h3>
       <p class="hint" id="clkMsg"></p>
@@ -1111,7 +1085,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     <section class="panel" id="help-start">
       <h3>Quick start</h3>
       <ol>
-        <li><b>Settings:</b> pick a tempo, use headphones for the click, tap Test microphone and hit the pad. The level bar should cross the trigger line on every stroke. Timing works without calibrating the sticks.</li>
+        <li><b>Settings:</b> pick a tempo, use headphones for the click, tap Test microphone and hit the pad. The level bar should cross the trigger line on every stroke.</li>
         <li><b>Library:</b> press <b>New</b> to write a routine or <b>Import</b> to bring one in. One exercise plays on its own. Two or more make a routine, played in order.</li>
         <li><b>Play:</b> set the tempo, click level and how long each exercise plays, then press Start. After the count-in, play on the moving line and press Stop when you are done. Your result appears first, with <b>Again</b> and <b>Done</b>. The staff keeps its colours and numbers so you can see which strokes were off. Done brings the controls back.</li>
       </ol>
@@ -1125,7 +1099,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>Library:</b> your saved routines, each with Edit and Play. <b>New</b> starts a routine, <b>Import</b> adds one from a file or a link, and <b>Export</b> saves the whole library as one file that Import reads back (it can also be hosted as a library). A title such as "Rudiment: Single stroke roll" groups the routine under Rudiment. Routines with no group go under Other. The ⋮ on a routine has Download and Delete. Delete asks for a second tap, and Undo follows. The chevron opens a routine to show its exercises.</li>
         <li><b>An unsaved routine</b> is what you are working on. It is kept as you type, but a saved routine changes only when you press Save. The app asks before you open another routine and lose unsaved work. The editor opens full screen from Edit, and Back returns you.</li>
         <li><b>Progress:</b> <b>History</b> lists your runs by exercise or routine, with Play. <b>Scores</b> shows each exercise (sorted by accuracy) and each routine: tempo, accuracy, trend, early or late, and evenness. <b>Achievements</b> shows your practice days for the last four weeks, a streak that forgives one rest day a week, and badges.</li>
-        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours), <b>Device</b> (input, microphone level, latency, stick calibration) and <b>Data</b> (export, import, clear, storage, library links).</li>
+        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
       </ul>
     </section>
 
@@ -1325,8 +1299,6 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Trigger line:</b> raise it if room noise counts as hits, lower it if soft strokes are missed.</li>
         <li><b>Settle time:</b> how long the app ignores the pad after a hit. Raise it if one stroke counts twice. Fast playing lowers it automatically so real strokes are not skipped.</li>
         <li><b>Latency:</b> sound reaches the page late, and the click reaches your ears late. Press <b>Auto calibrate</b> once on each device. It plays clicks through the speakers and times when the mic hears them, so you do not play. <b>Calibrate by playing</b> is the second choice: hit on each click, 80 hits or more, until the number settles. It assumes you were on the click on average. You can also type a number.</li>
-        <li><b>Hand detection</b> (experimental, off at first): turn it on under <b>Stick calibration</b>, then hit the same spot with one stick only, at normal strength, until the count finishes. Do both sticks. Sticks often sound alike, so no single stroke is marked. Instead, the notes after a run count the strokes that seemed to come from the wrong hand, and warn only when there are far more than usual.</li>
-        <li><b>Test left vs right:</b> after calibrating, hit once with whichever hand is shown, 20 times in a shuffled order. It reports how often the app named the right stick, how each hand did, and how many hits a run would count as the other stick. Below 90% is worth recalibrating.</li>
         <li><b>Accent and Other strokes</b> (Play page) lay accents and ghost notes over the loaded exercise. Accent picks the loud strokes: the first of each group, each beat, each bar, every 2nd to 7th stroke (counted across passes, so it drifts if the count does not divide the pass), or the right or left hand. Rests are never accented. Other strokes can be Normal or Ghost. The staff shows accents with &gt; and ghost notes in brackets.</li>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
         <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. Hits just before it (up to 80 ms for a flam, 120 ms for a drag) are its grace notes and are not counted as extras. While an exercise has them, the microphone also accepts a clearly louder strike soon after a hit, so a soft grace does not hide the main stroke. A grace as loud as the main stroke can, so play it softer. Keyboard play has no graces, so use one key per main stroke.</li>
@@ -2423,93 +2395,14 @@ function bestBefore(runs,k,bpm,lv,dy){
   runs.forEach(run=>{run.exercises.forEach(b=>{if(run.lv===lv&&(run.dy||'')===dy&&b.k===k&&b.due>0&&(b.bpm||run.bpm)===bpm){const p=b.within/b.due;if(best===null||p>best)best=p;}});});
   return best;
 }
-function fft(re,im){
-  const n=re.length;
-  for(let i=1,j=0;i<n;i++){
-    let bit=n>>1;
-    for(;j&bit;bit>>=1)j^=bit;
-    j^=bit;
-    if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}
-  }
-  for(let len=2;len<=n;len<<=1){
-    const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang),h=len>>1;
-    for(let i=0;i<n;i+=len){
-      let cr=1,ci=0;
-      for(let k=0;k<h;k++){
-        const a=i+k,b=a+h;
-        const vr=re[b]*cr-im[b]*ci,vi=re[b]*ci+im[b]*cr;
-        re[b]=re[a]-vr;im[b]=im[a]-vi;re[a]+=vr;im[a]+=vi;
-        const nr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=nr;
-      }
-    }
-  }
-}
-/* Seven tone features from the ~21 ms after an onset. Loudness is left out on purpose. */
-function computeFeatures(w,sr){
-  const N=w.length,re=new Float64Array(N),im=new Float64Array(N);
-  let mu=0;for(let i=0;i<N;i++)mu+=w[i];mu/=N;
-  for(let i=0;i<N;i++)re[i]=(w[i]-mu)*(0.5-0.5*Math.cos(2*Math.PI*i/(N-1)));
-  fft(re,im);
-  const binHz=sr/N,k0=Math.max(1,Math.ceil(150/binHz)),k1=Math.min(N/2-1,Math.floor(12000/binHz));
-  const P=new Float64Array(k1+1);
-  let tot=0,cen=0,lo=0,hi=0,ls=0,cnt=0;
-  for(let k=k0;k<=k1;k++){
-    const p=re[k]*re[k]+im[k]*im[k],f=k*binHz;
-    P[k]=p;tot+=p;cen+=p*f;if(f<1000)lo+=p;if(f>4000)hi+=p;ls+=Math.log(p+1e-12);cnt++;
-  }
-  const T=tot+1e-12;
-  let acc=0,f85=k1*binHz;
-  for(let k=k0;k<=k1;k++){acc+=P[k];if(acc>=0.85*tot){f85=k*binHz;break;}}
-  const flat=Math.exp(ls/cnt)/(tot/cnt+1e-12);
-  let e1=0,e3=0,zc=0;const th=Math.floor(N/3);
-  for(let i=0;i<N;i++){
-    const v=w[i]-mu;
-    if(i<th)e1+=v*v;else if(i>=N-th)e3+=v*v;
-    if(i&&(v>=0)!==((w[i-1]-mu)>=0))zc++;
-  }
-  return [Math.log10(cen/T+1),lo/T,hi/T,Math.log10(flat+1e-6),zc/N,Math.log10((e3+1e-9)/(e1+1e-9)),Math.log10(f85+1)];
-}
-function trainModel(L,R){
-  const K=L[0].length,muL=[],muR=[],sp=[],w=[];
-  for(let k=0;k<K;k++){
-    const a=L.map(x=>x[k]),b=R.map(x=>x[k]);
-    const ma=mean(a),mb=mean(b),va=sd(a)**2,vb=sd(b)**2;
-    muL.push(ma);muR.push(mb);
-    sp.push(Math.sqrt((va+vb)/2)+1e-6*(Math.abs(ma)+Math.abs(mb))+1e-9);
-    w.push(Math.min(4,(ma-mb)**2/(va+vb+1e-12)));
-  }
-  return {muL,muR,sp,w};
-}
-function classify(m,x){
-  let sL=0,sR=0;
-  for(let k=0;k<x.length;k++){
-    const zl=(x[k]-m.muL[k])/m.sp[k],zr=(x[k]-m.muR[k])/m.sp[k];
-    sL+=m.w[k]*zl*zl;sR+=m.w[k]*zr*zr;
-  }
-  return {hand:sL<=sR?'L':'R',conf:Math.abs(sL-sR)/(sL+sR+1e-9)};
-}
-/* Leave-one-out accuracy of the calibration hits: how well the two sticks can be told apart. */
-function looAccuracy(L,R){
-  if(L.length<4||R.length<4)return null;
-  let ok=0;
-  for(let i=0;i<L.length;i++){
-    const m=trainModel(L.filter((_,j)=>j!==i),R);
-    if(classify(m,L[i]).hand==='L')ok++;
-  }
-  for(let i=0;i<R.length;i++){
-    const m=trainModel(L,R.filter((_,j)=>j!==i));
-    if(classify(m,R[i]).hand==='R')ok++;
-  }
-  return ok/(L.length+R.length);
-}
-/* Runs inside an AudioWorklet (and in tests). Finds stick attacks and captures 1024 samples from each. */
+/* Runs inside an AudioWorklet (and in tests). Finds stick attacks and reports each one's peak over the 1024 samples after it. */
 class OnsetDetector{
   constructor(sr,emit){
     this.sr=sr;this.emit=emit;
     this.thr=0.03;this.refrac=Math.round(0.04*sr);this.flam=0;this.curPk=0;
     this.hp=0;this.px=0;this.ef=0;this.es=0.001;
     this.armed=true;this.since=1e9;
-    this.cap=null;this.capN=0;this.capT=0;this.capLen=1024;this.capPk=0;this.capRaw=0;
+    this.cap=false;this.capN=0;this.capT=0;this.capLen=1024;this.capPk=0;this.capRaw=0;
     this.pk=0;this.blocks=0;
     this.aF=Math.exp(-1/(0.006*sr));
     this.aS=Math.exp(-1/(0.12*sr));
@@ -2533,19 +2426,19 @@ class OnsetDetector{
       if(a>this.pk)this.pk=a;
       this.since++;
       if(!this.armed&&this.ef<this.thr*0.5)this.armed=true;
-      /* With flams and drags in play, a clearly louder strike just after a hit is the main stroke after its grace notes. It cuts the grace note's capture short and starts its own. */
+      /* With flams and drags in play, a clearly louder strike just after a hit is the main stroke after its grace notes. It cuts the grace note's window short and starts its own. */
       const again=this.flam>0&&this.since>this.flam*0.15&&this.since<=this.flam&&a>this.thr&&a>this.curPk*1.6&&this.ef>this.es*2.5;
-      if(again&&this.cap){const w=this.cap;this.cap=null;this.emit({type:'hit',t:this.capT,w:w,pk:this.capPk,raw:this.capRaw});}
+      if(again&&this.cap){this.cap=false;this.emit({type:'hit',t:this.capT,pk:this.capPk,raw:this.capRaw});}
       if(this.since<=this.flam*0.15&&a>this.curPk)this.curPk=a;
       if(again||(this.armed&&!this.cap&&this.since>this.refrac&&a>this.thr&&this.ef>this.es*2.5)){
         this.armed=false;this.since=0;this.curPk=a;
-        this.cap=new Float32Array(this.capLen);this.capN=0;this.capT=(base+i)/this.sr;this.capPk=0;this.capRaw=0;
+        this.cap=true;this.capN=0;this.capT=(base+i)/this.sr;this.capPk=0;this.capRaw=0;
       }
       if(this.cap){
-        this.cap[this.capN++]=x;
+        this.capN++;
         if(a>this.capPk)this.capPk=a;
         const ax=x<0?-x:x;if(ax>this.capRaw)this.capRaw=ax;
-        if(this.capN>=this.capLen){const w=this.cap;this.cap=null;this.emit({type:'hit',t:this.capT,w:w,pk:this.capPk,raw:this.capRaw});}
+        if(this.capN>=this.capLen){this.cap=false;this.emit({type:'hit',t:this.capT,pk:this.capPk,raw:this.capRaw});}
       }
     }
     if(++this.blocks>=20){this.emit({type:'level',v:this.pk});this.pk=0;this.blocks=0;}
@@ -2605,17 +2498,6 @@ function analyseCheck(noise,hits,settleMs){
   if(out.level==='good')out.lines.unshift('Mic check passed. Your quietest hit is '+Math.round(above)+' dB above the noise, and no double triggers were found.');
   return out;
 }
-/* Hand test. A balanced run of prompts, shuffled so no hand comes up more than three times in a row. */
-function handTestOrder(n,rnd){
-  rnd=rnd||Math.random;
-  for(let tries=0;tries<50;tries++){
-    const a=[];for(let i=0;i<n;i++)a.push(i%2?'R':'L');
-    for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}
-    let ok=true;for(let i=3;i<a.length;i++)if(a[i]===a[i-1]&&a[i]===a[i-2]&&a[i]===a[i-3]){ok=false;break;}
-    if(ok)return a;
-  }
-  const a=[];for(let i=0;i<n;i++)a.push(i%2?'R':'L');return a;
-}
 const ACC_MIN=4,GHOST_MIN=6;   /* dB an accent must sit above, and a ghost note below, the strokes around it */
 /* list: [{db,dy}] in order. An accent is compared with the median of the nearest strokes that are not accents, a ghost note with the nearest that are not ghost notes. */
 function dynStats(list){
@@ -2646,36 +2528,6 @@ function gateDynamics(r){
     Q.within--;r.within--;
     if(e.dy==='A'){Q.da++;Q.sc[e.ci]='s';}else{Q.dg++;Q.sc[e.ci]='l';}
   });
-}
-/* results: {want:'L'|'R', got:'L'|'R', conf} per prompted hit. A hit with conf under SURE counts as unsure,
-   which a run treats as the expected hand rather than tagging it. */
-const SURE=0.2;
-/* How well the two sticks are told apart. Under 90% is no use and detection stays off. */
-function handBand(acc){
-  if(acc>=1)return {word:'Perfect',level:'good',on:true};
-  if(acc>=0.96)return {word:'Good',level:'good',on:true};
-  if(acc>=0.9)return {word:'Borderline',level:'warn',on:true};
-  return {word:'Poor',level:'bad',on:false};
-}
-function summariseHandTest(results){
-  const n=results.length,out={n:n,correct:0,wrong:0,unsure:0,falseTags:0,L:{n:0,ok:0,to:0},R:{n:0,ok:0,to:0},acc:0,level:'good',lines:[]};
-  results.forEach(r=>{
-    const h=out[r.want];h.n++;
-    if(r.got===r.want){out.correct++;h.ok++;}else{out.wrong++;h.to++;}
-    if(r.conf<SURE)out.unsure++;
-    else if(r.got!==r.want)out.falseTags++;
-  });
-  out.acc=n?out.correct/n:0;
-  const pct=x=>Math.round(x*100);
-  const band=handBand(out.acc);out.level=band.level;
-  out.lines.push('Last test: '+out.correct+' of '+n+' hits ('+pct(out.acc)+'%) named the right stick. '+band.word+'.'+(band.level==='bad'?' Calibrate both sticks again, hitting the same spot at your normal strength.':(band.level==='warn'?' Recalibrating both sticks on the same spot may help.':'')));
-  ['L','R'].forEach(k=>{
-    const h=out[k],name=k==='L'?'Left':'Right',other=k==='L'?'right':'left';
-    if(h.n)out.lines.push(name+' stick: '+h.ok+' of '+h.n+' right'+(h.to?', '+h.to+' heard as '+other:'')+'.');
-  });
-  if(out.falseTags)out.lines.push(out.falseTags+(out.falseTags===1?' hit':' hits')+' would have counted as the other stick in a run (the app was confident and wrong).');
-  if(out.unsure)out.lines.push(out.unsure+(out.unsure===1?' hit was':' hits were')+' too close to call. A run counts those as the expected hand.');
-  return out;
 }
 /* ---------- latency calibration ---------- */
 /* ---------- audio clock health ---------- */
@@ -2769,9 +2621,8 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.88';                           /* shown beside the title */
+const VERSION='1.5.89';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
-const CAL_N=12;
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const LOOKAHEAD=0.35;                            /* how far ahead clicks are scheduled, in seconds */
@@ -2784,12 +2635,10 @@ const hostedLists=()=>Object.keys(HOSTED).map(id=>({url:hostedHref(HOSTED[id][0]
 const S={mode:'single',routineText:STARTER,eachUnit:'pass',eachVal:8,gap:0,   /* a fresh app: 8 passes at 40 BPM on the Easy click, so the first exercise is simple */
   pulse:true,startExercise:1,
   bpm:40,subdiv:4,click:'strokes',lastExport:0,expRuns:0,tol:20,sens:-30,settle:40,accent:'',others:'n',noise:null,vol:60,latency:null,latCal:false,input:'mic',editTab:'build',theme:'',palette:'std',libId:'',libSort:'name'};
-let cal={L:[],R:[]},model=null;
 try{
   const o=JSON.parse(localStorage.getItem(KEY)||'null');
   if(o){
-    Object.assign(S,o.settings||{});
-    if(o.cal&&Array.isArray(o.cal.L)&&Array.isArray(o.cal.R))cal=o.cal;
+    Object.assign(S,o.settings||{});   /* stick calibration (o.cal) is no longer used, and is dropped at the next save */
   }
 }catch(e){}
 S.theme=S.theme==='light'||S.theme==='dark'?S.theme:(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
@@ -2797,7 +2646,7 @@ S.mode=S.mode==='routine'?'routine':'single';
 S.seeded=S.seeded===true;                         /* the routines that ship with the app have been added to the Library */
 S.latCal=S.latCal===true;                          /* set once a calibration has run or a number was typed */
 S.editTab=S.editTab==='type'?'type':'build';       /* Build or Type, remembered on each device. Build is first. */
-S.handDet=S.handDet===true;   /* hand detection from the microphone: experimental, off unless turned on */
+delete S.handDet;   /* hand detection from the microphone was removed */
 S.libSort=S.libSort==='recent'?'recent':'name';   /* the Library's sort, remembered on each device. Name is first. */
 S.bpm=clamp(Math.round(+S.bpm)||60,40,220);
 S.subdiv=4;                                        /* strokes with no note code are sixteenths */
@@ -2832,7 +2681,7 @@ const PORTABLE=['bpm','tol','accent','others','vol','click','eachUnit','eachVal'
 S.expSel=(S.expSel&&typeof S.expSel==='object')?{hist:S.expSel.hist!==false,lib:S.expSel.lib!==false,lists:S.expSel.lists!==false,set:S.expSel.set!==false}:{hist:true,lib:true,lists:true,set:true};   /* what the Export dialog ticks, remembered */
 if(!isFinite(+S.lastExport))S.lastExport=0;
 if(!isFinite(+S.expRuns))S.expRuns=0;
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({settings:S,cal:cal}));}catch(e){}};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({settings:S}));}catch(e){}};
 function setLatency(v){S.latency=v;$('latency').value=v;save();}
 /* A calibration has been done, so the reminder at the top goes away. */
 function markCal(){S.latCal=true;save();syncInfo();}
@@ -2987,24 +2836,12 @@ function saveRecs(){
 }
 let lastRun=null;
 
-function rebuildModel(){
-  model=null;
-  if(cal.L.length>=6&&cal.R.length>=6){
-    try{
-      const m=trainModel(cal.L,cal.R);
-      m.acc=looAccuracy(cal.L,cal.R);
-      m.usable=m.acc!=null&&handBand(m.acc).on;
-      model=m;
-    }catch(e){model=null;}
-  }
-}
-rebuildModel();
 
 const WORKLET_SRC=OnsetDetector.toString()+`
 registerProcessor('onset',class extends AudioWorkletProcessor{
   constructor(){
     super();
-    this.d=new OnsetDetector(sampleRate,ev=>{ if(ev.w)this.port.postMessage(ev,[ev.w.buffer]); else this.port.postMessage(ev); });
+    this.d=new OnsetDetector(sampleRate,ev=>this.port.postMessage(ev));
     this.port.onmessage=e=>this.d.set(e.data);
   }
   process(inputs){
@@ -3018,7 +2855,7 @@ registerProcessor('onset',class extends AudioWorkletProcessor{
 let scoreOn=true;   /* a switch for this visit only: it is on again at every launch */
 let ctx=null,node=null,micSrc=null,workletReady=false,noWorklet=false,stream=null,sendDet=null,wake=null;
 let run=null,view=null,timer=0,raf=0;
-let calMode=null,routineParsed=parseRoutine(S.routineText),prevPlan=null,rowMap=new Map(),rowTop=0,slideTimer=0,curTab='play';
+let routineParsed=parseRoutine(S.routineText),prevPlan=null,rowMap=new Map(),rowTop=0,slideTimer=0,curTab='play';
 const latencySec=()=>(S.latency==null?40:S.latency)/1000;
 
 /* ---------- audio ---------- */
@@ -3136,7 +2973,7 @@ function micOff(force){
 }
 /* The microphone is open only while something needs it: a run, Mic check, a calibration or this test. Anything else puts it away and quiets the audio. */
 let micTest=false;
-const micBusy=()=>!!((run&&!run.ended)||chk||calMode||calTest||loop||listen||micTest);
+const micBusy=()=>!!((run&&!run.ended)||chk||loop||listen||micTest);
 function idleMic(){
   if(opening||micBusy())return;
   if(node||stream)micOff(true);
@@ -3149,8 +2986,8 @@ async function toggleMic(){
 }
 function syncMicBtn(){
   const busy=!!(run&&!run.ended);
-  $('testMic').disabled=busy||S.input==='kb'||!!chk||!!calTest;
-  $('micCheck').disabled=busy||!!calMode||S.input==='kb'||!!calTest||!!loop;
+  $('testMic').disabled=busy||S.input==='kb'||!!chk;
+  $('micCheck').disabled=busy||S.input==='kb'||!!loop;
   $('micCheck').textContent=chk?'Cancel check':'Mic check';
   $('testMic').textContent=micTest?'Stop test':'Test microphone';
   syncInfo();idleMic();
@@ -3158,9 +2995,6 @@ function syncMicBtn(){
 /* ---------- mic check ---------- */
 let chk=null;
 const CHK_STROKES=12;
-/* Left vs right test */
-const TEST_N=20;
-let calTest=null;
 function chkStop(msg){
   if(!chk)return;
   clearTimeout(chk.timer);
@@ -3170,8 +3004,6 @@ function chkStop(msg){
 async function toggleCheck(){
   if(chk){chkStop('Mic check cancelled.');return;}
   if(run&&!run.ended)return;
-  if(calMode){calMode=null;updateCalUI();}
-  if(calTest)return;
   if(!(await ensureAudio(true)))return;
   $('chkOut').textContent='';
   chk={phase:'quiet',levels:[],hits:[],thr:0.003,timer:0};
@@ -3236,12 +3068,7 @@ function onNodeMsg(e){
   const m=e.data;
   if(m.type==='level'){setMeter(m.v);if(chk&&chk.phase==='quiet')chk.levels.push(m.v);}
   else if(m.type==='hit'){
-    let f=null,det=null;
-    try{
-      f=computeFeatures(m.w,ctx.sampleRate);
-      if(S.handDet&&model&&model.usable)det=classify(model,f);
-    }catch(err){}
-    handleHit({t:m.t,kb:false,f:f,det:det,pk:m.pk,raw:m.raw});
+    handleHit({t:m.t,kb:false,det:null,pk:m.pk,raw:m.raw});
   }
 }
 function setMeter(v){
@@ -3322,7 +3149,7 @@ function beginRun(mode){
   if(!exercises.length)return;
   const plan=buildPlan(exercises,{gapBeats:S.gap,clickMode:lat?'note':S.click,dyn:lat?null:dynOpt()});
   const r={
-    mode:mode,plan:plan,w0:Date.now(),t0:ctx.currentTime+0.25,kb:S.input==='kb',hd:S.input!=='kb'&&S.handDet&&!!model&&!!model.usable,p0:model&&model.acc!=null?Math.max(0.05,1-model.acc):0.05,
+    mode:mode,plan:plan,w0:Date.now(),t0:ctx.currentTime+0.25,kb:S.input==='kb',
     nextClick:0,pulseIdx:-1,nextFin:0,pending:new Map(),cur:-1,showSeg:0,gridSeg:-1,
     errs:[],lv:[],seq:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,streak:0,best:0,checked:0,bad:0,trace:[],res:new Map(),showG:0,missRun:0,trail:[],live:'',pts:0,sk:0,hud:scoreOn&&mode==='play'&&!!LV_PTS[S.click],tm:[],
     fin:new Set(),paused:false,ci:null,dyc:lat?'':dynCode(),dyl:[],
@@ -3447,12 +3274,11 @@ function finalizeSlot(i){
   /* Hits just before the main stroke of a flam or drag are its grace notes, not extras. */
   const ex=hits.length-1-(sl.gr?hits.filter(x=>x!==h&&x.e<h.e&&h.e-x.e<=graceSpan(sl.gr)).length:0);
   const ms=h.e*1000,det=h.det;
-  const sure=!!det&&(h.kb||det.conf>=SURE);
-  const hand=h.kb&&det?det.hand:exp;   /* a key names the hand for certain; the microphone only adds to the count for the note after the run */
-  const wrong=h.kb&&sure&&det.hand!==exp;
+  const hand=det?det.hand:exp;   /* only a key names the hand; a microphone stroke counts as the hand it was due on */
+  const wrong=!!det&&det.hand!==exp;
   if(!redo){
     r.extras+=ex;Q.extras+=ex;
-    if(sure){r.checked++;Q.checked++;if(det.hand!==exp){r.bad++;Q.bad++;}}
+    if(det){r.checked++;Q.checked++;if(wrong){r.bad++;Q.bad++;}}
     r.errs.push(ms);Q.errs.push(ms);r.hand[hand].push(ms);Q.hand[hand].push(ms);
     const db=h.kb?null:strokeDb(h.pk,h.raw);
     if(db!==null){r.lv.push({db:db,hand:hand,dy:sl.dy||''});Q.lv.push({db:db,hand:hand,dy:sl.dy||''});}
@@ -3549,8 +3375,6 @@ function revealStaff(){
 /* Starts a practice run. */
 async function startPlay(){
   if(loop)endLoop('Auto calibrate cancelled.');
-  if(calTest)endHandTest('');
-  if(calMode){calMode=null;updateCalUI();}
   if(!currentExercises().length||setupNeeded())return;
   if(welcome){welcome=false;syncSetup();}   /* set up and starting: the welcome has done its job */
   showTab('play');
@@ -3626,9 +3450,7 @@ function inLead(plan,tc){
 function handleHit(h){
   if(chk){chkHit(h);return;}
   if(loop){loop.hits.push(h.t);flashHeard(h);return;}
-  if(calTest&&h.f){testHit(h);return;}
   flashHeard(h);
-  if(calMode&&h.f){collectCal(h.f);return;}
   const r=run;if(!r||r.ended)return;
   if(r.kb!==h.kb||r.paused)return;
   if(!h.kb)meterHit(h);
@@ -3653,12 +3475,12 @@ function handleHit(h){
   r.pending.set(i,arr);
   /* Show the result straight away. finalizeSlot replaces it once the window has closed. */
   const b=pickBest(arr),exp=hnd(plan.segs[sl.seg].notes[sl.pos]),det=b.det;
-  r.res.set(i,{ms:b.e*1000,wrong:(b.kb&&det&&det.hand!==exp)?det.hand:null});
+  r.res.set(i,{ms:b.e*1000,wrong:(det&&det.hand!==exp)?det.hand:null});
 }
 let heardTimer=0;
 function flashHeard(h){
   const el=$('heard');
-  el.textContent=h.det?('Heard '+h.det.hand+' · '+Math.round(h.det.conf*100)+'% sure'):'Heard a hit';
+  el.textContent=h.det?'Heard '+h.det.hand:'Heard a hit';
   clearTimeout(heardTimer);heardTimer=setTimeout(()=>{el.textContent='';},900);
 }
 
@@ -3746,7 +3568,7 @@ function loopClick(T){
 async function startLoop(){
   closeListen();
   if(loop){endLoop('Auto calibrate cancelled.');return;}
-  if(calMode||calTest||chk||(run&&!run.ended)||S.input!=='mic')return;
+  if(chk||(run&&!run.ended)||S.input!=='mic')return;
   if(!(await ensureAudio(true)))return;
   const t0=ctx.currentTime+1,T=[],src=[];
   for(let k=0;k<LOOP.n;k++){T.push(t0+k*LOOP.gap);src.push(loopClick(T[k]));}
@@ -3754,7 +3576,7 @@ async function startLoop(){
   const show=()=>{$('latMsg').textContent='Auto calibrate: playing '+LOOP.n+' clicks through the speakers. Keep quiet and do not play. '+T.filter(t=>t<=ctx.currentTime).length+'/'+LOOP.n;};
   show();loop.tick=setInterval(show,200);
   setStatus('Auto calibrate running.');
-  updateCalUI();syncMicBtn();
+  updateLatUI();syncMicBtn();
 }
 function endLoop(msg){
   if(!loop)return;
@@ -3763,7 +3585,7 @@ function endLoop(msg){
   for(const s of loop.src){try{s.stop();}catch(e){}}
   loop=null;
   if(msg){setStatus(msg);$('latMsg').textContent=msg;}
-  updateCalUI();syncMicBtn();
+  updateLatUI();syncMicBtn();
 }
 function finishLoop(){
   if(!loop)return;
@@ -3773,100 +3595,13 @@ function finishLoop(){
   $('latMsg').textContent=res.msg;
   setStatus(res.ok?'Latency set to '+S.latency+' ms.':'Latency not changed.');
 }
-/* ---------- stick calibration ---------- */
-async function startCal(hand){
-  if(calTest)return;
-  if(calMode===hand){calMode=null;updateCalUI();return;}
-  if(run&&!run.ended)stopRun();
-  if(!(await ensureAudio(true)))return;
-  calMode=hand;cal[hand]=[];rebuildModel();$('calTestOut').textContent='';updateCalUI();
-  setStatus('Calibrating the '+(hand==='L'?'left':'right')+' stick. Hit the pad '+CAL_N+' times.');
-}
-function collectCal(f){
-  cal[calMode].push(f);
-  if(cal[calMode].length>=CAL_N){
-    const h=calMode;calMode=null;rebuildModel();save();
-    setStatus((h==='L'?'Left':'Right')+' stick calibrated.');
-  }
-  updateCalUI();
-}
-function calText(){
-  if(calMode)return 'Hit the pad '+CAL_N+' times with your '+(calMode==='L'?'LEFT':'RIGHT')+' stick only. '+cal[calMode].length+'/'+CAL_N;
-  const nl=cal.L.length,nr=cal.R.length;
-  if(!nl&&!nr)return 'Calibrate both sticks so the app can learn how each one sounds.';
-  if(nl<6||nr<6)return 'Calibrate both sticks to use hand detection.';
-  const b=handBand(model.acc);
-  return b.word==='Poor'?'Too many hits sound alike to tell the hands apart (it needs 90% or more). Hit the same spot with each stick, or use a different spot per stick, then calibrate again.'
-    :(b.word==='Borderline'?'The sticks sound alike, so the note after a run needs strong evidence. Calibrating again on the same spot may help.':'The sticks are easy to tell apart.');
-}
-/* Status of each stick and of hand detection, as three plain rows. */
-function calStatus(){
-  const box=$('calSt');box.textContent='';
-  const row=(name,val,cls)=>{const r=document.createElement('div');r.className='cs';const n=document.createElement('span');n.textContent=name;const v=document.createElement('span');v.className=cls;v.textContent=val;r.appendChild(n);r.appendChild(v);box.appendChild(r);};
-  const stick=(h,name)=>{const n=cal[h].length;
-    if(calMode===h)return row(name,'Calibrating '+n+'/'+CAL_N,'');
-    row(name,n>=6?'Calibrated \u00B7 '+n+' hits':(n?'Needs more hits \u00B7 '+n:'Not calibrated'),n>=6?'good':'muted');};
-  stick('L','Left stick');stick('R','Right stick');
-  if(model&&!calMode){const b=handBand(model.acc);row('Hand detection',(b.on&&S.handDet?'On':'Off')+' \u00B7 '+Math.round(model.acc*100)+'% told apart \u00B7 '+b.word,b.level);}
-  else row('Hand detection','Off','muted');
-}
-/* ---------- left vs right test ---------- */
-async function startHandTest(){
-  if(calTest){endHandTest('Test cancelled.');return;}
-  if(!model||(run&&!run.ended)||chk)return;
-  if(calMode){calMode=null;}
-  if(!(await ensureAudio(true)))return;
-  calTest={order:handTestOrder(TEST_N),i:0,res:[],last:-1};
-  $('calTestOut').textContent='';
-  showTestPrompt();updateCalUI();syncMicBtn();
-  setStatus('Left vs right test. Hit once with the hand shown.');
-}
-function showTestPrompt(){
-  const t=calTest,want=t.order[t.i];
-  $('calTestBox').hidden=false;
-  const p=$('calTestPrompt');p.textContent=want;p.classList.remove('hit');
-  $('calTestMsg').textContent='Hit once with your '+(want==='L'?'LEFT':'RIGHT')+' stick. '+(t.i+1)+' of '+t.order.length+'. Leave a short gap between hits.';
-}
-function testHit(h){
-  const t=calTest;
-  if(t.last>=0&&h.t-t.last<0.15)return;           /* a double trigger is not a new hit */
-  t.last=h.t;
-  const d=h.det||(model?classify(model,h.f):null);
-  if(!d)return;
-  t.res.push({want:t.order[t.i],got:d.hand,conf:d.conf});
-  t.i++;
-  if(t.i>=t.order.length){finishHandTest();return;}
-  showTestPrompt();updateCalUI();
-}
-function endHandTest(msg){
-  calTest=null;
-  $('calTestBox').hidden=true;
-  updateCalUI();syncMicBtn();
-  if(msg)setStatus(msg);
-}
-function finishHandTest(){
-  const res=summariseHandTest(calTest.res);
-  endHandTest('Left vs right test done.');
-  const ul=$('calTestOut');ul.textContent='';
-  res.lines.forEach((t,i)=>{const li=document.createElement('li');li.textContent=t;li.className=i===0?res.level:'';ul.appendChild(li);});
-}
-function updateCalUI(){
-  $('calL').textContent=calMode==='L'?'Cancel ('+cal.L.length+'/'+CAL_N+')':'Calibrate left stick';
-  $('calR').textContent=calMode==='R'?'Cancel ('+cal.R.length+'/'+CAL_N+')':'Calibrate right stick';
-  $('calInfo').textContent=calText();calStatus();
-  const busy=!!(run&&!run.ended);
-  const tst=!!calTest;
-  const lp=!!loop;
+/* The latency buttons, and Listen, follow what else is using the audio. */
+function updateLatUI(){
+  const busy=!!(run&&!run.ended),lp=!!loop;
   syncListen();
-  $('calL').disabled=busy||calMode==='R'||tst||lp;
-  $('calR').disabled=busy||calMode==='L'||tst||lp;
-  $('calReset').disabled=busy||!!calMode||tst||lp;
-  $('calLatency').disabled=busy||!!calMode||tst||lp||!!chk;
+  $('calLatency').disabled=busy||lp||!!chk;
   $('calLoop').textContent=lp?'Cancel auto calibrate':'Auto calibrate';
-  $('calLoop').disabled=busy||!!calMode||tst||!!chk;
-  $('calTest').hidden=!model&&!tst;   /* it needs both sticks; the hint below says so */
-  $('calTest').disabled=busy||!!calMode||!model||!!chk||lp;
-  $('calTest').textContent=tst?'Cancel test ('+calTest.res.length+'/'+TEST_N+')':'Test left vs right';
+  $('calLoop').disabled=busy||!!chk;
 }
 
 /* ---------- rendering ---------- */
@@ -4532,21 +4267,13 @@ function updateGauge(r){
   const lo=clamp(m-s,-40,40),hi=clamp(m+s,-40,40);
   $('gBand').style.left=(50+lo/80*100)+'%';$('gBand').style.width=((hi-lo)/80*100)+'%';
 }
-/* Keys name the hand for certain, so 15% wrong is worth a note. The microphone mistakes a share of strokes even when
-   every one is right (p0, from calibration), so it says so only when far more strokes than that sound wrong. */
-function otherStick(r){
-  if(r.kb)return r.checked>=8&&r.bad/r.checked>0.15;
-  const n=r.checked,p=r.p0||0.05;
-  return n>=24&&r.bad/n>=0.15&&r.bad>=n*p+3*Math.sqrt(n*p*(1-p));
-}
 /* What to work on, most important first. */
 function insightParts(r){
   if(!r||!r.errs.length)return [];
   if(r.errs.length<8)return ['Keep going. Notes on your timing appear after a few passes.'];
   const parts=[];
   if(r.slots&&r.miss/r.slots>0.1)parts.push(r.miss+' strokes were not heard. Check the trigger line in Settings, under Device.');
-  const warn=otherStick(r);
-  if(warn)parts.push(r.kb?'The other hand played '+r.bad+' of '+r.checked+' strokes.':r.bad+' of '+r.checked+' strokes seemed to come from the wrong hand. Hand detection is experimental, so take this as a hint.');
+  if(r.checked>=8&&r.bad/r.checked>0.15)parts.push('The other hand played '+r.bad+' of '+r.checked+' strokes.');   /* keys name the hand */
   if(r.hand.L.length>=4&&r.hand.R.length>=4){
     const d=mean(r.hand.R)-mean(r.hand.L);
     if(Math.abs(d)>=4)parts.push('Your '+(d>0?'right':'left')+' hand lands '+Math.abs(d).toFixed(0)+' ms later than your '+(d>0?'left':'right')+'.');
@@ -4562,7 +4289,6 @@ function insightParts(r){
   const lvs=levelStats(r.lv);
   if(lvs&&lvs.diff!==null&&Math.abs(lvs.diff)>=3)parts.push('Your '+(lvs.diff<0?'left':'right')+' hand is '+Math.abs(lvs.diff).toFixed(0)+' dB quieter than your '+(lvs.diff<0?'right':'left')+'.');
   if(!parts.length)parts.push('Timing is even across both hands and all strokes.');
-  if(r.hd&&!warn)parts.push('Hand detection: '+r.bad+' of '+r.checked+' strokes seemed to come from the wrong hand.');   /* with detection on, the count is always given */
   return parts;
 }
 const insightText=r=>insightParts(r).join(' ');
@@ -4573,7 +4299,7 @@ function updateStats(r){
   $('sHits').textContent=r?r.errs.length+' of '+r.slots:'—';
   $('sL').textContent=r&&r.hand.L.length?fmtMs(mean(r.hand.L),1):'—';
   $('sR').textContent=r&&r.hand.R.length?fmtMs(mean(r.hand.R),1):'—';
-  $('sStick').textContent=r&&r.kb&&r.checked?Math.round((1-r.bad/r.checked)*100)+'%':'—';   /* only keys are sure enough for a figure */
+  $('sStick').textContent=r&&r.checked?Math.round((1-r.bad/r.checked)*100)+'%':'—';   /* keyboard runs only: keys name the hand */
   $('sExtra').textContent=r?String(r.extras):'—';
   const ls=r?levelStats(r.lv):null;
   $('sLevel').textContent=ls&&ls.sd!==null?ls.sd.toFixed(1):'—';
@@ -5879,7 +5605,7 @@ function clearSelected(){
   if(sel.lib){recs.lib=[];S.libId='';S.routineText=STARTER;S.startExercise=1;S.seeded=false;}   /* back to a first start: the routines that ship with the app are added again */
   if(sel.lists){S.lists=hostedLists();S.listSel='';}
   if(sel.set)PORTABLE.forEach(k=>{delete S[k];});   /* the page reloads, and every one falls back to its starting value */
-  if(sel.dev){micOff(true);S.clockLog=[];S.noise=null;S.latCal=false;S.latency=null;delete S.sens;delete S.settle;delete S.input;cal.L.length=0;cal.R.length=0;}   /* shows the Set up card again */
+  if(sel.dev){micOff(true);S.clockLog=[];S.noise=null;S.latCal=false;S.latency=null;delete S.sens;delete S.settle;delete S.input;}   /* shows the Set up card again */
   save();saveRecs();location.reload();
 }
 
@@ -6702,7 +6428,7 @@ function setRunning(on){
   $('helpBtn').disabled=on;
   syncMicBtn();
   if(on&&run&&run.mode==='play'&&S.mode==='routine'){$('runInfo').hidden=false;lastTimeLeft='';}
-  updateCalUI();
+  updateLatUI();
 }
 function playsFor(){return ' · plays for '+(S.eachUnit==='pass'?S.eachVal+(S.eachVal===1?' pass':' passes'):S.eachVal+(S.eachVal===1?' minute':' minutes'));}
 /* How long a run of these exercises takes: each exercise, the gaps between them and the opening count-in. */
@@ -6944,7 +6670,7 @@ function listenFrame(){
 }
 const ICON_SPK='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',ICON_STOP='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
 function syncListen(){
-  const busy=!!(run&&!run.ended)||!!loop||!!calMode||!!calTest||!!chk;
+  const busy=!!(run&&!run.ended)||!!loop||!!chk;
   const b=$('bListen');
   if(b){b.innerHTML=ICON_SPK;b.disabled=busy||!bPreview().b;}
   const p=$('lsPlay');
@@ -7344,24 +7070,13 @@ function wire(){
   $('stopBtn').addEventListener('click',()=>{if(run&&!run.ended)stopRun();});
   $('settle').addEventListener('input',e=>{S.settle=+e.target.value;$('settleOut').textContent=S.settle+' ms';pushDet();save();});
   $('micCheck').addEventListener('click',toggleCheck);
-  $('calTest').addEventListener('click',startHandTest);
   $('sens').addEventListener('input',e=>{S.sens=+e.target.value;$('sensOut').textContent=S.sens+' dB';placeMeter();pushDet();save();});
   $('vol').addEventListener('input',e=>{S.vol=+e.target.value;$('volOut').textContent=S.vol+'%';save();});
   $('latency').addEventListener('change',e=>{const v=e.target.value;S.latency=v===''?null:clamp(Math.round(+v)||0,0,400);if(v!=='')S.latCal=true;save();syncInfo();});
   $('themeBtn').addEventListener('click',()=>{S.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';applyTheme();save();});
   $('testMic').addEventListener('click',toggleMic);
-  $('handDet').checked=S.handDet;$('handBox').hidden=!S.handDet;
-  $('handDet').addEventListener('change',()=>{
-    S.handDet=$('handDet').checked;$('handBox').hidden=!S.handDet;
-    if(!S.handDet&&calMode)$('cal'+calMode).click();   /* turning it off cancels a calibration in progress */
-    if(!S.handDet&&calTest)startHandTest();   /* and a test */
-    save();updateCalUI();
-  });
-  $('calL').addEventListener('click',()=>startCal('L'));
-  $('calR').addEventListener('click',()=>startCal('R'));
-  $('calReset').addEventListener('click',()=>{cal={L:[],R:[]};rebuildModel();save();$('calTestOut').textContent='';updateCalUI();});
   $('calLatency').addEventListener('click',async()=>{
-    if(calMode||loop||(run&&!run.ended))return;
+    if(loop||(run&&!run.ended))return;
     if(S.input!=='mic')return;
     if(await ensureAudio(true))beginRun('lat');
   });
@@ -7412,13 +7127,13 @@ function wire(){
     if(t==='INPUT'||t==='SELECT'||t==='TEXTAREA')return;
     const k=e.key.toLowerCase();
     if(k!=='f'&&k!=='j')return;
-    handleHit({t:kbTime(e.timeStamp),kb:true,f:null,det:{hand:k==='f'?'L':'R',conf:1}});
+    handleHit({t:kbTime(e.timeStamp),kb:true,det:{hand:k==='f'?'L':'R'}});
   });
   document.querySelectorAll('.pad').forEach(b=>{
     b.addEventListener('pointerdown',e=>{
       e.preventDefault();
       if(S.input!=='kb'||!run||run.ended)return;
-      handleHit({t:kbTime(e.timeStamp),kb:true,f:null,det:{hand:b.dataset.hand,conf:1}});
+      handleHit({t:kbTime(e.timeStamp),kb:true,det:{hand:b.dataset.hand}});
     });
   });
   /* A new version: the page asks the server for itself, reads the version number, and offers to reload if it is newer. The notice stays out of the way during a run. */
@@ -7486,7 +7201,7 @@ function init(){
   $('sens').value=S.sens;$('sensOut').textContent=S.sens+' dB';placeMeter();
   $('vol').value=S.vol;$('volOut').textContent=S.vol+'%';
   $('latency').value=S.latency==null?'':S.latency;
-  initStrips();initTaps();wireBuilder();setInputMode();updateCalUI();
+  initStrips();initTaps();wireBuilder();setInputMode();updateLatUI();
   wire();applyTheme();syncLayout();
   showTab('play');
   onRoutineChanged();
