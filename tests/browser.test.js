@@ -73,6 +73,11 @@ test('a first visit sees the welcome and nothing else of Play, until Start pract
   await p.click('#setup >> text=Start practising');
   assert.deepEqual(await seen(), { welcome: false, start: true });
   assert.equal(await p.evaluate(() => document.getElementById('status').parentElement.id), 'stPlay');
+  /* the staff was laid out while hidden, at no width: once shown it is laid out again, as on a normal visit, with no gap */
+  await p.waitForTimeout(400);
+  const staff = q => q.evaluate(() => [...document.querySelectorAll('#rows .prow')].map(e => Math.round(e.getBoundingClientRect().height)));
+  const normal = await open({ seeded: true, noise: -50, latCal: true });
+  assert.deepEqual(await staff(p), await staff(normal));
   assert.deepEqual(p.errors, []);
 });
 

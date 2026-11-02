@@ -2765,7 +2765,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.81';                           /* shown beside the title */
+const VERSION='1.5.82';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -7422,9 +7422,10 @@ function wire(){
   $('updLater').addEventListener('click',()=>{updLater=true;showUpd();});
   setTimeout(checkUpdate,2000);
   document.addEventListener('visibilitychange',()=>{if(document.hidden){micTest=false;if(run&&!run.ended)pauseRun();idleMic();}if(!document.hidden){checkUpdate();if(run&&!run.ended)lockScreen();}});
+  /* The staff is laid out for its width. It is laid out again whenever that width changes: the window is resized, or the staff
+     was hidden (at zero width, as under the welcome) and is shown. */
   let lastW=0,rzT=0;
-  window.addEventListener('resize',()=>{
-    drawTrace();
+  const relayout=()=>{
     clearTimeout(rzT);
     rzT=setTimeout(()=>{
       const w=$('rows').clientWidth;
@@ -7436,7 +7437,9 @@ function wire(){
       }else if(rvModel&&document.body.dataset.state==='done')showReview();
       else if(!run||run.ended)previewRows(false);
     },150);
-  });
+  };
+  window.addEventListener('resize',()=>{drawTrace();relayout();});
+  if(window.ResizeObserver)new ResizeObserver(relayout).observe($('rows'));
   if(window.matchMedia)window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',drawTrace);
 }
 function syncEach(){
