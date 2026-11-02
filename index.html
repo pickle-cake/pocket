@@ -667,7 +667,8 @@ body[data-input="kb"] #micPill{display:none}
 /* Library lists are flat: a line above each group, hairlines between routines, no boxes inside boxes. */
 .glib{border:0;border-top:1px solid var(--line);border-radius:0;background:none}
 .glib>summary{padding:14px 0}
-.glib>.gb{padding:0;gap:0}
+.glib>.gb{padding:0 var(--s-3);gap:0;margin:0 0 var(--s-3);background:var(--surface);border-left:3px solid var(--accent)}   /* open: the routines on a band with a rail, as an open History row */
+.gb .hrow .hb{border-left:0;background:var(--bg)}   /* a routine opened inside a group: one rail, the group's; its exercises sit recessed */
 .gb>.hrow:last-child{border-bottom:0}
 /* Every page is flat: a line between sections and between rows, no boxes. Dialogs and the staff keep theirs. */
 .page .panel{background:none;border:0;border-top:1px solid var(--line);border-radius:0;padding:16px 0 0}
@@ -2765,7 +2766,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.82';                           /* shown beside the title */
+const VERSION='1.5.83';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
