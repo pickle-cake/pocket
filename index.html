@@ -567,7 +567,8 @@ body[data-mode="routine"] .single-only{display:none}
 .clk i.on{background:var(--fill);border-color:var(--fill)}
 .clc{font-size:13px;color:var(--muted);margin:2px 0 8px}
 .xlist{max-height:40vh;overflow:auto;border-top:1px solid var(--line);margin-left:32px} .xlist .xrow:last-child{border-bottom:0}
-.handbox{display:grid;gap:var(--s-2)} .handbox[hidden]{display:none}
+.xrow.flat{border-bottom:0}   /* a lone checkbox: the line belongs to what opens below it */
+.handbox{display:grid;gap:var(--s-2);border-top:1px solid var(--line);padding-top:var(--s-3)} .handbox[hidden]{display:none}
 .xrow{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)} .xrow:last-child{border-bottom:0} .xrow input{margin-top:3px;width:20px;height:20px;flex:none} .xrow small{color:var(--muted);font-size:13px}
 .modal{position:fixed;inset:0;z-index:50;background:var(--scrim);display:grid;place-items:center;padding:16px}
 .mbox{box-shadow:var(--shadow-pop);width:min(560px,100%);max-height:92vh;display:grid;gap:12px;overflow:hidden}
@@ -849,7 +850,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     </section>
     <section class="panel mic-only" aria-label="Stick calibration">
       <h3>Stick calibration</h3>
-      <label class="xrow"><input type="checkbox" id="handDet"><span>Hand detection (experimental)<br><small>Listens for which stick played each stroke. Two sticks often sound alike, so single strokes are never marked. After a run, a note says so only if many strokes sounded like the other stick.</small></span></label>
+      <label class="xrow flat"><input type="checkbox" id="handDet"><span>Hand detection (experimental)<br><small>Listens for which stick played each stroke. Two sticks often sound alike, so single strokes are never marked. After a run, a note says so only if many strokes sounded like the other stick.</small></span></label>
       <div class="handbox" id="handBox" hidden>
       <div class="btns even">
         <button class="btn" id="calL" type="button">Calibrate left stick</button>
@@ -2768,7 +2769,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.85';                           /* shown beside the title */
+const VERSION='1.5.86';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
