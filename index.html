@@ -2302,7 +2302,7 @@ function practiceDays(runs,sum){
   runs.forEach(r=>{const k=dayKey(r.t);m.set(k,(m.get(k)||0)+(r.sec||0));});
   return m;
 }
-const STREAK_MIN=300;   /* seconds of practice that make a day count toward the streak */
+const STREAK_MIN=300;   /* seconds of practice that make a day count towards the streak */
 function streakOf(days,now){
   const at=k=>dayKey(new Date(now.getFullYear(),now.getMonth(),now.getDate()-k).getTime());
   const has=k=>(days.get(at(k))||0)>=STREAK_MIN;
@@ -2611,7 +2611,7 @@ function dynStats(list){
   o.a.sd=o.a.d.length>=3?sd(o.a.d):null;o.g.sd=o.g.d.length>=3?sd(o.g.d):null;   /* how even the accents are with each other, and the ghost notes with each other */
   return o;
 }
-/* A stroke counts toward ACC when it is on time and, where the exercise asks for an accent or a ghost note, played as written. Levels are judged against the strokes around each one, so this can only be done once the run is over. */
+/* A stroke counts towards ACC when it is on time and, where the exercise asks for an accent or a ghost note, played as written. Levels are judged against the strokes around each one, so this can only be done once the run is over. */
 function gateDynamics(r){
   dynStats(r.dyl);
   r.dyl.forEach(e=>{
@@ -2743,7 +2743,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.75';                           /* shown beside the title */
+const VERSION='1.5.76';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -4671,7 +4671,7 @@ function recordRun(r){
   if(scoreOn&&rk&&run.rp&&run.rp.x&&!libFor(rk)&&recs.lib.length<MAX_LIB){autoLib={id:libId(),x:run.rp.x,t:Date.now()};recs.lib.push(autoLib);}
   const bv1=badgeValues(recs.runs,recs.sum),won=[];
   BADGES.forEach(b=>b.at.forEach((n,i)=>{if(bv0[b.id]<n&&bv1[b.id]>=n)won.push({id:b.id,i:i,v:bv1[b.id]});}));
-  if(!scoreOn){const dk=dayKey(run.t);recs.sum.days[dk]=(recs.sum.days[dk]||0)+run.sec;}   /* the time of a practice run still counts toward today and the streak */
+  if(!scoreOn){const dk=dayKey(run.t);recs.sum.days[dk]=(recs.sum.days[dk]||0)+run.sec;}   /* the time of a practice run still counts towards today and the streak */
   const saved=saveRecs();
   if(scoreOn)askPersist();
   lastRun={run:run,autoLib:autoLib,prevBest:prevBest,newTempo:newTempo,won:won,rows:rows,skipped:skipped,saved:saved,practice:!scoreOn,score:score,share0:share0,hsNew:scoreOn&&score>hs0};
@@ -5586,7 +5586,7 @@ function deleteRun(id){
   if(lastRun&&lastRun.run.id===id){lastRun=null;renderAdvice();}
   renderProgress();
 }
-/* Takes one exercise out of a recorded routine run, for a stray exercise that was in the editor. The run becomes a run of the routine without it, so it counts toward that routine. */
+/* Takes one exercise out of a recorded routine run, for a stray exercise that was in the editor. The run becomes a run of the routine without it, so it counts towards that routine. */
 function dropExercise(r,b){
   const gone=b.i||0,inSk=!!(r.sk&&r.sk.includes(b)),left=inSk?r.exercises:r.exercises.filter(x=>x!==b);
   if(!left.length||!gone){deleteRun(r.id);return;}
