@@ -1332,10 +1332,15 @@ RLRR LRLL RLRR LRLL</pre>
     <section class="panel" id="help-trouble">
       <h3>If something is off</h3>
       <ul>
-        <li><b>The microphone will not turn on:</b> the page needs a secure address. Opening the file from your computer works in Chrome and Edge. Otherwise serve it with <b>python3 -m http.server</b> or switch Input to Keyboard.</li>
-        <li><b>Every stroke looks late or early:</b> run Calibrate latency.</li>
-        <li><b>Extra hits show up:</b> raise the trigger line, or use headphones for the click.</li>
-        <li><b>Wrong-hand tags look random:</b> calibrate both sticks again on the same spot of the pad.</li>
+        <li><b>The microphone will not turn on:</b> allow it for this page. On an iPhone, tap <b>aA</b> in Safari's address bar, then <b>Website Settings › Microphone › Allow</b>. On a computer, use the icon beside the address. Close any other app that is using the microphone, such as a call.</li>
+        <li><b>There is no click:</b> turn the volume up and check <b>Click volume</b> in <b>Settings › Preferences</b>. On an iPhone, Silent mode can mute the page, so turn it off.</li>
+        <li><b>Every stroke looks late or early:</b> run <b>Auto calibrate</b> in <b>Settings › Device › Latency</b>, in a quiet room. With headphones on, use <b>Calibrate by playing</b> there instead.</li>
+        <li><b>Extra hits show up:</b> raise the trigger line in <b>Settings › Device › Microphone level</b>, or use headphones so the microphone does not hear the click.</li>
+        <li><b>Soft strokes are missed:</b> lower the trigger line, or run <b>Mic check</b> in the same place.</li>
+        <li><b>Wrong-hand tags look random:</b> calibrate both sticks again in <b>Settings › Device › Stick calibration</b>, on the same spot of the pad.</li>
+        <li><b>The clicks are out of step with the count-in:</b> press Stop and start again. If it keeps happening, use <b>Report a timing problem</b> in <b>Settings › Device › Audio timing</b>.</li>
+        <li><b>Your runs have gone:</b> on an iPhone, Safari can clear a site's data after about a week without use. Add Pocket to your Home Screen, and keep a copy with <b>Export</b> in <b>Settings › Data</b>.</li>
+        <li><b>Something else:</b> <button class="btn link" id="fbTrouble" type="button">Send feedback</button></li>
       </ul>
     </section>
     <section class="panel" id="help-about">
@@ -2759,7 +2764,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.78';                           /* shown beside the title */
+const VERSION='1.5.79';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const CAL_N=12;
 const MAX_TEXT=200000;
@@ -3017,7 +3022,7 @@ function setStatus(t,run){statusRun=!!run;$('status').hidden=statusRun&&document
 function showMicError(err){
   const n=err&&(err.name||err.message)||'';
   let m;
-  if(n==='insecure')m='The microphone needs a secure page (https:// or localhost). Host this file or run a local server, or switch Input to Keyboard in Settings, under Device.';
+  if(n==='insecure')m='The microphone needs a secure page. Open Pocket from its web address, starting with https://.';
   else if(n==='NotAllowedError'||n==='SecurityError')m='Microphone blocked. Allow it for this page in your browser settings, then press Start again.';
   else if(n==='NotFoundError')m='No microphone found.';
   else if(n==='muted')m='The microphone is muted. Unmute it from the browser\u2019s page menu, then press Start again.';
@@ -7242,6 +7247,7 @@ function wire(){
   document.addEventListener('input',e=>{if(e.target.type==='range')paintRange(e.target);},true);
   $('clkReport').addEventListener('click',()=>openFeedback(true,'The clicks were out of step with the count-in. '));
   $('fbHelp').addEventListener('click',()=>openFeedback(false,''));
+  $('fbTrouble').addEventListener('click',()=>openFeedback(false,''));
   $('fbDev').addEventListener('change',syncFeedback);
   $('fbMail').addEventListener('click',mailFeedback);
   $('fbCopy').addEventListener('click',copyFeedback);
