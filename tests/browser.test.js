@@ -136,21 +136,27 @@ test('a fresh app starts on 8 passes at 40 BPM with the Easy click; saved settin
   assert.deepEqual(await kept.evaluate(() => { const S = window.__T.S(); return [S.click, S.eachUnit, S.eachVal, S.bpm]; }), ['beat', 'min', 2, 90]);
 });
 
-test('the tempo steps by 10 and 1, stops at 40 and 220, and fits beside a usable slider on a phone', async () => {
-  const p = await open({ seeded: true, noise: -50, latCal: true, bpm: 40 }, { width: 390, height: 844 });
+test('the tempo steps by 1, can be typed, stops at 40 and 220, and the quick row fits a phone', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, bpm: 41 }, { width: 390, height: 844 });
   const bpm = () => p.evaluate(() => window.__T.S().bpm);
-  await p.click('#bpmUp10'); await p.click('#bpmUp10');
-  assert.equal(await bpm(), 60, 'two taps from 40 to 60');
-  await p.click('#bpmDown'); assert.equal(await bpm(), 59);
-  await p.click('#bpmUp'); assert.equal(await bpm(), 60);
-  await p.click('#bpmDown10'); await p.click('#bpmDown10'); await p.click('#bpmDown10');
-  assert.equal(await bpm(), 40, 'never below 40');
-  await p.evaluate(() => { const s = document.getElementById('bpm'); s.value = 215; s.dispatchEvent(new Event('input')); });
-  await p.click('#bpmUp10'); assert.equal(await bpm(), 220, 'never above 220');
+  await p.click('#bpmDown'); assert.equal(await bpm(), 40);
+  await p.click('#bpmDown'); assert.equal(await bpm(), 40, 'never below 40');
+  await p.click('#bpmUp'); assert.equal(await bpm(), 41);
+  await p.fill('#bpm', '120'); await p.press('#bpm', 'Enter');
+  assert.equal(await bpm(), 120, 'typed');
+  await p.fill('#bpm', '300'); await p.press('#bpm', 'Enter');
+  assert.equal(await bpm(), 220, 'never above 220');
   assert.equal(await p.inputValue('#bpm'), '220');
-  const w = await p.evaluate(() => ({ slider: document.getElementById('bpm').getBoundingClientRect().width, page: document.documentElement.scrollWidth, btn: ['bpmDown10', 'bpmDown', 'bpmUp', 'bpmUp10'].map(id => document.getElementById(id).getBoundingClientRect()).map(r => Math.min(r.width, r.height)) }));
-  assert.ok(w.slider >= 100, 'slider still usable: ' + w.slider);
-  assert.ok(w.btn.every(x => x >= 44), 'buttons are 44px targets: ' + w.btn);
+  await p.fill('#bpm', ''); await p.press('#bpm', 'Enter');
+  assert.equal(await p.inputValue('#bpm'), '220', 'an empty box goes back to the tempo');
+  assert.match(await p.textContent('#playSummary'), /^220 BPM/);
+  await p.click('#ckHalf');
+  assert.equal(await p.evaluate(() => window.__T.S().click), 'half');
+  assert.equal(await p.getAttribute('#ckHalf', 'aria-pressed'), 'true');
+  assert.equal(await p.textContent('#clickHint'), 'A click on the strong beats');
+  const w = await p.evaluate(() => ({ page: document.documentElement.scrollWidth, btn: ['bpmDown', 'bpmUp', 'bpm', 'eachVal', 'eachUnit', 'ckStrokes', 'ckBar'].map(id => document.getElementById(id).getBoundingClientRect()).map(r => Math.min(r.width, r.height)), over: [...document.querySelectorAll('#clickSeg button')].some(b => b.scrollWidth > b.clientWidth) }));
+  assert.ok(w.btn.every(x => x >= 44), 'controls are 44px targets: ' + w.btn);
+  assert.ok(!w.over, 'the click levels fit their buttons');
   assert.ok(w.page <= 390, 'no sideways scroll');
   assert.deepEqual(p.errors, []);
 });
@@ -683,7 +689,7 @@ test('no empty box sits between the tabs and the page on any tab', async () => {
   }
 });
 
-test('the exercise list starts collapsed, Start is full width and the time sits in the Tempo box', async () => {
+test('the exercise list starts collapsed, Start is full width and the time sits under Start', async () => {
   const text = 'title: Test\n' + Array.from({ length: 24 }, () => '8 RLRL RLRL').join('\n') + '\n';
   const p = await open({ seeded: true, input: 'kb', mode: 'routine', routineText: text, bpm: 70, eachUnit: 'pass', eachVal: 8 }, { width: 390, height: 844 });
   const r = await p.evaluate(() => {
@@ -691,14 +697,14 @@ test('the exercise list starts collapsed, Start is full width and the time sits 
     return {
       open: document.getElementById('exBox').open,
       sum: document.getElementById('routineInfo').textContent,
-      note: document.getElementById('tempoNote').textContent,
+      note: document.getElementById('playSummary').textContent,
       startW: w('startBtn').width, panelW: w('exBox').width,
       startBottom: w('startBtn').bottom,
     };
   });
   assert.equal(r.open, false);
   assert.equal(r.sum, '24 exercises');
-  assert.match(r.note, /^about \d+:\d\d/);
+  assert.match(r.note, /^70 BPM · about \d+:\d\d/);
   assert.ok(r.startW >= r.panelW - 1, 'Start is full width ' + r.startW + ' vs ' + r.panelW);
   assert.ok(r.startBottom < 844, 'Start is on the first screen ' + r.startBottom);
   await p.evaluate(() => document.querySelector('#exBox>summary').click());
@@ -809,13 +815,23 @@ audioTest('rests keep the streak and score nothing unless hit, and a hit on a re
   assert.ok(/r/.test(q), 'the other rests are kept: ' + q);
 });
 
-test('Play settings sit in aligned columns: Click beside Scoring, tops level', async () => {
+test('Play settings: Scoring beside Accent, tops level; Other strokes only once an accent is set', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true }, { width: 390, height: 900 });
+  assert.equal(await p.textContent('#setSum'), 'Scored · No accents');
   await p.evaluate(() => { document.getElementById('setBox').open = true; });   /* closed at phone width */
-  const r = await p.evaluate(() => { const a = document.getElementById('click').getBoundingClientRect(), b = document.getElementById('score').getBoundingClientRect(); return { dy: Math.abs(a.top - b.top), side: b.left > a.right - 1 }; });
-  assert.ok(await p.isVisible('#click'), 'Click is visible');
-  assert.ok(r.side, 'Scoring is beside Click');
+  const r = await p.evaluate(() => { const a = document.getElementById('score').getBoundingClientRect(), b = document.getElementById('accent').getBoundingClientRect(); return { dy: Math.abs(a.top - b.top), side: b.left > a.right - 1 }; });
+  assert.ok(await p.isVisible('#score'), 'Scoring is visible');
+  assert.ok(r.side, 'Accent is beside Scoring');
   assert.ok(r.dy < 1, 'tops are level');
+  assert.ok(!(await p.isVisible('#othersSeg')), 'no Other strokes without an accent');
+  await p.selectOption('#accent', 'b');
+  assert.ok(await p.isVisible('#othersSeg'), 'Other strokes shows with an accent');
+  await p.click('#othG');
+  assert.equal(await p.evaluate(() => window.__T.S().others), 'g');
+  await p.evaluate(() => { document.getElementById('setBox').open = false; });
+  await p.waitForFunction(() => document.getElementById('setSum').textContent !== 'More settings');
+  assert.equal(await p.textContent('#setSum'), 'Scored · Accent: each beat · Ghost notes');
+  assert.deepEqual(p.errors, []);
 });
 
 audioTest('a routine shows the most a flawless run could score, and a flawless run reaches it', async () => {
