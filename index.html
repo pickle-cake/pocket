@@ -108,18 +108,21 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radiu
 input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 #pattern{font:600 var(--t-title) var(--font-data);letter-spacing:.08em}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}   /* fields side by side */
-.tempo{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center}
-.tempo .btn{padding:0;font-size:20px;min-height:var(--hit)}
-.tempo.steps{grid-template-columns:var(--hit) var(--hit) 1fr var(--hit) var(--hit);gap:var(--s-2)}   /* steps of 10 and 1 either side of the slider */
-.tempo.steps .btn{font:600 var(--t-data) var(--font-data)}
-.tc{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.6fr);gap:12px;align-items:start}   /* both columns: a label line, then a 44px control, so the two lines meet */
-.tc .field>label{display:flex;align-items:center;height:20px;line-height:20px;overflow:hidden}
-.tc .field output{line-height:20px}
-.tc select{font-size:14px;padding-left:8px;padding-right:4px;height:44px;box-sizing:border-box}
-.tc .tempo{min-height:44px}
-.tc .tempo{grid-template-columns:36px 1fr 36px;gap:4px}
-.tc .tempo .btn{min-width:0;width:36px}
-#clickPanel{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}   /* the click level needs the wider column */
+/* Quick row: the three settings changed between runs (tempo, length, click), one tap each above Start. */
+.qgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s-3);align-items:start}
+.tempo{display:grid;grid-template-columns:var(--hit) minmax(0,1fr) var(--hit);gap:var(--s-1);align-items:center}
+.tempo .btn{padding:0;font:600 var(--t-title) var(--font-data)}
+.bpmval{display:grid;align-items:end;justify-items:center;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--bg)}   /* the tempo: tap to type it; BPM sits under the number */
+.bpmval>*{grid-area:1/1}
+.bpmval input[type=number]{border:0;background:none;padding:0 0 var(--s-3);text-align:center;font:800 var(--t-title) var(--font-display);font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield}
+.bpmval input::-webkit-inner-spin-button,.bpmval input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.bpmval input:focus-visible{outline:0}
+.bpmval:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.bpmval span{font:var(--t-eyebrow) var(--font-data);color:var(--muted);padding-bottom:var(--s-1);pointer-events:none}
+#quickRow .dur{grid-template-columns:56px minmax(0,1fr);gap:var(--s-1)}
+#quickRow .dur select{padding-left:var(--s-2);padding-right:var(--s-1)}
+#clickSeg,#othersSeg{grid-auto-columns:minmax(0,1fr)}
+#clickSeg button{padding:0 var(--s-1)}
 #lsInfo{flex:1}
 .err{color:var(--danger);font-size:13px;margin:0;min-height:0}
 .panel>p:empty,.panel>ul:empty{display:none}   /* empty message slots would add a grid gap each */
@@ -680,9 +683,6 @@ body[data-input="kb"] #micPill{display:none}
 :root[data-layout=desktop] body[data-review="1"] #startBtn,:root[data-layout=desktop] body[data-review="1"] #playSummary{display:none}
 .exercises.lexs{border:0;border-radius:0;background:none}
 /* An open row is lifted with a lighter background that reaches a little past the text on both sides. */
-output.bigbpm{display:block;font:800 var(--t-hero) var(--font-display);font-variant-numeric:tabular-nums;margin:2px 0 8px}   /* the Play page's one big number */
-.bigrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.bigrow .hint{margin:0;text-align:right}
 .setbox{border:0;border-radius:0;background:none}
 body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing the drummer watches the staff, so it waits for the end of the run */
 .sbody{display:grid;gap:22px}
@@ -1352,74 +1352,69 @@ RLRR LRLL RLRR LRLL</pre>
       <p class="maxline routine-only" id="maxLine"></p>
     </section>
 
-    <section class="panel cfg" id="tempoPanel" aria-label="Tempo">
-      <div class="field">
-        <label for="bpm">Tempo</label>
-        <div class="bigrow"><output id="bpmOut" class="bigbpm"></output><span class="hint routine-only" id="tempoNote"></span></div>
-        <div class="tempo steps">
-          <button class="btn" id="bpmDown10" type="button" aria-label="10 BPM slower">&#8722;10</button>
-          <button class="btn" id="bpmDown" type="button" aria-label="1 BPM slower">&#8722;1</button>
-          <input type="range" id="bpm" min="40" max="220" step="1">
-          <button class="btn" id="bpmUp" type="button" aria-label="1 BPM faster">+1</button>
-          <button class="btn" id="bpmUp10" type="button" aria-label="10 BPM faster">+10</button>
-        </div>
+    <section class="panel cfg" id="quickRow" aria-label="Tempo, length and click">
+      <div class="qgrid">
+        <div class="field"><label for="bpm">Tempo</label>
+          <div class="tempo">
+            <button class="btn" id="bpmDown" type="button" aria-label="1 BPM slower">&#8722;</button>
+            <div class="bpmval"><input type="number" id="bpm" min="40" max="220" step="1" inputmode="numeric" aria-describedby="bpmUnit"><span id="bpmUnit">BPM</span></div>
+            <button class="btn" id="bpmUp" type="button" aria-label="1 BPM faster">+</button>
+          </div></div>
+        <div class="field"><label for="eachVal"><span class="routine-only">Each exercise</span><span class="single-only">Length</span></label>
+          <div class="dur"><input type="number" id="eachVal" min="1" max="200" step="1" inputmode="decimal"><select id="eachUnit" aria-label="Measured in"><option value="min">min</option><option value="pass">passes</option></select></div></div>
       </div>
+      <p class="hint" id="eachNote" hidden></p>
+      <div class="field"><span class="lbl" id="clickLbl">Click</span>
+        <div class="seg wide" id="clickSeg" role="group" aria-labelledby="clickLbl" aria-describedby="clickHint">
+          <button type="button" id="ckStrokes" data-v="strokes" aria-pressed="false">Easy</button>
+          <button type="button" id="ckBeat" data-v="beat" aria-pressed="false">Medium</button>
+          <button type="button" id="ckHalf" data-v="half" aria-pressed="false">Hard</button>
+          <button type="button" id="ckBar" data-v="bar" aria-pressed="false">Extreme</button>
+          <button type="button" id="ckNone" data-v="none" aria-pressed="false">Master</button>
+        </div>
+        <p class="hint" id="clickHint"></p></div>
     </section>
     <details id="setBox" class="setbox">
       <summary id="setSum"></summary>
       <div class="sbody">
-    <section class="panel cfg" aria-label="How long it plays">
+    <section class="panel cfg" aria-label="More settings">
       <div class="fields">
-        <div class="field"><label for="eachVal"><span class="routine-only">Each exercise plays for</span><span class="single-only">Plays for</span></label>
-          <div class="dur"><input type="number" id="eachVal" min="1" max="200" step="1" inputmode="decimal"><select id="eachUnit" aria-label="Measured in"><option value="min">minutes</option><option value="pass">passes</option></select></div></div>
-        <div class="field routine-only"><label for="gap">Between exercises</label>
-          <select id="gap"><option value="4">4-beat count-in</option><option value="0">Straight on</option></select></div>
+        <div class="field"><label for="score">Scoring</label>
+          <select id="score">
+            <option value="1">Scored</option>
+            <option value="0">Practice</option>
+          </select></div>
+        <div class="field"><label for="accent">Accent</label>
+          <select id="accent">
+            <option value="">Off</option>
+            <optgroup label="Structure">
+              <option value="g">Each group</option>
+              <option value="b">Each beat</option>
+              <option value="m">Each bar</option>
+            </optgroup>
+            <optgroup label="Hand">
+              <option value="R">Right hand</option>
+              <option value="L">Left hand</option>
+            </optgroup>
+            <optgroup label="Every Nth stroke">
+              <option value="2">Every 2nd stroke</option>
+              <option value="3">Every 3rd stroke</option>
+              <option value="4">Every 4th stroke</option>
+              <option value="5">Every 5th stroke</option>
+              <option value="6">Every 6th stroke</option>
+              <option value="7">Every 7th stroke</option>
+            </optgroup>
+          </select></div>
       </div>
-      <p class="hint">A pass is the exercise played once through.</p>
-      <p class="hint" id="eachNote" hidden></p>
+      <div class="field" id="othersField"><span class="lbl" id="othersLbl">Other strokes</span>
+        <div class="seg wide" id="othersSeg" role="group" aria-labelledby="othersLbl" aria-describedby="othersHint">
+          <button type="button" id="othN" data-v="n" aria-pressed="false">Normal</button>
+          <button type="button" id="othG" data-v="g" aria-pressed="false">Ghost (soft)</button>
+        </div>
+        <p class="hint" id="othersHint"></p></div>
+      <div class="field routine-only"><label for="gap">Between exercises</label>
+        <select id="gap"><option value="4">4-beat count-in</option><option value="0">Straight on</option></select></div>
     </section>
-
-    <section class="panel cfg tc" id="clickPanel" aria-label="Click">
-      <div class="field"><label for="click">Click</label>
-        <select id="click">
-          <option value="strokes">Easy: every stroke</option>
-          <option value="beat">Medium: the beat</option>
-          <option value="half">Hard: strong beats</option>
-          <option value="bar">Extreme: 1 of each bar</option>
-          <option value="none">Master: count-in only</option>
-        </select></div>
-      <div class="field"><label for="score">Scoring</label>
-        <select id="score">
-          <option value="1">Scored</option>
-          <option value="0">Practice</option>
-        </select></div>
-    </section>
-    <section class="panel cfg tc" aria-label="Accents and ghost notes">
-      <div class="field"><label for="accent">Accent</label>
-        <select id="accent">
-          <option value="">Off</option>
-          <optgroup label="Structure">
-            <option value="g">Each group</option>
-            <option value="b">Each beat</option>
-            <option value="m">Each bar</option>
-          </optgroup>
-          <optgroup label="Hand">
-            <option value="R">Right hand</option>
-            <option value="L">Left hand</option>
-          </optgroup>
-          <optgroup label="Every Nth stroke">
-            <option value="2">Every 2nd stroke</option>
-            <option value="3">Every 3rd stroke</option>
-            <option value="4">Every 4th stroke</option>
-            <option value="5">Every 5th stroke</option>
-            <option value="6">Every 6th stroke</option>
-            <option value="7">Every 7th stroke</option>
-          </optgroup>
-        </select></div>
-      <div class="field"><label for="others">Other strokes</label>
-        <select id="others"><option value="n">Normal</option><option value="g">Ghost (soft)</option></select></div>
-    </section>
-
       </div>
     </details>
     <div class="transport">
@@ -2622,7 +2617,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.90';                           /* shown beside the title */
+const VERSION='1.5.91';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5424,7 +5419,7 @@ function dropExercise(r,b){
 const replayRun=r=>{if(!(run&&!run.ended))guard(()=>loadRun(r));};
 function loadRun(r){
   const q=r.rp;if(!q)return;
-  S.click=r.lv==='off'?'none':r.lv;$('click').value=S.click;
+  S.click=r.lv==='off'?'none':r.lv;
   applyDy(r.dy);
   S.tol=r.tol;$('tol').value=String(r.tol);
   S.bpm=clamp(Math.round(r.bpm),40,220);$('bpm').value=S.bpm;
@@ -5456,7 +5451,7 @@ function exerciseListEl(text,lv,dy){
 function practisePattern(k,lv,dy){
   if(run&&!run.ended)return;
   guard(()=>{
-    if(lv){S.click=lv;$('click').value=lv;}
+    if(lv)S.click=lv;
     applyDy(dy);
     openText(keyToText(k),k);
     showTab('play');
@@ -5467,7 +5462,7 @@ function applyDy(code){
   code=code||'';
   const soft=/s$/.test(code);
   S.accent=soft?code.slice(0,-1):code;S.others=soft?'g':'n';
-  $('accent').value=S.accent;$('others').value=S.others;save();pushDet();
+  $('accent').value=S.accent;save();pushDet();syncDyCtl();
 }
 /* Hands text to the browser as a download. */
 /* On iPhone and iPad the file goes to the share sheet, where Save to Files (iCloud Drive) is one of the choices. Elsewhere it downloads. Resolves false if the share sheet was dismissed. */
@@ -6400,7 +6395,7 @@ function showCachedList(){
 }
 
 /* ---------- controls ---------- */
-const LOCKED=['tol','accent','others','pulse','bpm','bpmDown','bpmUp','bpmDown10','bpmUp10','subdiv','click','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
+const LOCKED=['tol','accent','othN','othG','pulse','bpm','bpmDown','bpmUp','subdiv','ckStrokes','ckBeat','ckHalf','ckBar','ckNone','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
 function syncRunUI(){
   const on=!!(run&&!run.ended),play=on&&run.mode==='play',paused=on&&!!run.paused;
   const b=$('startBtn');
@@ -6486,10 +6481,8 @@ function syncInfo(){
     ok=exercises.length>0;
     const errs=routineParsed.errors;
     $('routineErr').textContent=n===0&&!S.routineText.trim()?'':(errs.length?errs.slice(0,3).join(' ')+(errs.length>3?' (+'+(errs.length-3)+' more)':''):(n===0?'No exercises found. Type one exercise per line using L and R.':''));
-    const total=playTime(exercises);
     $('routineInfo').textContent=ok?n+(n===1?' exercise':' exercises')+(S.startExercise>1?' · from '+S.startExercise:''):'';
     syncMaxScore();
-    $('tempoNote').textContent=ok?'about '+fmtTime(total)+pulseNote(exercises):'';
     const en=$('eachNote');
     en.hidden=!routineParsed.each;
     if(routineParsed.each)en.textContent='This routine sets its own time per exercise (each:), so the two settings above are not used. Exercises with their own x, time or @ still win.';
@@ -6500,18 +6493,28 @@ function syncInfo(){
   const sum=$('playSummary');
   if(!exercises.length)sum.textContent=S.mode==='single'?'Type an exercise in the editor, then press Start.':'Add some exercises in the editor, then press Start.';
   else if(S.mode==='single')sum.textContent=S.bpm+' BPM'+pulseNote(exercises)+playsFor();
-  else{const g=routineGuide();sum.textContent=g?'Routine cleared at '+g.split(' at ')[1]:'';}
+  else sum.textContent=S.bpm+' BPM'+pulseNote(exercises)+' · about '+fmtTime(playTime(exercises))+routineGuide();
   {const b=exercises[0];$('playPat').textContent=exercises.length&&S.mode==='single'?showPattern(b.notes,b.groupStart,b.subs,b.defSub,b.sig,b.src):'';}
-  $('bpmOut').textContent=S.bpm+' BPM';
-  {   /* what the closed Settings drawer holds, so a setting that matters is never hidden */
-    const ck=$('click'),ac=$('accent');
-    const dur=S.eachVal+(S.eachUnit==='pass'?(S.eachVal===1?' pass':' passes'):' min')+(S.mode==='routine'?' each':'');
-    const parts=[dur,ck.options[ck.selectedIndex].text.split(':')[0]+(S.click==='none'?'':' click')];
-    if(!scoreOn)parts.push('Not scoring');
-    if(S.accent)parts.push('Accent: '+ac.options[ac.selectedIndex].text.toLowerCase());
-    if(S.others==='g')parts.push('Ghost notes');
-    $('setSum').textContent=$('setBox').open?'Settings':parts.join(' · ');   /* open: just the name; closed: what is inside */
+  if(document.activeElement!==$('bpm'))$('bpm').value=S.bpm;   /* not while it is being typed */
+  setPressed('clickSeg',S.click);
+  $('clickHint').textContent=CLICK_HINT[S.click]||'';
+  syncDyCtl();
+  {   /* what the closed drawer holds, so a setting that matters is never hidden */
+    const ac=$('accent');
+    const parts=[scoreOn?'Scored':'Practice',S.accent?'Accent: '+ac.options[ac.selectedIndex].text.toLowerCase():'No accents'];
+    if(S.others==='g')parts.push(S.accent?'Ghost notes':'All strokes soft');
+    if(S.mode==='routine')parts.push(S.gap?'Count-in between':'Straight on');
+    $('setSum').textContent=$('setBox').open?'More settings':parts.join(' · ');   /* open: just the name; closed: what is inside */
   }
+}
+const CLICK_HINT={strokes:'A click on every stroke',beat:'A click on the beat',half:'A click on the strong beats',bar:'A click on 1 of each bar',none:'Count-in only'};
+/* A segmented control's buttons carry their value in data-v; the one that matches is pressed. */
+function setPressed(id,v){$(id).querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===v)));}
+/* Other strokes only matters once an accent is set (or when every stroke is soft, from an old run). */
+function syncDyCtl(){
+  setPressed('othersSeg',S.others);
+  $('othersField').hidden=!S.accent&&S.others!=='g';
+  $('othersHint').textContent=!S.accent?'Every stroke is played soft.':(S.others==='g'?'Strokes that are not accented are played soft.':'Strokes that are not accented are played as usual.');
 }
 /* BPM counts the pulse. Say so when that is the eighth note. */
 function pulseNote(exercises){
@@ -6957,17 +6960,16 @@ function applyTheme(){
   drawTrace();
 }
 function wire(){
-  const setBpm=v=>{S.bpm=clamp(Math.round(v),40,220);$('bpm').value=S.bpm;save();if(S.mode==='routine')buildExerciseList();syncInfo();};
-  $('bpm').addEventListener('input',e=>setBpm(+e.target.value));
+  const setBpm=v=>{if(isFinite(v)&&v>0)S.bpm=clamp(Math.round(v),40,220);$('bpm').value=S.bpm;save();if(S.mode==='routine')buildExerciseList();syncInfo();};
+  $('bpm').addEventListener('change',e=>setBpm(parseFloat(e.target.value)));   /* typed: kept on Enter or on leaving the box, so 120 is not cut to 40 at its first digit */
+  $('bpm').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();});
   $('bpmDown').addEventListener('click',()=>setBpm(S.bpm-1));
   $('bpmUp').addEventListener('click',()=>setBpm(S.bpm+1));
-  $('bpmDown10').addEventListener('click',()=>setBpm(S.bpm-10));
-  $('bpmUp10').addEventListener('click',()=>setBpm(S.bpm+10));
   $('score').addEventListener('change',e=>{scoreOn=e.target.value==='1';syncInfo();});
-  $('click').addEventListener('change',e=>{S.click=e.target.value;save();if(S.mode==='routine')buildExerciseList();syncInfo();});
+  $('clickSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.click=b.dataset.v;save();if(S.mode==='routine')buildExerciseList();syncInfo();});
   const dyChanged=()=>{save();pushDet();refreshPreview();};
   $('accent').addEventListener('change',e=>{S.accent=e.target.value;dyChanged();});
-  $('others').addEventListener('change',e=>{S.others=e.target.value;dyChanged();});
+  $('othersSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.others=b.dataset.v;dyChanged();});
   $('tol').addEventListener('change',e=>{S.tol=+e.target.value;save();renderAll();syncInfo();});   /* the routine's Max score carries the window */
   $('inputMode').addEventListener('change',e=>{S.input=e.target.value;save();setInputMode();});
   $('routineText').addEventListener('input',e=>{const v=plainText(e.target.value);if(v!==e.target.value)e.target.value=v;S.routineText=v.slice(0,MAX_TEXT);S.startExercise=1;save();onRoutineChanged();});
@@ -7192,7 +7194,7 @@ function init(){
   if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
   $('routineText').value=S.routineText;
   $('bpm').value=S.bpm;
-  $('click').value=S.click;$('accent').value=S.accent;$('others').value=S.others;
+  $('accent').value=S.accent;
   $('tol').value=String(S.tol);
   $('gap').value=String(S.gap);
   $('pulse').value=S.pulse?'on':'off';$('palette').value=S.palette;$('layout').value=S.layout;
