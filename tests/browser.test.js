@@ -136,25 +136,49 @@ test('a fresh app starts on 8 passes at 40 BPM with the Easy click; saved settin
   assert.deepEqual(await kept.evaluate(() => { const S = window.__T.S(); return [S.click, S.eachUnit, S.eachVal, S.bpm]; }), ['beat', 'min', 2, 90]);
 });
 
-test('the tempo steps by 1, can be typed, stops at 40 and 220, and the quick row fits a phone', async () => {
-  const p = await open({ seeded: true, noise: -50, latCal: true, bpm: 41 }, { width: 390, height: 844 });
+test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 and 220, and the quick row fits a phone', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, bpm: 41 }, { width: 390, height: 844 }, () => {
+    if (localStorage.getItem('stick-timing-trainer.records.v2')) return;
+    const run = (i, b) => ({ id: 'r' + i, t: Date.now() - 86400000 * (3 - i), mode: 'single', rk: null, lv: 'beat', dy: '', ne: 1, bpm: b, tol: 20, sec: 60,
+      exercises: [{ k: '8 RLRL', bpm: b, due: 16, within: 8, heard: 16, avg: 0, sd: 3, miss: 0, i: 1 }] });
+    localStorage.setItem('stick-timing-trainer.records.v2', JSON.stringify({ v: 1, names: {}, nu: 1, lib: [], runs: [run(0, 55), run(1, 60)] }));
+  });
   const bpm = () => p.evaluate(() => window.__T.S().bpm);
   await p.click('#bpmDown'); assert.equal(await bpm(), 40);
   await p.click('#bpmDown'); assert.equal(await bpm(), 40, 'never below 40');
   await p.click('#bpmUp'); assert.equal(await bpm(), 41);
-  await p.fill('#bpm', '120'); await p.press('#bpm', 'Enter');
+  assert.equal(await p.textContent('#bpmNum'), '41');
+  await p.click('#bpmOpen'); assert.ok(await p.isVisible('#tempoModal'), 'tapping the tempo opens the sheet');
+  await p.click('#tmUp10'); await p.click('#tmUp10'); assert.equal(await bpm(), 61, 'steps of 10');
+  await p.click('#tmDown10'); await p.click('#tmDown'); assert.equal(await bpm(), 50);
+  assert.equal(await p.inputValue('#tmRange'), '50', 'the slider follows');
+  await p.fill('#tmRange', '75'); assert.equal(await bpm(), 75, 'the slider sets it');
+  await p.keyboard.press('Escape'); assert.ok(!(await p.isVisible('#tempoModal')), 'Escape closes it');
+  assert.equal(await p.textContent('#bpmNum'), '75');
+  await p.click('#bpmOpen'); await p.fill('#bpm', '120'); await p.press('#bpm', 'Enter');
   assert.equal(await bpm(), 120, 'typed');
-  await p.fill('#bpm', '300'); await p.press('#bpm', 'Enter');
+  assert.ok(!(await p.isVisible('#tempoModal')), 'Enter keeps it and closes the sheet');
+  await p.click('#bpmOpen'); await p.fill('#bpm', '300'); await p.press('#bpm', 'Enter');
   assert.equal(await bpm(), 220, 'never above 220');
   assert.equal(await p.inputValue('#bpm'), '220');
-  await p.fill('#bpm', ''); await p.press('#bpm', 'Enter');
+  await p.click('#bpmOpen'); await p.fill('#bpm', ''); await p.press('#bpm', 'Enter');
   assert.equal(await p.inputValue('#bpm'), '220', 'an empty box goes back to the tempo');
   assert.match(await p.textContent('#playSummary'), /^220 BPM/);
+  const chips = await p.$$eval('#tmChips .tmchip', b => b.map(x => x.textContent));
+  assert.ok(chips.length >= 1 && chips.every(c => /^\d+ BPM(Last time|Cleared|Recent)$/.test(c)), 'the sheet offers the tempos played: ' + chips);
+  await p.click('#bpmOpen'); const first = await p.$eval('#tmChips .tmchip b', b => parseInt(b.textContent));
+  await p.click('#tmChips .tmchip'); assert.equal(await bpm(), first, 'a chip sets its tempo');
+  assert.ok(!(await p.isVisible('#tempoModal')), 'and closes the sheet');
+  await p.click('#bpmOpen'); await p.click('#tmDone'); assert.ok(!(await p.isVisible('#tempoModal')), 'Done closes it');
+  const b0 = await bpm(); const box = await p.$eval('#bpmUp', e => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+  await p.mouse.move(box[0], box[1]); await p.mouse.down(); await p.waitForTimeout(1200); await p.mouse.up();
+  const b1 = await bpm(); assert.ok(b1 >= b0 + 5 && b1 <= 220, 'holding + keeps going: ' + b0 + ' to ' + b1);
+  await p.waitForTimeout(300); assert.equal(await bpm(), b1, 'and stops on release, without one more step');
   await p.click('#ckHalf');
   assert.equal(await p.evaluate(() => window.__T.S().click), 'half');
   assert.equal(await p.getAttribute('#ckHalf', 'aria-pressed'), 'true');
   assert.equal(await p.textContent('#clickHint'), 'A click on the strong beats');
-  const w = await p.evaluate(() => ({ page: document.documentElement.scrollWidth, btn: ['bpmDown', 'bpmUp', 'bpm', 'eachVal', 'eachUnit', 'ckStrokes', 'ckBar'].map(id => document.getElementById(id).getBoundingClientRect()).map(r => Math.min(r.width, r.height)), over: [...document.querySelectorAll('#clickSeg button')].some(b => b.scrollWidth > b.clientWidth) }));
+  const w = await p.evaluate(() => ({ page: document.documentElement.scrollWidth, btn: ['bpmDown', 'bpmUp', 'bpmOpen', 'eachVal', 'eachUnit', 'ckStrokes', 'ckBar'].map(id => document.getElementById(id).getBoundingClientRect()).map(r => Math.min(r.width, r.height)), over: [...document.querySelectorAll('#clickSeg button')].some(b => b.scrollWidth > b.clientWidth) }));
   assert.ok(w.btn.every(x => x >= 44), 'controls are 44px targets: ' + w.btn);
   assert.ok(!w.over, 'the click levels fit their buttons');
   assert.ok(w.page <= 390, 'no sideways scroll');

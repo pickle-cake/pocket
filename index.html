@@ -119,6 +119,18 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .bpmval input:focus-visible{outline:0}
 .bpmval:focus-within{outline:2px solid var(--accent);outline-offset:1px}
 .bpmval span{font:var(--t-eyebrow) var(--font-data);color:var(--muted);padding-bottom:var(--s-1);pointer-events:none}
+.bpmval.btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--s-1) 0}   /* the tempo in the quick row: tap it for the tempo sheet */
+.bpmval.btn b{font:800 var(--t-title) var(--font-display);font-variant-numeric:tabular-nums}
+.bpmval.btn span{padding:0}
+.tempo .btn{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}   /* hold to repeat without selecting text or opening a menu */
+/* The tempo sheet: steps of 10 and 1, the tempo to type, a slider, and the tempos you play. */
+.tmrow{display:grid;grid-template-columns:var(--hit) var(--hit) minmax(0,1fr) var(--hit) var(--hit);gap:var(--s-1)}
+.tmrow .btn{padding:0;font:600 var(--t-small) var(--font-data)}
+.tmrow .bpmval input[type=number]{font:800 var(--t-display) var(--font-display);padding:var(--s-2) 0 var(--s-4)}
+.tmchips{display:flex;flex-wrap:wrap;gap:var(--s-2)}
+.tmchip{display:grid;justify-items:start;padding:var(--s-1) var(--s-3);text-align:left}
+.tmchip b{font:600 var(--t-small) var(--font-data)}
+.tmchip small{font:var(--t-caption) var(--font-body);color:var(--muted)}
 #quickRow .dur{grid-template-columns:56px minmax(0,1fr);gap:var(--s-1)}
 #quickRow .dur select{padding-left:var(--s-2);padding-right:var(--s-1)}
 #clickSeg,#othersSeg{grid-auto-columns:minmax(0,1fr)}
@@ -1089,7 +1101,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <ol>
         <li><b>Settings:</b> pick a tempo, use headphones for the click, tap Test microphone and hit the pad. The level bar should cross the trigger line on every stroke.</li>
         <li><b>Library:</b> press <b>New</b> to write a routine or <b>Import</b> to bring one in. One exercise plays on its own. Two or more make a routine, played in order.</li>
-        <li><b>Play:</b> set the tempo, click level and how long each exercise plays, then press Start. After the count-in, play on the moving line and press Stop when you are done. Your result appears first, with <b>Again</b> and <b>Done</b>. The staff keeps its colours and numbers so you can see which strokes were off. Done brings the controls back.</li>
+        <li><b>Play:</b> set the tempo, click level and how long each exercise plays, then press Start. Hold − or + to keep going, or tap the tempo for steps of 10, a slider and the tempos you play most. After the count-in, play on the moving line and press Stop when you are done. Your result appears first, with <b>Again</b> and <b>Done</b>. The staff keeps its colours and numbers so you can see which strokes were off. Done brings the controls back.</li>
       </ol>
       <p>No microphone? Under Settings &rsaquo; Device, set Input to "Keyboard or pads" and press <b>F</b> for left, <b>J</b> for right. This is a test mode, and its timing is rougher than a pad with a microphone.</p>
     </section>
@@ -1355,11 +1367,11 @@ RLRR LRLL RLRR LRLL</pre>
 
     <section class="panel cfg" id="quickRow" aria-label="Tempo, length and click">
       <div class="qgrid">
-        <div class="field"><label for="bpm">Tempo</label>
-          <div class="tempo">
-            <button class="btn" id="bpmDown" type="button" aria-label="1 BPM slower">&#8722;</button>
-            <div class="bpmval"><input type="number" id="bpm" min="40" max="220" step="1" inputmode="numeric" aria-describedby="bpmUnit"><span id="bpmUnit">BPM</span></div>
-            <button class="btn" id="bpmUp" type="button" aria-label="1 BPM faster">+</button>
+        <div class="field"><span class="lbl" id="tempoLbl">Tempo</span>
+          <div class="tempo" role="group" aria-labelledby="tempoLbl">
+            <button class="btn" id="bpmDown" type="button" aria-label="1 BPM slower, hold to keep going" title="Hold to keep going">&#8722;</button>
+            <button class="btn bpmval" id="bpmOpen" type="button" aria-haspopup="dialog"><b id="bpmNum"></b> <span>BPM</span></button>
+            <button class="btn" id="bpmUp" type="button" aria-label="1 BPM faster, hold to keep going" title="Hold to keep going">+</button>
           </div></div>
         <div class="field"><label for="eachVal"><span class="routine-only">Each exercise</span><span class="single-only">Length</span></label>
           <div class="dur"><input type="number" id="eachVal" min="1" max="200" step="1" inputmode="decimal"><select id="eachUnit" aria-label="Measured in"><option value="min">min</option><option value="pass">passes</option></select></div></div>
@@ -1578,6 +1590,22 @@ RLRR LRLL RLRR LRLL</pre>
       <p class="hint" id="lsInfo"></p>
       <button class="btn icon" id="lsPlay" type="button" aria-label="Play again" title="Play again"></button>
     </div>
+  </div>
+</div>
+
+<div class="modal" id="tempoModal" role="dialog" aria-modal="true" aria-labelledby="tmTitle" hidden>
+  <div class="card mbox">
+    <div class="mhead"><h3 id="tmTitle">Tempo</h3><button class="btn" id="tmDone" type="button">Done</button></div>
+    <div class="tmrow">
+      <button class="btn" id="tmDown10" type="button" aria-label="10 BPM slower">&#8722;10</button>
+      <button class="btn" id="tmDown" type="button" aria-label="1 BPM slower">&#8722;1</button>
+      <div class="bpmval"><input type="number" id="bpm" min="40" max="220" step="1" inputmode="numeric" aria-label="Tempo" aria-describedby="bpmUnit"><span id="bpmUnit">BPM</span></div>
+      <button class="btn" id="tmUp" type="button" aria-label="1 BPM faster">+1</button>
+      <button class="btn" id="tmUp10" type="button" aria-label="10 BPM faster">+10</button>
+    </div>
+    <input type="range" id="tmRange" min="40" max="220" step="1" aria-label="Tempo slider">
+    <div class="field" id="tmChipBox"><span class="lbl" id="tmChipLbl">Your tempos</span>
+      <div class="tmchips" id="tmChips" role="group" aria-labelledby="tmChipLbl"></div></div>
   </div>
 </div>
 
@@ -2618,7 +2646,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.94';                           /* shown beside the title */
+const VERSION='1.5.95';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -6419,7 +6447,7 @@ function showCachedList(){
 }
 
 /* ---------- controls ---------- */
-const LOCKED=['tol','accent','othN','othG','pulse','bpm','bpmDown','bpmUp','subdiv','ckStrokes','ckBeat','ckHalf','ckBar','ckNone','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
+const LOCKED=['tol','accent','othN','othG','pulse','bpm','bpmDown','bpmUp','bpmOpen','tmDown10','tmDown','tmUp','tmUp10','tmRange','subdiv','ckStrokes','ckBeat','ckHalf','ckBar','ckNone','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
 function syncRunUI(){
   const on=!!(run&&!run.ended),play=on&&run.mode==='play',paused=on&&!!run.paused;
   const b=$('startBtn');
@@ -6520,6 +6548,8 @@ function syncInfo(){
   else sum.textContent=S.bpm+' BPM'+pulseNote(exercises)+' · about '+fmtTime(playTime(exercises))+routineGuide();
   {const b=exercises[0];$('playPat').textContent=exercises.length&&S.mode==='single'?showPattern(b.notes,b.groupStart,b.subs,b.defSub,b.sig,b.src):'';}
   if(document.activeElement!==$('bpm'))$('bpm').value=S.bpm;   /* not while it is being typed */
+  $('bpmNum').textContent=S.bpm;$('bpmOpen').setAttribute('aria-label',S.bpm+' BPM, change the tempo');
+  {const r=$('tmRange');r.value=S.bpm;r.setAttribute('aria-valuetext',S.bpm+' BPM');paintRange(r);}
   setPressed('clickSeg',S.click);
   $('clickHint').textContent=CLICK_HINT[S.click]||'';
   syncDyCtl();
@@ -6976,6 +7006,49 @@ function placeAdv(){
   if(document.documentElement.dataset.layout==='desktop')$('advBar').append(a);
   else $('advBody').after(a);
 }
+/* A tempo button that repeats while held: after 0.4 s it steps by 1, getting quicker, then by 5 to the next multiple of 5.
+   The click that ends a hold is not counted again. */
+function holdStep(btn,dir,setBpm){
+  let timer=0,n=0,held=false;
+  const stop=()=>{clearTimeout(timer);timer=0;};
+  const tick=()=>{
+    n++;held=true;
+    if(n>8)setBpm(dir>0?Math.floor(S.bpm/5)*5+5:Math.ceil(S.bpm/5)*5-5);else setBpm(S.bpm+dir);
+    timer=setTimeout(tick,n>8?180:Math.max(70,140-n*10));
+  };
+  btn.addEventListener('pointerdown',e=>{if(e.button!==0||btn.disabled)return;stop();n=0;held=false;timer=setTimeout(tick,400);});
+  ['pointerup','pointercancel','pointerleave'].forEach(t=>btn.addEventListener(t,stop));
+  btn.addEventListener('contextmenu',e=>e.preventDefault());   /* a long press is a hold, not a menu */
+  btn.addEventListener('click',()=>{if(held){held=false;return;}setBpm(S.bpm+dir);});
+}
+/* The tempo sheet. Its chips are the tempos you play: last time and cleared on this exercise or routine, then recent runs. */
+function tempoChips(){
+  const out=[],seen=new Set(),add=(v,why)=>{v=Math.round(v);if(v>=40&&v<=220&&!seen.has(v)&&out.length<5){seen.add(v);out.push([v,why]);}};
+  const ex=currentExercises(),dy=dynCode()?'|'+dynCode():'',key=b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig);
+  let e=null;
+  if(ex.length)e=S.mode==='single'?guide().pat.get(key(ex[0])+'|'+S.click+dy):guide().rt.get(routineKeyOf(allExercises().map(key))+'|'+S.click+dy);
+  if(e&&e.bpm)add(e.bpm,'Last time');
+  if(e&&e.cleared)add(e.cleared,'Cleared');
+  for(let i=recs.runs.length-1;i>=0&&out.length<5;i--)add(recs.runs[i].bpm,'Recent');
+  return out;
+}
+function openTempo(setBpm){
+  if(run&&!run.ended)return;
+  const box=$('tmChips'),chips=tempoChips();box.textContent='';
+  chips.forEach(([v,why])=>{
+    const b=document.createElement('button');b.type='button';b.className='btn tmchip';
+    const n=document.createElement('b');n.textContent=v+' BPM';
+    const w=document.createElement('small');w.textContent=why;
+    b.append(n,w);b.addEventListener('click',()=>{setBpm(v);closeTempo();});box.append(b);
+  });
+  $('tmChipBox').hidden=!chips.length;
+  $('tempoModal').hidden=false;syncInfo();
+  $('tmRange').focus();
+}
+function closeTempo(){
+  const m=$('tempoModal');if(m.hidden)return;
+  m.hidden=true;$('bpmOpen').focus({preventScroll:true});
+}
 function applyTheme(){
   const d=S.theme==='dark',b=$('themeBtn');
   document.documentElement.dataset.theme=S.theme;
@@ -6986,9 +7059,14 @@ function applyTheme(){
 function wire(){
   const setBpm=v=>{if(isFinite(v)&&v>0)S.bpm=clamp(Math.round(v),40,220);$('bpm').value=S.bpm;save();if(S.mode==='routine')buildExerciseList();syncInfo();};
   $('bpm').addEventListener('change',e=>setBpm(parseFloat(e.target.value)));   /* typed: kept on Enter or on leaving the box, so 120 is not cut to 40 at its first digit */
-  $('bpm').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();});
-  $('bpmDown').addEventListener('click',()=>setBpm(S.bpm-1));
-  $('bpmUp').addEventListener('click',()=>setBpm(S.bpm+1));
+  $('bpm').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.target.blur();closeTempo();}});
+  holdStep($('bpmDown'),-1,setBpm);holdStep($('bpmUp'),1,setBpm);
+  $('bpmOpen').addEventListener('click',()=>openTempo(setBpm));
+  [['tmDown10',-10],['tmDown',-1],['tmUp',1],['tmUp10',10]].forEach(([id,d])=>$(id).addEventListener('click',()=>setBpm(S.bpm+d)));
+  $('tmRange').addEventListener('input',e=>setBpm(+e.target.value));
+  $('tmDone').addEventListener('click',closeTempo);
+  $('tempoModal').addEventListener('click',e=>{if(e.target===$('tempoModal'))closeTempo();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('tempoModal').hidden)closeTempo();});
   $('score').addEventListener('change',e=>{scoreOn=e.target.value==='1';syncInfo();});
   $('clickSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.click=b.dataset.v;save();if(S.mode==='routine')buildExerciseList();syncInfo();});
   const dyChanged=()=>{save();pushDet();refreshPreview();};
