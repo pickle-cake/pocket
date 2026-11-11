@@ -5,3 +5,6 @@ tests/fixtures/*.raw.json
 
 # Claude Code settings for this machine only (permission rules and the like)
 .claude/settings.local.json
+
+# the assembled Pages site: npm run site
+_site/

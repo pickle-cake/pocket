@@ -2,7 +2,7 @@
 
 A timing coach for drummers practising on a pad. It plays a click, listens to each stroke through the microphone and shows how early or late it landed, in milliseconds. It runs in the browser, on a phone or a computer, and works offline after the first visit. Nothing is uploaded: your history stays in the browser.
 
-**Open it:** https://pickle-cake.github.io/pocket/
+**Open it:** https://pickle-cake.github.io/pocket/app/ (the home page, https://pickle-cake.github.io/pocket/, says what it does)
 
 ## Licence
 
@@ -16,7 +16,7 @@ Pocket is free software under the GNU General Public License, version 3 or any l
 
 ## Where changes go
 
-Work happens in the fork, `feature-pocket`. A push to its `main` runs the tests and, if they pass, publishes `index.html`, `sw.js` and `routines/` to the fork's own GitHub Pages site, https://b6fsb6.github.io/feature-pocket/. That site is the preview: try a change there on a phone. The fork has its own address, so its saved settings and records are separate from the live app's.
+Work happens in the fork, `feature-pocket`. A push to its `main` runs the tests and, if they pass, publishes the site that `npm run site` assembles in `_site/` (the home page from `landing/index.html` at the root, the app with `sw.js` and `routines/` under `app/`) to the fork's own GitHub Pages site, https://b6fsb6.github.io/feature-pocket/. That site is the preview: try a change there on a phone. The fork has its own address, so its saved settings and records are separate from the live app's.
 
 When a change is good, open a pull request from the fork's `main` to this repository's `main`. The same workflow runs the tests on the pull request. After review, merge it (squash); the merge publishes the live site. Then reset the fork's `main` to this repository's `main`.
 

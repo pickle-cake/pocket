@@ -5,11 +5,12 @@
   "license": "GPL-3.0-or-later",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "test:core": "node --test tests/core.test.js tests/libraries.test.js tests/style.test.js tests/lint.test.js",
-    "test:browser": "node --test tests/browser.test.js tests/a11y.test.js",
+    "test:core": "node --test tests/core.test.js tests/libraries.test.js tests/style.test.js tests/lint.test.js tests/landing.test.js",
+    "test:browser": "node --test tests/browser.test.js tests/a11y.test.js tests/landing.browser.test.js",
     "test:webkit": "node --test tests/webkit.js",
-    "lint": "eslint . && html-validate index.html",
-    "style:baseline": "node tests/style.js --update"
+    "lint": "eslint . && html-validate index.html landing/index.html",
+    "style:baseline": "node tests/style.js --update",
+    "site": "node scripts/site.js"
   },
   "devDependencies": {
     "axe-core": "^4.14.0",

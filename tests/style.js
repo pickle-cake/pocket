@@ -9,8 +9,8 @@ const BASELINE = path.join(__dirname, 'style-baseline.json');
 /* ---- The stylesheet ---- */
 
 /* Every declaration in the <style> block, with the selector (and any @media around it) it sits in. */
-function declarations() {
-  const css = /<style>([\s\S]*?)<\/style>/.exec(html)[1].replace(/\/\*[\s\S]*?\*\//g, '');
+function declarations(page = html) {
+  const css = /<style>([\s\S]*?)<\/style>/.exec(page)[1].replace(/\/\*[\s\S]*?\*\//g, '');
   const out = [], stack = [];
   let buf = '';
   const flush = () => {
@@ -46,9 +46,9 @@ function shorthandSize(v) {
   return m && m[1];
 }
 
-function staticViolations() {
-  const ds = declarations();
-  const defined = new Set([...html.matchAll(/--([\w-]+)\s*:/g)].map(m => m[1]).concat([...html.matchAll(/setProperty\('--([\w-]+)'/g)].map(m => m[1])));
+function staticViolations(page = html) {   /* index.html by default; the home page passes its own */
+  const ds = declarations(page);
+  const defined = new Set([...page.matchAll(/--([\w-]+)\s*:/g)].map(m => m[1]).concat([...page.matchAll(/setProperty\('--([\w-]+)'/g)].map(m => m[1])));
   const found = { 'raw-colour': [], 'font-size': [], 'radius': [], 'letter-spacing': [], 'undefined-variable': [] };
   for (const d of ds) {
     if (/#[0-9a-f]{3,8}\b|\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(|\b(white|black)\b/i.test(d.value) && !(d.prop.startsWith('--') && inTheme(d)))

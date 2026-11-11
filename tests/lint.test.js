@@ -31,9 +31,12 @@ test('eslint: no problems', async () => {
 test('html-validate: no problems', async () => {
   const { HtmlValidate, FileSystemConfigLoader } = require('html-validate');
   const { ROOT } = require('./helpers');
-  const report = await new HtmlValidate(new FileSystemConfigLoader()).validateFile(require('path').join(ROOT, 'index.html'));
-  const found = report.results.flatMap(r => r.messages.map(m => 'index.html:' + m.line + ':' + m.column + '  ' + m.message + '  (' + m.ruleId + ')'));
-  assert.ok(report.valid, found.length + ' markup problem(s). Fix them; see .htmlvalidate.cjs for the rules turned off and why:\n  ' + found.join('\n  '));
+  const hv = new HtmlValidate(new FileSystemConfigLoader()), found = [];
+  for (const f of ['index.html', 'landing/index.html']) {   /* the app, and the home page that links to it */
+    const report = await hv.validateFile(require('path').join(ROOT, f));
+    found.push(...report.results.flatMap(r => r.messages.map(m => f + ':' + m.line + ':' + m.column + '  ' + m.message + '  (' + m.ruleId + ')')));
+  }
+  assert.ok(!found.length, found.length + ' markup problem(s). Fix them; see .htmlvalidate.cjs for the rules turned off and why:\n  ' + found.join('\n  '));
 });
 
 /* Australian English in everything people read: the page's text and labels, sentences in the scripts, and the built-in
@@ -48,6 +51,9 @@ test('spelling: Australian English in everything people read', () => {
   texts.push(['index.html', markup.replace(/<[^>]+>/g, ' ')]);
   for (const m of markup.matchAll(/(?:aria-label|title|placeholder|alt)="([^"]*)"/g)) texts.push(['index.html', m[1]]);
   for (const s of scripts) for (const m of s.code.matchAll(/'((?:[^'\\n]|\.)*)'/g)) if (/[a-z] [a-z]/i.test(m[1])) texts.push(['index.html <script id="' + s.name + '">', m[1]]);
+  const home = fs.readFileSync(path.join(ROOT, 'landing', 'index.html'), 'utf8').replace(/<style[\s\S]*?<\/style>/g, '').replace(/<script[\s\S]*?<\/script>/g, '').replace(/<!--[\s\S]*?-->/g, '');
+  texts.push(['landing/index.html', home.replace(/<[^>]+>/g, ' ')]);
+  for (const m of home.matchAll(/(?:aria-label|title|placeholder|alt|content)="([^"]*)"/g)) texts.push(['landing/index.html', m[1]]);
   for (const f of fs.readdirSync(path.join(ROOT, 'routines'))) texts.push(['routines/' + f, fs.readFileSync(path.join(ROOT, 'routines', f), 'utf8')]);
   const found = [];
   texts.forEach(([src, t]) => {
