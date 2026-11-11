@@ -166,6 +166,8 @@ test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 
   assert.match(await p.textContent('#playSummary'), /^220 BPM/);
   const chips = await p.$$eval('#tmChips .tmchip', b => b.map(x => x.textContent));
   assert.ok(chips.length >= 1 && chips.every(c => /^\d+ BPM(Last time|Cleared|Recent)$/.test(c)), 'the sheet offers the tempos played: ' + chips);
+  const nums = chips.map(c => parseInt(c));
+  assert.ok(nums.length >= 2 && nums.every((n, i) => !i || n > nums[i - 1]), 'slowest to fastest: ' + chips);
   await p.click('#bpmOpen'); const first = await p.$eval('#tmChips .tmchip b', b => parseInt(b.textContent));
   await p.click('#tmChips .tmchip'); assert.equal(await bpm(), first, 'a chip sets its tempo');
   assert.ok(!(await p.isVisible('#tempoModal')), 'and closes the sheet');
