@@ -43,7 +43,7 @@ jobs:
       - run: npx playwright install --with-deps webkit
       - run: npm run test:webkit
 
-  # Only tested code goes live, and only from main. The site is the app and its hosted libraries.
+  # Only tested code goes live, and only from main. The site is the home page, the app and its hosted libraries.
   deploy:
     needs: test
     if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
@@ -56,14 +56,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Assemble the site
-        run: |
-          mkdir site
-          cp index.html sw.js site/
-          cp -r routines site/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Assemble the site   # the home page at the root, the app under app/: see scripts/site.js
+        run: node scripts/site.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

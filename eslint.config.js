@@ -4,9 +4,9 @@ const html = require('eslint-plugin-html');
 const globals = require('globals');
 
 module.exports = [
-  { ignores: ['node_modules/**'] },
+  { ignores: ['node_modules/**', '_site/**'] },
   {
-    files: ['index.html'],
+    files: ['index.html', 'landing/index.html'],
     plugins: { html },
     languageOptions: { ecmaVersion: 'latest', sourceType: 'script', globals: { ...globals.browser } },
     linterOptions: { reportUnusedDisableDirectives: 'error' },
@@ -60,7 +60,7 @@ module.exports = [
     },
   },
   {
-    files: ['tests/**/*.js', 'eslint.config.js'],
+    files: ['tests/**/*.js', 'scripts/**/*.js', 'eslint.config.js'],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'commonjs', globals: { ...globals.node, ...globals.browser, axe: 'readonly' } },   /* page.evaluate callbacks run in the browser */
     rules: {
       'no-undef': 'error',

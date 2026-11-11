@@ -1,6 +1,6 @@
 # Pocket
 
-A drum practice pad timing trainer. The whole app is the single file `index.html`: CSS in the `<style>` block, the core logic in `<script id="core">`, and the UI in `<script id="app">`. `routines/*.txt` hold the built-in libraries. `sw.js` is the service worker that keeps the app working offline. There is no build step.
+A drum practice pad timing trainer. The whole app is the single file `index.html`: CSS in the `<style>` block, the core logic in `<script id="core">`, and the UI in `<script id="app">`. `routines/*.txt` hold the built-in libraries. `sw.js` is the service worker that keeps the app working offline. `landing/index.html` is the home page, a separate page with its own copy of the theme tokens (`tests/landing.test.js` keeps them equal to the app's). There is no build step: `scripts/site.js` (`npm run site`) only copies files into `_site/`, the home page at the root and the app under `app/`, which is what Pages publishes.
 
 ## Workflow
 
