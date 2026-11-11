@@ -188,12 +188,18 @@ test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 
 });
 
 test('a newer version on the server shows the update notice, asked at an address no cache can answer', async () => {
-  const p = await open({ seeded: true, noise: -50, latCal: true });
+  /* WebKit lets a page's requests pass a route once a service worker is installed, so this one has none and routes before the page loads. */
+  const ctx = await browser.newContext({ ...contextFor({ width: 390, height: 900 }), serviceWorkers: 'block' });
+  await ctx.addInitScript(() => localStorage.setItem('stick-timing-trainer.v1', JSON.stringify({ settings: { seeded: true, noise: -50, latCal: true }, cal: null })));
   const asked = [];
-  await p.route(u => u.searchParams.has('check'), async r => {
+  await ctx.route(u => u.searchParams.has('check'), async r => {
     asked.push(r.request().url());
     const res = await r.fetch(); r.fulfill({ response: res, body: (await res.text()).replace(/const VERSION='[\d.]+'/, "const VERSION='99.0.0'") });
   });
+  const p = await ctx.newPage();
+  p.errors = [];
+  p.on('pageerror', e => p.errors.push(e.message));
+  await p.goto(base);
   await p.waitForSelector('#updNote:not([hidden])', { timeout: 5000 });
   assert.equal(await p.textContent('#updText'), 'A new version (99.0.0) is available.');
   assert.ok(asked.length && asked.every(u => /\?check=\d+$/.test(u)), 'a new address each time: ' + asked);
@@ -208,9 +214,9 @@ test('on desktop the tempo sheet covers only the controls column', async () => {
   assert.ok(Math.abs(r[0].left - r[1].left) < 1 && Math.abs(r[0].width - r[1].width) < 1, 'the width of the column: ' + JSON.stringify(r.slice(0, 2)));
   assert.ok(r[0].right <= r[2].left, 'clear of the staff');
   assert.ok(r[0].bottom <= 800, 'on screen');
-  await p.setViewportSize({ width: 1100, height: 800 }); await p.waitForTimeout(100);
-  const r2 = await p.evaluate(() => [document.querySelector('#tempoModal .mbox'), document.querySelector('#pagePlay>.pctl')].map(e => e.getBoundingClientRect().left));
-  assert.ok(Math.abs(r2[0] - r2[1]) < 1, 'and follows it when the window changes size');
+  await p.setViewportSize({ width: 1100, height: 800 });
+  const follows = await p.waitForFunction(() => { const [m, c] = [document.querySelector('#tempoModal .mbox'), document.querySelector('#pagePlay>.pctl')].map(e => e.getBoundingClientRect()); return innerWidth === 1100 && Math.abs(m.left - c.left) < 1 && Math.abs(m.width - c.width) < 1; }, null, { timeout: 2000 }).then(() => true, () => false);   /* WebKit can send resize a little after the viewport changes */
+  assert.ok(follows, 'and follows it when the window changes size');
   assert.deepEqual(p.errors, []);
 });
 
