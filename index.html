@@ -2649,7 +2649,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.96';                           /* shown beside the title */
+const VERSION='1.5.97';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -7256,7 +7256,10 @@ function wire(){
       handleHit({t:kbTime(e.timeStamp),kb:true,det:{hand:b.dataset.hand}});
     });
   });
-  /* A new version: the page asks the server for itself, reads the version number, and offers to reload if it is newer. The notice stays out of the way during a run. */
+  /* A new version: the page asks the server for itself, reads the version number, and offers to reload if it is newer. The notice stays out of the way during a run.
+     It asks on load, when the app comes back to the front or its window gets focus (desktop Safari does not report switching apps
+     as hidden), and every 30 minutes. The question has its own address each time, so no cache can answer it: not the browser's,
+     not the service worker's (sw.js lets it through), not a proxy's. The page itself still loads from the cache as before. */
   let newVer='',updLater=false,updAt=0;
   const verGt=(a,b)=>{const x=a.split('.').map(Number),y=b.split('.').map(Number);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0);}return false;};
   const showUpd=()=>{$('updNote').hidden=!newVer||updLater;$('updText').textContent='A new version ('+newVer+') is available.';};
@@ -7264,7 +7267,7 @@ function wire(){
     if(!/^https?:$/.test(location.protocol)||Date.now()-updAt<60000)return;
     updAt=Date.now();
     try{
-      const res=await fetch(location.pathname,{cache:'no-cache',credentials:'omit'});
+      const res=await fetch(location.pathname+'?check='+Date.now(),{cache:'no-store',credentials:'omit'});
       if(!res.ok)return;
       const m=/const VERSION='(\d+\.\d+\.\d+)'/.exec(await res.text());
       if(m&&verGt(m[1],VERSION)){newVer=m[1];showUpd();}
@@ -7272,10 +7275,11 @@ function wire(){
   }
   $('updGo').addEventListener('click',()=>{
     if(run&&!run.ended)return;
-    fetch(location.pathname,{cache:'reload',credentials:'omit'}).catch(()=>{}).then(()=>location.reload());
+    fetch(location.pathname,{cache:'reload'}).catch(()=>{}).then(()=>location.reload());   /* with cookies, as a page load is: Safari keeps the two in separate cache entries */
   });
   $('updLater').addEventListener('click',()=>{updLater=true;showUpd();});
   setTimeout(checkUpdate,2000);
+  window.addEventListener('focus',checkUpdate);setInterval(checkUpdate,1800000);
   document.addEventListener('visibilitychange',()=>{if(document.hidden){micTest=false;if(run&&!run.ended)pauseRun();idleMic();}if(!document.hidden){checkUpdate();if(run&&!run.ended)lockScreen();}});
   /* The staff is laid out for its width. It is laid out again whenever that width changes: the window is resized, or the staff
      was hidden (at zero width, as under the welcome) and is shown. */

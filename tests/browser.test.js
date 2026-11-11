@@ -185,6 +185,20 @@ test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 
   assert.deepEqual(p.errors, []);
 });
 
+test('a newer version on the server shows the update notice, asked at an address no cache can answer', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true });
+  const asked = [];
+  await p.route(u => u.searchParams.has('check'), async r => {
+    asked.push(r.request().url());
+    const res = await r.fetch(); r.fulfill({ response: res, body: (await res.text()).replace(/const VERSION='[\d.]+'/, "const VERSION='99.0.0'") });
+  });
+  await p.waitForSelector('#updNote:not([hidden])', { timeout: 5000 });
+  assert.equal(await p.textContent('#updText'), 'A new version (99.0.0) is available.');
+  assert.ok(asked.length && asked.every(u => /\?check=\d+$/.test(u)), 'a new address each time: ' + asked);
+  await p.click('#updLater'); assert.ok(!(await p.isVisible('#updNote')), 'Later hides it');
+  assert.deepEqual(p.errors, []);
+});
+
 test('on desktop the tempo sheet covers only the controls column', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true }, { width: 1280, height: 800 });
   await p.click('#tabPlay'); await p.click('#bpmOpen');
