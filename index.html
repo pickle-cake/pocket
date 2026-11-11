@@ -310,6 +310,7 @@ button.row:disabled{opacity:.4;cursor:not-allowed}
 .row.num>.ra{grid-column:3}
 .exercises>.row{padding:var(--s-2) var(--s-3)}   /* inside the bordered list box */
 #pickList .row{padding-inline:var(--s-3)}   /* every row as wide as the selected one, so the titles line up */
+.pickrec>.eyebrow{color:var(--ink);margin:0 0 var(--s-2)}   /* a section label: the recent routines, ahead of the groups */
 .chkmsg{margin:0;padding:var(--s-3);border-left:3px solid var(--accent);font:600 var(--t-small) var(--font-body);color:var(--ink)}   /* a notice: flat, with an accent rail */ .chkmsg:empty{display:none}
 .rtruns{padding:0 var(--s-3);background:var(--surface);border-left:3px solid var(--accent)}   /* the runs of an open row sit on a band with an accent rail, so they read as part of it */
 .row>.rtruns{grid-column:1/-1;margin:var(--s-2) 0 calc(-1*var(--s-3))}
@@ -2617,7 +2618,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.91';                           /* shown beside the title */
+const VERSION='1.5.92';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -2672,6 +2673,8 @@ S.layout=S.layout==='phone'||S.layout==='desktop'?S.layout:'auto';
 S.resultHelp=S.resultHelp===true;
 S.clockLog=Array.isArray(S.clockLog)?S.clockLog.filter(d=>d&&typeof d==='object').slice(0,10):[];   /* audio timing of the last runs, on this device */               /* the note on reading a result has been shown on this device */
 if(typeof S.libId!=='string')S.libId='';
+/* When each library routine was last opened, on this device, newest first: the picker lists the latest ones at the top. */
+S.libOpened=Array.isArray(S.libOpened)?S.libOpened.filter(o=>o&&typeof o.id==='string'&&isFinite(+o.t)).slice(0,20).map(o=>({id:o.id,t:+o.t})):[];
 S.startExercise=1;
 const PORTABLE=['bpm','tol','accent','others','vol','click','eachUnit','eachVal','gap','pulse','palette','theme'];   /* settings that travel in an export. Microphone, latency and sensitivity belong to the device and stay out. */
 S.expSel=(S.expSel&&typeof S.expSel==='object')?{hist:S.expSel.hist!==false,lib:S.expSel.lib!==false,lists:S.expSel.lists!==false,set:S.expSel.set!==false}:{hist:true,lib:true,lists:true,set:true};   /* what the Export dialog ticks, remembered */
@@ -5969,9 +5972,14 @@ function curName(){
 }
 /* Puts library text in the scratch pad, linked to its entry. */
 function openText(txt,key){
+  const was=S.libId;
   setRoutineText(txt);
   const m=key&&libFor(key);
-  if(m){S.libId=m.id;save();}
+  if(m){
+    /* the routine being left was in use until now, so it heads the picker's Recent list */
+    const now=Date.now(),touched=[{id:m.id,t:now}].concat(was&&was!==m.id?[{id:was,t:now-1}]:[]);
+    S.libId=m.id;S.libOpened=touched.concat(S.libOpened.filter(o=>!touched.some(x=>x.id===o.id))).slice(0,20);save();
+  }
   syncInfo();
 }
 const loadEntry=e=>openText(entryText(e),libKey(e));
@@ -6106,6 +6114,7 @@ function libGroups(list,byName){
   return gnames.map(g=>[g,groups.get(g)]);
 }
 /* Play > Change: pick a routine from the library without leaving the Play page. */
+const PICK_RECENT=4;
 function openPick(){
   if(run&&!run.ended)return;
   const box=$('pickList');box.textContent='';
@@ -6114,23 +6123,38 @@ function openPick(){
   if(!list.length){
     box.appendChild(emptyState('book','No saved routines yet','Routines you write or import show up here.','Open the Library',()=>{closePick();showTab('library');}));
   }
+  const pickRow=(e,label)=>{
+    const b=document.createElement('button');b.type='button';b.className='row'+(e.id===S.libId?' cur':'');
+    const n=exerciseCount(e.x);
+    b.innerHTML='<span class="rt"></span><span class="ra"><span class="rm"></span></span>';b.firstChild.textContent=label;
+    const d=b.lastChild.firstChild;d.textContent=n+(n===1?' exercise':' exercises');
+    if(n>1){const i=routineInfoOf(parseRoutine(e.x));if(i.max){d.appendChild(document.createElement('br'));d.appendChild(document.createTextNode(maxText(i.max)));}}
+    b.addEventListener('click',()=>{
+      if(e.id===S.libId){closePick();return;}
+      closePick();guard(()=>loadEntry(e));
+    });
+    return b;
+  };
+  /* Recent: the four routines last opened or played, other than the open one, by full name and outside their groups. Only
+     worth showing when the library holds more than that. */
+  if(list.length>PICK_RECENT+1){
+    const when=new Map(S.libOpened.map(o=>[o.id,o.t])),keyed=new Map(list.map(e=>[libKey(e),e]));
+    recs.runs.forEach(r=>{const e=keyed.get(r.mode==='routine'?r.rk:r.exercises[0].k);if(e&&!(when.get(e.id)>=r.t))when.set(e.id,r.t);});
+    const recent=list.filter(e=>e.id!==S.libId&&when.has(e.id)).sort((a,b)=>when.get(b.id)-when.get(a.id)).slice(0,PICK_RECENT);
+    if(recent.length){
+      const sec=document.createElement('div');sec.className='pickrec';
+      const h=document.createElement('div');h.className='eyebrow';h.id='pickRecLbl';h.textContent='Recent';
+      const body=document.createElement('div');body.setAttribute('role','group');body.setAttribute('aria-labelledby','pickRecLbl');
+      recent.forEach(e=>body.appendChild(pickRow(e,entryName(e))));
+      sec.append(h,body);box.appendChild(sec);
+    }
+  }
   libGroups(list,byName).forEach(([g,items])=>{
     const det=document.createElement('details');det.className='glib';
     det.open=items.some(x=>x[0].id===S.libId);
     const sm=document.createElement('summary');sm.textContent=g+' ('+items.length+')';
     const body=document.createElement('div');body.className='gb';
-    items.forEach(([e,label])=>{
-      const b=document.createElement('button');b.type='button';b.className='row'+(e.id===S.libId?' cur':'');
-      const n=exerciseCount(e.x);
-      b.innerHTML='<span class="rt"></span><span class="ra"><span class="rm"></span></span>';b.firstChild.textContent=label;
-      const d=b.lastChild.firstChild;d.textContent=n+(n===1?' exercise':' exercises');
-      if(n>1){const i=routineInfoOf(parseRoutine(e.x));if(i.max){d.appendChild(document.createElement('br'));d.appendChild(document.createTextNode(maxText(i.max)));}}
-      b.addEventListener('click',()=>{
-        if(e.id===S.libId){closePick();return;}
-        closePick();guard(()=>loadEntry(e));
-      });
-      body.appendChild(b);
-    });
+    items.forEach(([e,label])=>body.appendChild(pickRow(e,label)));
     det.append(sm,body);box.appendChild(det);
   });
   $('pickModal').hidden=false;$('pickClose').focus();

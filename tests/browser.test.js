@@ -237,6 +237,30 @@ test('the Library opens sorted by name, with Name first, and Recent puts the new
   assert.deepEqual(p.errors, []);
 });
 
+test('Change lists the four routines last opened or played at the top, without the open one', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, libId: 'b1', libOpened: [{ id: 'b2', t: 50 }, { id: 'b3', t: 40 }, { id: 'b1', t: 30 }] }, null, () => {
+    if (!localStorage.getItem('stick-timing-trainer.records.v2')) localStorage.setItem('stick-timing-trainer.records.v2', JSON.stringify({ v: 1, names: {}, nu: 1, runs: [], lib: [
+      { id: 'b1', x: 'G: 8 RLRL RLRL', t: 1 }, { id: 'b2', x: 'G: 8 RRLL RRLL', t: 1 }, { id: 'b3', x: 'G: 8 RLLR RLLR', t: 1 },
+      { id: 'b4', x: 'G: 8 RRRL RRRL', t: 1 }, { id: 'b5', x: 'G: 8 RLRR RLRR', t: 1 }, { id: 'b6', x: 'G: 8 LRLR LRLR', t: 1 }] }));
+  });
+  const recent = () => p.evaluate(() => [...document.querySelectorAll('#pickList .pickrec .row > .rt')].map(e => e.textContent));
+  await p.evaluate(() => document.getElementById('pickModal').hidden || document.getElementById('pickClose').click());
+  await p.click('#playChange');
+  const first = await recent();
+  assert.equal(first.length, 2, 'only routines opened before are listed, and not the open one: ' + first);
+  assert.ok(!first.some(n => /RLRL RLRL/.test(n)), 'the open routine is left out');
+  /* open another from its group: it goes to the top next time, and the one it replaced joins the list */
+  assert.equal(await p.evaluate(() => document.querySelector('#pickList .glib').open), true, 'the group of the open routine is open');
+  await p.locator('#pickList .glib .row').filter({ hasText: 'RRRL' }).click();
+  await p.waitForTimeout(200);
+  await p.click('#playChange');
+  const next = await recent();
+  assert.equal(next.length, 3);
+  assert.match(next[0], /RLRL RLRL/, 'the routine open before is now the newest');
+  assert.ok(!next.some(n => /RRRL/.test(n)), 'the routine now open is left out');
+  assert.deepEqual(p.errors, []);
+});
+
 test('Device has no stick calibration, and an old saved one is dropped', async () => {
   const p = await open(null, null, () => {
     if (!localStorage.getItem('stick-timing-trainer.v1')) localStorage.setItem('stick-timing-trainer.v1', JSON.stringify({ settings: { seeded: true, noise: -50, latCal: true, handDet: true }, cal: { L: [[1, 2]], R: [[3, 4]] } }));
