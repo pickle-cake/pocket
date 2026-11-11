@@ -131,6 +131,9 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .tmchip{display:grid;justify-items:start;padding:var(--s-1) var(--s-3);text-align:left}
 .tmchip b{font:600 var(--t-small) var(--font-data)}
 .tmchip small{font:var(--t-caption) var(--font-body);color:var(--muted)}
+/* Desktop: the sheet covers only the controls column, level with the quick row (placeTempo sets where). */
+:root[data-layout=desktop] #tempoModal{place-items:start;padding:var(--tm-y,var(--s-4)) 0 0 var(--tm-x,var(--s-4))}
+:root[data-layout=desktop] #tempoModal .mbox{width:var(--tm-w,min(560px,100%))}
 #quickRow .dur{grid-template-columns:56px minmax(0,1fr);gap:var(--s-1)}
 #quickRow .dur select{padding-left:var(--s-2);padding-right:var(--s-1)}
 #clickSeg,#othersSeg{grid-auto-columns:minmax(0,1fr)}
@@ -2646,7 +2649,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.95';                           /* shown beside the title */
+const VERSION='1.5.96';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -7042,8 +7045,18 @@ function openTempo(setBpm){
     b.append(n,w);b.addEventListener('click',()=>{setBpm(v);closeTempo();});box.append(b);
   });
   $('tmChipBox').hidden=!chips.length;
-  $('tempoModal').hidden=false;syncInfo();
+  $('tempoModal').hidden=false;syncInfo();placeTempo();
   $('tmRange').focus();
+}
+/* On desktop the sheet lines up with the controls column, its top level with the quick row while it fits on screen. */
+function placeTempo(){
+  const m=$('tempoModal');if(m.hidden)return;
+  ['--tm-x','--tm-y','--tm-w'].forEach(v=>m.style.removeProperty(v));
+  if(document.documentElement.dataset.layout!=='desktop')return;
+  const c=document.querySelector('#pagePlay>.pctl').getBoundingClientRect(),q=$('quickRow').getBoundingClientRect();
+  m.style.setProperty('--tm-x',c.left+'px');m.style.setProperty('--tm-w',c.width+'px');
+  const h=m.querySelector('.mbox').getBoundingClientRect().height;
+  m.style.setProperty('--tm-y',Math.max(16,Math.min(q.top,innerHeight-h-16))+'px');
 }
 function closeTempo(){
   const m=$('tempoModal');if(m.hidden)return;
@@ -7065,6 +7078,7 @@ function wire(){
   [['tmDown10',-10],['tmDown',-1],['tmUp',1],['tmUp10',10]].forEach(([id,d])=>$(id).addEventListener('click',()=>setBpm(S.bpm+d)));
   $('tmRange').addEventListener('input',e=>setBpm(+e.target.value));
   $('tmDone').addEventListener('click',closeTempo);
+  window.addEventListener('resize',placeTempo);
   $('tempoModal').addEventListener('click',e=>{if(e.target===$('tempoModal'))closeTempo();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('tempoModal').hidden)closeTempo();});
   $('score').addEventListener('change',e=>{scoreOn=e.target.value==='1';syncInfo();});

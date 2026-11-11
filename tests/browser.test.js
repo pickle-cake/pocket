@@ -185,6 +185,19 @@ test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 
   assert.deepEqual(p.errors, []);
 });
 
+test('on desktop the tempo sheet covers only the controls column', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true }, { width: 1280, height: 800 });
+  await p.click('#tabPlay'); await p.click('#bpmOpen');
+  const r = await p.evaluate(() => [document.querySelector('#tempoModal .mbox'), document.querySelector('#pagePlay>.pctl'), document.querySelector('#pagePlay>.pview')].map(e => e.getBoundingClientRect()));
+  assert.ok(Math.abs(r[0].left - r[1].left) < 1 && Math.abs(r[0].width - r[1].width) < 1, 'the width of the column: ' + JSON.stringify(r.slice(0, 2)));
+  assert.ok(r[0].right <= r[2].left, 'clear of the staff');
+  assert.ok(r[0].bottom <= 800, 'on screen');
+  await p.setViewportSize({ width: 1100, height: 800 }); await p.waitForTimeout(100);
+  const r2 = await p.evaluate(() => [document.querySelector('#tempoModal .mbox'), document.querySelector('#pagePlay>.pctl')].map(e => e.getBoundingClientRect().left));
+  assert.ok(Math.abs(r2[0] - r2[1]) < 1, 'and follows it when the window changes size');
+  assert.deepEqual(p.errors, []);
+});
+
 test('Report a timing problem opens feedback with the timing ticked, and Copy and Email it say what they did', async () => {
   const log = [{ t: 1, ver: 'x', ok: true, slip: 0, clicks: 36, runs: 1, mics: 1 }, { t: 2, ver: 'x', ok: false, slip: 250, clicks: 4, runs: 1, mics: 0, kb: true }];
   const p = await open({ seeded: true, noise: -50, latCal: true, clockLog: log }, null, () => {
