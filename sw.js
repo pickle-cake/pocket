@@ -19,6 +19,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   const font = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (url.origin !== self.location.origin && !font) return;   /* other sites, such as linked libraries, go straight to the network */
+  if (url.searchParams.has('check')) return;   /* the page asking whether there is a new version: always the network, never kept */
   e.respondWith(font ? cacheFirst(req) : networkFirst(req));
 });
 

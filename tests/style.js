@@ -83,6 +83,7 @@ const VIEWS = [
   ['device', ['#tabSetup', '#svBtnDev']],
   ['data', ['#tabSetup', '#svBtnData']],
   ['help', ['#tabPlay', '#helpBtn']],
+  ['tempo', ['#tabPlay', '#bpmOpen']],
 ];
 const THEMES = [['light', {}], ['dark', { theme: 'dark' }], ['cb-light', { palette: 'cb' }], ['cb-dark', { theme: 'dark', palette: 'cb' }]];
 const SIZES_PX = [['phone', { width: 390, height: 844 }], ['desktop', { width: 1280, height: 900 }]];
