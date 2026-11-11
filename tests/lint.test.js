@@ -5,7 +5,7 @@ const vm = require('vm');
 const { html } = require('./helpers');
 
 /* Each inline <script>, with the line of index.html it starts on. */
-const scripts = [...html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/g)]
+const scripts = [...html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script[^>]*>/gi)]
   .filter(m => !/\ssrc=/.test(m[1] || ''))
   .map(m => ({ name: (/id="([^"]+)"/.exec(m[1] || '') || [, 'inline'])[1], code: m[2], line: html.slice(0, m.index + m[0].indexOf('>') + 1).split('\n').length - 1 }));
 
@@ -44,14 +44,24 @@ test('html-validate: no problems', async () => {
 const AU_US = /\b(colors?|colored|behaviors?|centers?|centered|favorites?|grays?|catalogs?|license|licensed|defense|offense|traveled|traveling|canceled|canceling|labeled|labeling|modeled|leveled|leveling|signaled|fulfill|enroll|skillful|judgment|toward|math|gotten|analog|fiber|theater|liters?|[a-z]+(?:yze|yzed|yzing|ize|izes|ized|izing|ization|izations))\b/gi;
 const AU_OK = new Set(['size', 'sizes', 'sized', 'resize', 'resized', 'resizing', 'prize', 'prizes', 'seize']);   /* not the -ize ending */
 const AU_NAMES = /GNU General Public License|stop-color|color:var/g;   /* a proper name, and CSS inside script strings */
+/* A page's readable markup: no comments, styles or scripts. Repeated until nothing changes, so a removal cannot join
+   the pieces around it into a new tag (<scr<script></script>ipt>). */
+function readable(page) {
+  let prev;
+  do {
+    prev = page;
+    page = page.replace(/<!--[\s\S]*?-->/g, '').replace(/<style[\s\S]*?<\/style[^>]*>/gi, '').replace(/<script[\s\S]*?<\/script[^>]*>/gi, '');
+  } while (page !== prev);
+  return page;
+}
 test('spelling: Australian English in everything people read', () => {
   const fs = require('fs'), path = require('path'), { ROOT } = require('./helpers');
   const texts = [];
-  const markup = html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<script[\s\S]*?<\/script>/g, '');
+  const markup = readable(html);
   texts.push(['index.html', markup.replace(/<[^>]+>/g, ' ')]);
   for (const m of markup.matchAll(/(?:aria-label|title|placeholder|alt)="([^"]*)"/g)) texts.push(['index.html', m[1]]);
-  for (const s of scripts) for (const m of s.code.matchAll(/'((?:[^'\\n]|\.)*)'/g)) if (/[a-z] [a-z]/i.test(m[1])) texts.push(['index.html <script id="' + s.name + '">', m[1]]);
-  const home = fs.readFileSync(path.join(ROOT, 'landing', 'index.html'), 'utf8').replace(/<style[\s\S]*?<\/style>/g, '').replace(/<script[\s\S]*?<\/script>/g, '').replace(/<!--[\s\S]*?-->/g, '');
+  for (const s of scripts) for (const m of s.code.matchAll(/'((?:[^'\\\n]|\\.)*)'/g)) if (/[a-z] [a-z]/i.test(m[1])) texts.push(['index.html <script id="' + s.name + '">', m[1]]);
+  const home = readable(fs.readFileSync(path.join(ROOT, 'landing', 'index.html'), 'utf8'));
   texts.push(['landing/index.html', home.replace(/<[^>]+>/g, ' ')]);
   for (const m of home.matchAll(/(?:aria-label|title|placeholder|alt|content)="([^"]*)"/g)) texts.push(['landing/index.html', m[1]]);
   for (const f of fs.readdirSync(path.join(ROOT, 'routines'))) texts.push(['routines/' + f, fs.readFileSync(path.join(ROOT, 'routines', f), 'utf8')]);
