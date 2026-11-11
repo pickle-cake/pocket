@@ -2649,7 +2649,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.101';                           /* shown beside the title */
+const VERSION='1.5.102';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -2681,7 +2681,7 @@ S.subdiv=4;                                        /* strokes with no note code 
 S.tol=[10,15,20,30,40,50].includes(+S.tol)?+S.tol:20;
 S.sens=clamp(Math.round(+S.sens)||-30,-55,-8);
 S.accent=/^[gbm2-7RL]?$/.test(S.accent)?S.accent:'';   /* which strokes are accented */
-S.others=S.others==='g'?'g':'n';                          /* the other strokes: normal or ghost */
+S.others=S.accent&&S.others==='g'?'g':'n';               /* the other strokes: normal or ghost, and always normal with no accent */
 S.noise=typeof S.noise==='number'&&isFinite(S.noise)?clamp(Math.round(S.noise),-90,-10):null;   /* room noise in dB from the last Mic check, on this device */
 S.settle=clamp(Math.round(+S.settle)||40,20,120);
 /* Saved libraries: address, name, and the last loaded routines (kept for the three newest loads only). */
@@ -3889,8 +3889,8 @@ function buildStaff(sg,availW,cursor,strict,dy){
   return {svg:box,cards:cards,lines:pl.lines.length,plan:pl};
 }
 /* Accents and ghost notes. The Play page picks a rule that is laid over whatever exercise is loaded. */
-function dynOpt(){return (S.accent||S.others==='g')?{acc:S.accent,oth:S.others}:null;}
-function dynCode(){return (S.accent||S.others==='g')?S.accent+(S.others==='g'?'s':''):'';}
+function dynOpt(){return S.accent?{acc:S.accent,oth:S.others}:null;}
+function dynCode(){return S.accent?S.accent+(S.others==='g'?'s':''):'';}
 const DY_NAMES={g:'each group',b:'each beat',m:'each bar',R:'right hand',L:'left hand'};
 const nth=n=>n+(n===2?'nd':n===3?'rd':'th');
 function dynText(code){
@@ -5495,7 +5495,7 @@ function practisePattern(k,lv,dy){
 function applyDy(code){
   code=code||'';
   const soft=/s$/.test(code);
-  S.accent=soft?code.slice(0,-1):code;S.others=soft?'g':'n';
+  S.accent=soft?code.slice(0,-1):code;S.others=soft&&S.accent?'g':'n';   /* an old all-soft run comes back with normal strokes */
   $('accent').value=S.accent;save();pushDet();syncDyCtl();
 }
 /* Hands text to the browser as a download. */
@@ -6559,7 +6559,7 @@ function syncInfo(){
   {   /* what the closed drawer holds, so a setting that matters is never hidden */
     const ac=$('accent');
     const parts=[scoreOn?'Scored':'Practice',S.accent?'Accent: '+ac.options[ac.selectedIndex].text.toLowerCase():'No accents'];
-    if(S.others==='g')parts.push(S.accent?'Ghost notes':'All strokes soft');
+    if(S.accent&&S.others==='g')parts.push('Ghost notes');
     if(S.mode==='routine')parts.push(S.gap?'Count-in between':'Straight on');
     $('setSum').textContent=$('setBox').open?'More settings':parts.join(' · ');   /* open: just the name; closed: what is inside */
   }
@@ -6567,11 +6567,11 @@ function syncInfo(){
 const CLICK_HINT={strokes:'A click on every stroke',beat:'A click on the beat',half:'A click on the strong beats',bar:'A click on 1 of each bar',none:'Count-in only'};
 /* A segmented control's buttons carry their value in data-v; the one that matches is pressed. */
 function setPressed(id,v){$(id).querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===v)));}
-/* Other strokes only matters once an accent is set (or when every stroke is soft, from an old run). */
+/* Other strokes only matters once an accent is set. */
 function syncDyCtl(){
   setPressed('othersSeg',S.others);
-  $('othersField').hidden=!S.accent&&S.others!=='g';
-  $('othersHint').textContent=!S.accent?'Every stroke is played soft.':(S.others==='g'?'Strokes that are not accented are played soft.':'Strokes that are not accented are played as usual.');
+  $('othersField').hidden=!S.accent;
+  $('othersHint').textContent=(S.others==='g'?'Strokes that are not accented are played soft.':'Strokes that are not accented are played as usual.');
 }
 /* BPM counts the pulse. Say so when that is the eighth note. */
 function pulseNote(exercises){
@@ -7084,7 +7084,7 @@ function wire(){
   $('score').addEventListener('change',e=>{scoreOn=e.target.value==='1';syncInfo();});
   $('clickSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.click=b.dataset.v;save();if(S.mode==='routine')buildExerciseList();syncInfo();});
   const dyChanged=()=>{save();pushDet();refreshPreview();};
-  $('accent').addEventListener('change',e=>{S.accent=e.target.value;dyChanged();});
+  $('accent').addEventListener('change',e=>{S.accent=e.target.value;if(!S.accent)S.others='n';dyChanged();});   /* with no accent every stroke is normal */
   $('othersSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.others=b.dataset.v;dyChanged();});
   $('tol').addEventListener('change',e=>{S.tol=+e.target.value;save();renderAll();syncInfo();});   /* the routine's Max score carries the window */
   $('inputMode').addEventListener('change',e=>{S.input=e.target.value;save();setInputMode();});
