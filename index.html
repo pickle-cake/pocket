@@ -1042,6 +1042,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
             <code>q 8 16 32</code><span>quarter to thirty-second notes</span>
             <code>8t 16t</code><span>triplets</span>
             <code>5t 7t</code><span>quintuplets, septuplets</span>
+            <code>8:6</code><span>8 notes in the time of 6 sixteenths</span>
             <code>fR dL</code><span>flam, drag (grace notes first)</span>
             <code>zR</code><span>buzz stroke</span>
             <code>_</code><span>rest</span>
@@ -1179,7 +1180,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     <section class="panel" id="help-format">
       <h3>Writing a routine</h3>
       <p><b>L</b> and <b>R</b> are strokes, a <b>space</b> starts a new beamed group and <b>_</b> is a rest. One line is one exercise. Two or more lines make a routine, played in order. With no note code, strokes are sixteenths.</p>
-      <p>A <b>note code</b> sets what the strokes after it are, in any time signature, until the next code: <b>q</b> quarter notes, <b>8</b> eighths, <b>16</b> sixteenths, <b>32</b> thirty-seconds, <b>8t</b> eighth triplets, <b>16t</b> sixteenth triplets, <b>5t</b> quintuplets and <b>7t</b> septuplets. <b>8 RLRL 16 RLRL</b> is a beat of eighths, then a beat of sixteenths. The code has to give a sensible speed for the beat.</p>
+      <p>A <b>note code</b> sets what the strokes after it are, in any time signature, until the next code: <b>q</b> quarter notes, <b>8</b> eighths, <b>16</b> sixteenths, <b>32</b> thirty-seconds, <b>8t</b> eighth triplets, <b>16t</b> sixteenth triplets, <b>5t</b> quintuplets and <b>7t</b> septuplets. <b>8 RLRL 16 RLRL</b> is a beat of eighths, then a beat of sixteenths. Any other tuplet is written <b>N:M</b>, N notes in the time of M sixteenths: in 6/8, <b>8 RLR 8:6 LRLRLRLR</b> is three eighths, then eight even strokes in the time of the next three. The code has to give a sensible speed for the beat.</p>
       <h4>Simple examples</h4>
       <p>Each example has a Try it button.</p>
       <div class="ex">
@@ -1716,13 +1717,19 @@ RLRR LRLL RLRR LRLL</pre>
 
 <script id="core">
 /* Pure logic: pattern parsing, hit matching, stick classifier, onset detector. No DOM access. */
-/* Strokes with optional note codes, e.g. "16 RLRL 8t RLR LRL" (q quarter, 8 eighth, 16 sixteenth, 32, 8t eighth triplet, 16t, 5t, 7t).
-   subs[i] is the marker in force for stroke i (null before any marker). */
+/* Strokes with optional note codes, e.g. "16 RLRL 8t RLR LRL" (q quarter, 8 eighth, 16 sixteenth, 32, 8t eighth triplet, 16t, 5t, 7t,
+   and N:M for N notes in the time of M sixteenths, like 8:6). subs[i] is the marker in force for stroke i (null before any marker).
+   An N:M marker can give a subdivision that is not a whole number. */
 const MAXSTROKES=64;                              /* longest exercise, in strokes and rests */
 /*  With a pulse
    of d (4 = quarter), 16ths are 16/d strokes per pulse, so in 2/2 (d = 2) they are 8 and eighths are 4. */
-const NV_SRC='\\b(?:8t|16t|5t|7t|q|8|16|32)\\b';
+const NV_SRC='\\b(?:\\d{1,2}:\\d{1,2}|8t|16t|5t|7t|q|8|16|32)\\b';
 const NV_VAL={q:4,'8':8,'16':16,'32':32,'8t':12,'16t':24,'5t':20,'7t':28};     /* strokes per quarter-note beat x 4 */
+const TUP_RE=/^(\d{1,2}):(\d{1,2})$/;
+/* Strokes per quarter-note beat x 4 for a note code. N:M is N notes in the time of M sixteenths. */
+const nvVal=code=>{const t=TUP_RE.exec(code);return t?(+t[2]>0?16*t[1]/t[2]:NaN):NV_VAL[code.toLowerCase()];};
+/* A subdivision as a fraction [a,b], so a tuplet's saved key is exact. */
+function fracOf(x){for(let b=1;b<=256;b++)if(Math.abs(x*b-Math.round(x*b))<1e-6)return [Math.round(x*b),b];return [x,1];}
 /* A flam, drag or buzz is written in front of its main stroke: fR is a flam on the right (a left grace note first), dL a drag on the left,
    zR a buzz stroke on the right (pressed into the pad so it bounces several times). A note is then 'L', 'R', '_', or one of those with f, d or z in front. */
 const GRACE_ERR='f (flam), d (drag) and z (buzz) go directly in front of an L or R, like fR, dL or zR';
@@ -1733,24 +1740,28 @@ const graceHand=n=>hnd(n)==='R'?'L':'R';
 function parseStrokes(str,pd){
   const dd=pd||4;
   const notes=[],gs=[],subs=[],src=String(str),re=new RegExp('\\/\\s*(\\d+)|(\\/)|('+NV_SRC+')|((?:(?!'+NV_SRC+')[^\\/])+)','gi');
-  let cur=null,ng=true,m,gr='';
+  let cur=null,ng=true,m,gr='',tn=0;
+  const tns=[];                                   /* the N of the N:M marker in force for each stroke, for grouping */
   while((m=re.exec(src))){
     if(m[1]!==undefined){
-      return {err:'write the note without a slash: q, 8, 16, 32, 8t, 16t, 5t or 7t'};
+      return {err:'write the note without a slash: q, 8, 16, 32, 8t, 16t, 5t, 7t or N:M'};
     }else if(m[3]!==undefined){
-      const sub=NV_VAL[m[3].toLowerCase()]/dd;
-      if(!Number.isInteger(sub)||sub<1||sub>8)return {err:m[3].trim()+' does not fit a beat of 1/'+dd+' (the notes would be too fast or too slow)'};
-      cur=sub;ng=true;
+      const t=TUP_RE.exec(m[3]);
+      if(t&&(+t[1]<2||+t[2]<1))return {err:m[3]+' needs at least 2 notes in the time of at least 1 sixteenth, like 8:6'};
+      let sub=nvVal(m[3])/dd;
+      if(t&&isInt(sub))sub=Math.round(sub);
+      if(!(sub>=1&&sub<=8)||(!t&&!Number.isInteger(sub)))return {err:m[3].trim()+' does not fit a beat of 1/'+dd+' (the notes would be too fast or too slow)'};
+      cur=sub;tn=t?+t[1]:0;ng=true;
     }else if(m[2]){ng=true;}
     else{
       /* A lone hyphen between spaces is a rest. A hyphen joined to strokes still separates groups. */
       const txt=m[4].replace(/(^|\s)-(?=\s|$)/g,'$1_');
-      if(!/^[LRlrFfDdZz_\s,\-|.]+$/.test(txt))return {err:'only L, R and _ (rest) are allowed, with f, d or z in front of a stroke for a flam, drag or buzz (fR), plus spaces and the note codes q, 8, 16, 32, 8t, 16t, 5t, 7t'};
+      if(!/^[LRlrFfDdZz_\s,\-|.]+$/.test(txt))return {err:'only L, R and _ (rest) are allowed, with f, d or z in front of a stroke for a flam, drag or buzz (fR), plus spaces and the note codes q, 8, 16, 32, 8t, 16t, 5t, 7t and N:M (like 8:6)'};
       for(const ch of txt){
         const c=ch.toUpperCase();
         if(c==='F'||c==='D'||c==='Z'){if(gr)return {err:GRACE_ERR};gr=c.toLowerCase();continue;}
         if(gr&&c!=='L'&&c!=='R')return {err:GRACE_ERR};
-        if(c==='L'||c==='R'||c==='_'){notes.push(gr?gr+c:c);gs.push(ng);subs.push(cur);ng=false;gr='';}
+        if(c==='L'||c==='R'||c==='_'){notes.push(gr?gr+c:c);gs.push(ng);subs.push(cur);tns.push(tn);ng=false;gr='';}
         else ng=true;
       }
     }
@@ -1758,10 +1769,10 @@ function parseStrokes(str,pd){
   if(gr)return {err:GRACE_ERR};
   const total=notes.length,rawGs=gs.slice(0,MAXSTROKES);
   /* A run of strokes under one marker with no spaces is grouped by four, or by six for triplets (two triplets joined),
-     or by the subdivision above that. */
+     or by the subdivision above that. An N:M run is grouped by N. */
   for(let a=0;a<total;){
-    let b=a;while(b<total&&subs[b]===subs[a])b++;
-    const g=subs[a]===3?6:(subs[a]>=3?subs[a]:4);
+    let b=a;while(b<total&&subs[b]===subs[a]&&tns[b]===tns[a])b++;
+    const g=tns[a]||(subs[a]===3?6:(subs[a]>=3?subs[a]:4));
     let groups=0;for(let i=a;i<b;i++)if(gs[i])groups++;
     if(b-a>g&&groups<=1)for(let i=a;i<b;i++)gs[i]=((i-a)%g===0);
     a=b;
@@ -1885,7 +1896,7 @@ function parseExerciseLine(raw,defSig,defStrokes,lenient){
     sig=ps.sig;line=sm[2];return null;
   };
   let se=takeSig();if(se)return se;
-  const lm=/^([A-Za-z][A-Za-z0-9 ]*?)\s*:\s*(.*)$/.exec(line);
+  const lm=/^([A-Za-z][A-Za-z0-9 ]*?)\s*:(?!\d)\s*(.*)$/.exec(line);   /* not the colon of an N:M note code */
   if(lm){line=lm[2];se=takeSig();if(se)return se;}   /* a name before a colon is a note to yourself and is not kept */
   line=line.replace(/^\s*\d+\s*[.)]\s+/,'');
   if(/^\d+\s*\/\s*\d+/.test(line))return {err:'write a time signature with a colon after it, like 7/8: RLR LR LR'};
@@ -1907,7 +1918,7 @@ function parseExerciseLine(raw,defSig,defStrokes,lenient){
   return {exercise:{src:((defStrokes?defStrokes+' ':'')+core).replace(/\s+/g,' ').trim(),notes:p.notes,groupStart:gs,subs:subs,dur:dur,bpm:bpm,sig:sig,warn:warns.join('; ')}};
 }
 /* ---------- helpers for the exercise builder: they only change text, so typing and tapping stay in step ---------- */
-const CODE_TAIL=/(^|\s)(8t|16t|5t|7t|q|8|16|32)$/i;
+const CODE_TAIL=/(^|\s)(\d{1,2}:\d{1,2}|8t|16t|5t|7t|q|8|16|32)$/i;
 /* A routine line in three parts: what comes before the strokes (label, numbering, signature), the strokes and note
    codes, and the options after them (x8, 90s, @100). A trailing space in the strokes is kept, because it separates a
    note code from the next stroke. */
@@ -1919,7 +1930,7 @@ function lineParts(raw){
   const SIG=/^(\s*\d{1,2}\s*\/\s*\d{1,2}(?:\s*\([\d\s+]+\))?\s*:\s*)(.*)$/;
   const grab=re=>{const m=re.exec(line);if(m){pre+=m[1];line=m[2];return true;}return false;};
   grab(SIG);
-  const lm=/^(\s*[A-Za-z][A-Za-z0-9 ]*?\s*:\s*)(.*)$/.exec(line);
+  const lm=/^(\s*[A-Za-z][A-Za-z0-9 ]*?\s*:(?!\d)\s*)(.*)$/.exec(line);
   if(lm&&!/^\s*(title|each|time|strokes)\s*:/i.test(lm[1])){pre+=lm[1];line=lm[2];grab(SIG);}
   grab(/^(\s*\d+\s*[.)]\s+)(.*)$/);
   const opts=[];
@@ -2186,7 +2197,7 @@ function fmtTime(s){
 function fmtPattern(notes,gs,subs,def){
   let s='',cur=def;
   for(let i=0;i<notes.length;i++){
-    if(subs&&subs[i]!==cur){s+=(s?' ':'')+'/'+subs[i]+' ';cur=subs[i];}
+    if(subs&&subs[i]!==cur){const f=fracOf(subs[i]);s+=(s?' ':'')+'/'+(f[1]===1?f[0]:f[0]+':'+f[1])+' ';cur=subs[i];}
     else if(i&&gs[i])s+=' ';
     s+=notes[i];
   }
@@ -2197,7 +2208,10 @@ function fmtPattern(notes,gs,subs,def){
    subdivision with no code is left out. */
 function nameMarkers(str,d){
   const dd=d||4,NAME={4:'q',8:'8',16:'16',32:'32',12:'8t',24:'16t',20:'5t',28:'7t'};
-  return String(str).replace(/\/(\d+) /g,(m,n)=>(NAME[+n*dd]||'')+(NAME[+n*dd]?' ':''));
+  return String(str).replace(/\/(\d+)(?::(\d+))? /g,(m,n,q)=>{
+    if(q){const f=fracOf(n*dd/q/16);return f[0]+':'+f[1]+' ';}   /* a tuplet, as N notes in the time of M sixteenths */
+    return (NAME[+n*dd]||'')+(NAME[+n*dd]?' ':'');
+  });
 }
 const showSig=sig=>sig?sig.n+'/'+sig.d+(sig.groups.join('+')===defGroups(sig.n,sig.d).join('+')?'':' ('+sig.groups.join('+')+')')+': ':'';
 const showPattern=(notes,gs,subs,def,sig,src)=>showSig(sig)+(src||nameMarkers(fmtPattern(notes,gs,subs,def),sig?sig.d:4));
@@ -2754,7 +2768,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.116';                           /* shown beside the title */
+const VERSION='1.5.117';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3980,6 +3994,12 @@ function staffLine(sg,opt){
   };
   for(let a=0;a<N;){
     const sb=subs[a];
+    if(!isInt(sb)){
+      /* an N:M tuplet, which can cross beats: one bracket per group, labelled with the notes and rests in it */
+      let b=a;while(b+1<N&&subs[b+1]===sb)b++;
+      for(let st=a,i=a+1;i<=b+1;i++)if(i>b||sg.groupStart[i]){if(i-1>st)bracket(st,i-1,i-st);st=i;}
+      a=b+1;continue;
+    }
     if(sb<3||sb===4||sb===8){a++;continue;}
     let b=a;while(b+1<N&&subs[b+1]===sb&&beat(b+1)===beat(a))b++;
     if(b>a){

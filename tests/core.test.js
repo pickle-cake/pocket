@@ -1,6 +1,6 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
-const c = loadCore(['parseStrokes', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
+const c = loadCore(['parseStrokes', 'nameMarkers', 'fmtPattern', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
   'graceSlot', 'buzzAt', 'buzzStats', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
 
 const runPoints = (codes, lv) => c.scoreParts([[codes, 1]], lv);
@@ -38,6 +38,35 @@ test('buzz strokes: z goes in front of a stroke', () => {
     assert.match(c.parseStrokes(bad, 4).err, /buzz/, bad);
   const k = x => c.textKey(x, 4);
   assert.notEqual(k('RLRL'), k('zRLRL'));
+});
+
+test('tuplets: N:M is N notes in the time of M sixteenths', () => {
+  const r = c.parseStrokes('8 RLR 8:6 LRLRLRLR', 8);
+  assert.equal(r.err, undefined);
+  assert.deepEqual(plain(r.subs.slice(0, 4)), [1, 1, 1, 8 / 3]);
+  assert.deepEqual(plain(r.groupStart), [true, false, false, true, false, false, false, false, false, false, false]);
+  /* 6:4 is the same as 16t, and grouping by N does not need spaces */
+  assert.deepEqual(plain(c.parseStrokes('6:4 RLRLRLRLRLRL', 4).subs), Array(12).fill(6));
+  assert.deepEqual(plain(c.parseStrokes('5:4 RLRLRLRLRL', 4).groupStart).map(Number), [1, 0, 0, 0, 0, 1, 0, 0, 0, 0]);
+  assert.match(c.parseStrokes('1:4 RL', 4).err, /at least 2 notes/);
+  assert.match(c.parseStrokes('2:16 RL', 4).err, /too fast or too slow/);
+  /* a bar of 6/8: three eighths and eight in the time of three eighths fill it */
+  const text = `time: 6/8
+8 RLR 8:6 LRLRLRLR 8 LRL 8:6 RLRLRLRL
+RLR 8:6 LRLRLRL_
+Ex 3: 8 RLR 8:6 LRLRLRLR`;
+  const p = c.parseRoutine(text);
+  assert.deepEqual(plain(p.errors), []);
+  assert.equal(p.exercises.length, 3);
+  const e = p.exercises[0], key = c.patKey(e.notes, e.groupStart, e.subs, 1, e.sig);
+  assert.ok(key.includes('/8:3 LRLRLRLR'), key);
+  /* a key without the routine's text names the tuplet by its lowest terms */
+  assert.equal(c.nameMarkers(c.fmtPattern(['R', 'L'], [true, false], [8 / 3, 8 / 3], 0), 8), '4:3 RL');
+  /* the plan spaces the eight evenly over three eighths: at 60 BPM an eighth is a second */
+  const { plan: pl } = plan(text);
+  const t = pl.slots.slice(0, 11).map(x => x.t - pl.slots[0].t);
+  assert.ok(Math.abs(t[3] - 3) < 1e-9, String(t[3]));
+  for (let i = 4; i < 11; i++) assert.ok(Math.abs(t[i] - t[i - 1] - 0.375) < 1e-9, String(t));
 });
 
 test('a flam is a different exercise from the plain stroke', () => {
