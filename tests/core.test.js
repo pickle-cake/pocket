@@ -50,6 +50,10 @@ test('tuplets: N:M is N notes in the time of M sixteenths', () => {
   assert.deepEqual(plain(c.parseStrokes('5:4 RLRLRLRLRL', 4).groupStart).map(Number), [1, 0, 0, 0, 0, 1, 0, 0, 0, 0]);
   assert.match(c.parseStrokes('1:4 RL', 4).err, /at least 2 notes/);
   assert.match(c.parseStrokes('2:16 RL', 4).err, /too fast or too slow/);
+  /* up to 16 notes in a beat: ten sixteenths and 32nds in a half note beat of cut time */
+  assert.equal(c.parseStrokes('8 RLRL 10:8 RRLLRRLLRR', 2).err, undefined);
+  assert.deepEqual(plain(c.parseStrokes('32 RLRLRLRLRLRLRLRL', 2).subs), Array(16).fill(16));
+  assert.match(c.parseStrokes('17:8 RL', 2).err, /too fast or too slow/);
   /* a bar of 6/8: three eighths and eight in the time of three eighths fill it */
   const text = `time: 6/8
 8 RLR 8:6 LRLRLRLR 8 LRL 8:6 RLRLRLRL

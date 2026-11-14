@@ -1735,6 +1735,7 @@ function fracOf(x){for(let b=1;b<=256;b++)if(Math.abs(x*b-Math.round(x*b))<1e-6)
 const GRACE_ERR='f (flam), d (drag) and z (buzz) go directly in front of an L or R, like fR, dL or zR';
 const hnd=n=>n.slice(-1);                         /* the hand that plays the main stroke */
 const graceOf=n=>n[0]==='f'?1:(n[0]==='d'?2:0);   /* grace notes before it: 1 flam, 2 drag */
+const MAXSUB=16;                                    /* most notes in one beat: 32nds in a half note beat, or 10:8 in cut time */
 const buzzOf=n=>n[0]==='z';                       /* a buzz stroke: one stroke that bounces several times */
 const graceHand=n=>hnd(n)==='R'?'L':'R';
 function parseStrokes(str,pd){
@@ -1750,7 +1751,7 @@ function parseStrokes(str,pd){
       if(t&&(+t[1]<2||+t[2]<1))return {err:m[3]+' needs at least 2 notes in the time of at least 1 sixteenth, like 8:6'};
       let sub=nvVal(m[3])/dd;
       if(t&&isInt(sub))sub=Math.round(sub);
-      if(!(sub>=1&&sub<=8)||(!t&&!Number.isInteger(sub)))return {err:m[3].trim()+' does not fit a beat of 1/'+dd+' (the notes would be too fast or too slow)'};
+      if(!(sub>=1&&sub<=MAXSUB)||(!t&&!Number.isInteger(sub)))return {err:m[3].trim()+' does not fit a beat of 1/'+dd+' (the notes would be too fast or too slow)'};
       cur=sub;tn=t?+t[1]:0;ng=true;
     }else if(m[2]){ng=true;}
     else{
@@ -2768,7 +2769,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.117';                           /* shown beside the title */
+const VERSION='1.5.118';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3900,7 +3901,7 @@ function staffLine(sg,opt){
     svg.appendChild(mk('line',{class:'bar',x1:E-12,x2:E-12,y1:Y-18,y2:Y+18}));
   }
   /* sub 1 quarter, 2 eighth, 3 eighth triplet, 4+ sixteenth. When the pulse is an eighth note, everything is one flag more, and when it is a half note (2/2) one flag fewer. */
-  const beamsOf=s=>Math.max(0,Math.min(eighths?2:3,(s>=8?3:(s>=4?2:(s>=2?1:0)))+(eighths?1:0)-(halves?1:0)));
+  const beamsOf=s=>Math.max(0,Math.min(eighths?2:3,(s>=16?4:s>=8?3:(s>=4?2:(s>=2?1:0)))+(eighths?1:0)-(halves?1:0)));
   const cards=[];
   for(let i=0;i<N;i++){
     const h=sg.notes[i],rest=h==='_',cx=xc(i);
@@ -7278,7 +7279,7 @@ function renderBuilder(){
   const d=(pv.b&&pv.b.sig?pv.b.sig.d:(pv.ctx.sig?pv.ctx.sig.d:4)),cur=pv.b?pv.b.subs[pv.b.subs.length-1]:null;
   const codes=$('bCodes');codes.textContent='';
   B_CODES.forEach(c=>{
-    const sub=NV_VAL[c]/d,okc=Number.isInteger(sub)&&sub>=1&&sub<=8;
+    const sub=NV_VAL[c]/d,okc=Number.isInteger(sub)&&sub>=1&&sub<=MAXSUB;
     const btn=document.createElement('button');btn.type='button';btn.className='bcode';btn.textContent=c;btn.dataset.code=c;
     btn.disabled=!okc;
     btn.setAttribute('aria-pressed',String(okc&&(cur!=null?sub===cur:sub===(pv.b?pv.b.defSub:S.subdiv))));
