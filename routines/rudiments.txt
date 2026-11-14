@@ -1,5 +1,5 @@
 # Standard rudiments, written as sticking. Routines are split by lines of dashes.
-# Flams and drags are written fR and dL: f or d in front of a stroke. Buzz strokes are left out.
+# Flams and drags are written fR and dL: f or d in front of a stroke. A buzz stroke is z in front: zR.
 ---
 title: Rudiments: Single stroke roll (R lead)
 RLRL RLRL RLRL RLRL
@@ -25,8 +25,11 @@ RRLL R___ LLRR L___
 title: Rudiments: Seven stroke roll
 RRLL RRL_ LLRR LLR_
 ---
-title: Rudiments: Nine stroke roll
+title: Rudiments: Nine stroke roll (open)
 RRLL RRLL R___ LLRR LLRR L___
+---
+title: Rudiments: Nine stroke roll (closed)
+8 zR zL zR zL 16 R___ 8 zL zR zL zR 16 L___
 ---
 title: Rudiments: Six stroke roll
 16t RLLRRL LRRLLR RLLRRL LRRLLR

@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['parseStrokes', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
+  'graceSlot', 'buzzAt', 'buzzStats', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
 
 const runPoints = (codes, lv) => c.scoreParts([[codes, 1]], lv);
 const plan = (text, opt) => {
@@ -30,6 +30,14 @@ test('flams and drags: f and d go in front of a stroke', () => {
   assert.deepEqual(plain(c.parseStrokes('FR dl', 4).notes), ['fR', 'dL']);
   for (const bad of ['f', 'fR f', 'f R', 'd_', 'fRd'])
     assert.match(c.parseStrokes(bad, 4).err, /flam/, bad);
+});
+
+test('buzz strokes: z goes in front of a stroke', () => {
+  assert.deepEqual(plain(c.parseStrokes('zR zL Zr', 4).notes), ['zR', 'zL', 'zR']);
+  for (const bad of ['z', 'zR z', 'z_', 'zfR'])
+    assert.match(c.parseStrokes(bad, 4).err, /buzz/, bad);
+  const k = x => c.textKey(x, 4);
+  assert.notEqual(k('RLRL'), k('zRLRL'));
 });
 
 test('a flam is a different exercise from the plain stroke', () => {
@@ -64,6 +72,31 @@ test('plan: one slot per stroke, none for rests, and grace flags', () => {
   assert.deepEqual(plain(pl.slots.map(s => s.gr)), [1, 0, 2]);
 });
 
+test('plan: buzz flags, and how far a buzz rings', () => {
+  const { plan: pl } = plan('16 zR L zL R');
+  const s = pl.slots;
+  assert.deepEqual(plain(s.map(x => x.bz)), [true, false, true, false]);
+  assert.equal(c.buzzAt(s, s[0].t + 0.1), 0);
+  assert.equal(c.buzzAt(s, s[1].t + 0.1), -1);
+  assert.equal(c.buzzAt(s, s[1].t - 0.005), -1);   /* just before the next stroke is not part of the buzz */
+});
+
+test('buzz stats count the bounces after each stroke and how far it rang', () => {
+  const { plan: pl } = plan('16 zR zL zR zL');
+  const s = pl.slots, res = new Map(), bnc = [];
+  s.forEach((x, i) => {
+    res.set(i, { ms: 0 });
+    for (let b = 1; b <= (i === 3 ? 1 : 10); b++) bnc.push(x.t + b * 0.02);   /* the last one bounces once */
+  });
+  const st = c.buzzStats(s, res, bnc);
+  assert.deepEqual(plain(st.map(x => x.n)), [10, 10, 10, 1]);
+  assert.ok(st[0].fill > 0.8 && st[0].fill <= 1, 'fill ' + st[0].fill);
+  const note = c.buzzNote(st);
+  assert.match(note, /bounced 7\.8 times/);
+  assert.match(note, /1 of 4 had fewer than two bounces/);
+  assert.equal(c.buzzNote(st.slice(0, 3)), '');
+});
+
 test('graceSlot finds a flam only just before its main stroke', () => {
   const { plan: pl } = plan('8 R fL R L');
   const s = pl.slots, t = s[1].t;
@@ -78,6 +111,9 @@ test('builder taps edit the text', () => {
   assert.equal(c.builderApply('RfL', 'back'), 'R');
   assert.equal(c.builderApply('RLfR', 'swap'), 'LRfL');
   assert.equal(c.builderApply('RL', 'code:8'), 'RL 8 ');
+  assert.equal(c.builderApply('R ', 'zL'), 'R zL');
+  assert.equal(c.builderApply('RzL', 'back'), 'R');
+  assert.equal(c.builderApply('zRL', 'swap'), 'zLR');
 });
 
 /* A stick strike: a noisy burst that fades in a few milliseconds. */
@@ -104,6 +140,37 @@ test('detector: a soft grace does not hide the loud main stroke when flams are o
 test('detector: a single hit is heard once', () => {
   const h = detect(0.07, 0.03, 0, 0.6);
   assert.equal(h.length, 1);
+});
+
+/* A buzz: a strike and a run of fading bounces every 20 ms, for each stroke of a roll. */
+function detectBuzz(buzz, times, bounces) {
+  const sr = 48000, hits = [], bnc = [];
+  const d = new c.OnsetDetector(sr, e => { if (e.type === 'hit') hits.push(e.t); else if (e.type === 'bnc') bnc.push(e.t); });
+  d.set({ thr: 0.02, refrac: 0.04, flam: 0, buzz });
+  const n = sr, buf = new Float32Array(n);
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const strike = (t, a) => { const s0 = Math.round(t * sr); for (let i = 0; i < sr * 0.03 && s0 + i < n; i++) buf[s0 + i] += a * Math.exp(-i / (0.003 * sr)) * (Math.sin(i * 0.9) * 0.7 + (rnd() - 0.5) * 0.6); };
+  for (const t of times) { strike(t, 0.6); for (let b = 1, a = 0.4; b <= bounces; b++, a *= 0.8) strike(t + b * 0.02, a); }
+  for (let i = 0; i < n; i += 128) d.process(buf.subarray(i, i + 128), i);
+  return { hits, bnc };
+}
+
+test('detector: with buzz on, a buzz is one hit and its bounces', () => {
+  const times = [0.2, 0.45, 0.7];
+  const { hits, bnc } = detectBuzz(0.15, times, 9);
+  assert.equal(hits.length, 3, 'hits ' + hits);
+  times.forEach((t, i) => assert.ok(Math.abs(hits[i] - t) < 0.004, 'stroke ' + t + ' heard at ' + hits[i]));
+  assert.ok(bnc.length >= 18, 'bounces ' + bnc.length);
+});
+
+test('detector: a closed roll, each buzz ringing into the next, still finds every stroke', () => {
+  const times = [0.2, 0.325, 0.45, 0.575, 0.7];
+  for (const bounces of [4, 5, 6]) {
+    const { hits, bnc } = detectBuzz(0.075, times, bounces);
+    assert.equal(hits.length, times.length, bounces + ' bounces, hits ' + hits);
+    times.forEach((t, i) => assert.ok(Math.abs(hits[i] - t) < 0.004, 'stroke ' + t + ' heard at ' + hits[i]));
+    assert.ok(bnc.length >= times.length * (bounces - 1), 'bounces ' + bnc.length);
+  }
 });
 
 test('mastery is measured in strokes a minute, so sixteenths count for more than eighths', () => {
