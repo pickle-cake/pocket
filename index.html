@@ -1153,7 +1153,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <ul>
         <li><b>Each row is one pass</b> of an exercise. The top row is playing and the next passes sit beneath it. Rows slide up as each pass ends.</li>
         <li><b>The moving line</b> reaches each note exactly when it is due. Strike as it arrives.</li>
-        <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same shallow note, a frame with coloured glass: play as it lands on the pad at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A note is dim in the distance and solid as it comes near. When you play, the pad lights and a flash shows where the note was: above the line is early, below is late. Once judged, a stroke takes the colour of its timing and the verdict appears under its lane.</li>
+        <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A note is dim in the distance and solid as it comes near. When you play, the socket takes the colour of your timing for a moment and a flash shows where the note was: above the line is early, below is late. Once judged, a stroke takes the colour of its timing and the verdict appears under its lane.</li>
         <li><b>Letter colours:</b> green is on time, blue and slanted is early, pink and underlined is late, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as green.</li>
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
         <li><b>The gauge</b> shows how early or late you played on average over the last 32 strokes. Left is early, right is late.</li>
@@ -2679,7 +2679,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.113';                           /* shown beside the title */
+const VERSION='1.5.114';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4165,9 +4165,10 @@ function paintRows(r,cursor,heard){
   drawHwy(r,heard);
 }
 /* ---------- the highway: the strokes as two lanes, L and R, running towards a line in perspective ----------
-   Each stroke is a note in its hand's lane: a frame with glass in its hand's colour, wide and shallow so its front edge is plainly
-   the moment to play. Every note has the same outline; an accent's glass flares and a ghost note's is empty. The line has a pad in
-   each lane, the same frame and glass, that each note lands on and that lights when it is played. Once judged, a stroke takes the
+   Each stroke is a note in its hand's lane: a box with a frame and glass in its hand's colour, its top running back along the road
+   in its perspective, and its front edge plainly the moment to play. Every note has the same outline; an accent's glass flares and
+   a ghost note's is empty. The line has a socket in each lane, the same box in wire, that each note lands in and that takes the
+   colour of the timing when it is played. Once judged, a stroke takes the
    colour of its timing, with the verdict written under the lane as the second cue. */
 const HW={col:null,colKey:'',obs:false,fade:{}};
 const HW_TOP=2.2,HW_ROUND=0.15;                 /* a note's depth on the line, and its corners, as parts of its front face's height */
