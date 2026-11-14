@@ -30,6 +30,8 @@ if(t!=='light'&&t!=='dark')t=window.matchMedia&&matchMedia('(prefers-color-schem
   --heat:#E5322B; --heat-low:#fff;                  /* the streak meter runs from --heat-low at the first stroke to --heat at the best streak */
   --meter-lo:var(--ok); --meter-mid:var(--fill); --meter-hi:var(--heat);   /* the stroke level meter: soft to loud; its own role, following the palette */
   --surface-2:color-mix(in srgb,var(--ink) 6%,var(--bg));   /* troughs, keys, pressed rows: a step down from the page */
+  --shade:#000; --shine:#fff;                        /* depth on the highway's strokes, only ever at low alpha */
+  --hand-l:#5E5CA0; --hand-r:#A97F57;               /* the highway's lanes: a cool hue for L, a warm one for R, muted so neither reads as a timing colour */
   --scrim:rgb(0 0 0 / .55); --shadow-pop:0 8px 24px rgb(0 0 0 / .25);   /* behind dialogs; under menus and dialogs */
   --font-display:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;
   --font-body:'Barlow',system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -47,12 +49,13 @@ if(t!=='light'&&t!=='dark')t=window.matchMedia&&matchMedia('(prefers-color-schem
     --bg:#0F1311; --surface:#171C19; --ink:#E7ECE9; --muted:#93A09A; --line:#2A322E; --line-strong:#66726C;
     --accent:#E3A93B; --fill:#E3A93B; --accent-ink:#1A1200;
     --early:#6FA8E8; --late:#F07A97; --ok:#5CC48A;
+    --hand-l:#A3A1E0; --hand-r:#CFAE8E;
     --on-danger:#0F1311;                            /* the light danger needs dark text */
     --shadow-pop:0 8px 24px rgb(0 0 0 / .35);
     color-scheme:dark;
   }
-  :root[data-palette=cb]{--early:#00669F; --late:#A84300; --ok:#5A6560; --heat:#FF8A3D}     /* colour-blind safe: blue, vermillion, grey stay apart in all common forms */
-  :root[data-palette=cb][data-theme=dark]{--early:#56B4E9; --late:#FF8A3D; --ok:#9AA59D; --heat:#FF8A3D}
+  :root[data-palette=cb]{--early:#00669F; --late:#A84300; --ok:#5A6560; --heat:#FF8A3D; --hand-l:#5E5CA0; --hand-r:#9C8A4A}     /* colour-blind safe: blue, vermillion, grey stay apart in all common forms */
+  :root[data-palette=cb][data-theme=dark]{--early:#56B4E9; --late:#FF8A3D; --ok:#9AA59D; --heat:#FF8A3D; --hand-l:#A3A1E0; --hand-r:#D2C08A}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;touch-action:manipulation}   /* no double-tap zoom */
 body{
@@ -97,6 +100,20 @@ header .headbtns{grid-area:btns} header .sub{grid-area:sub} header .tabs{grid-ar
 
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 .field{display:grid;gap:var(--s-2);min-width:0}
+/* A switch row: the title and meta on the left, the state as a word and a track on the right. The word is the second cue. */
+.toggle{display:flex;align-items:center;gap:var(--s-3);width:100%;min-height:var(--hit);padding:var(--s-3) 0;background:none;border:0;border-top:1px solid var(--line);color:var(--ink);text-align:left;cursor:pointer}
+.toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toggle-text{display:grid;gap:var(--s-1);flex:1;min-width:0}
+.toggle-title{font:600 var(--t-body) var(--font-body)}
+.toggle-meta{font:400 var(--t-caption) var(--font-body);color:var(--muted)}
+.toggle-state{font:600 var(--t-small) var(--font-body);color:var(--muted);min-width:2em;text-align:right}
+.toggle-state::before{content:"Off"}
+.toggle[aria-checked=true] .toggle-state{color:var(--ink)} .toggle[aria-checked=true] .toggle-state::before{content:"On"}
+.toggle-track{flex:none;position:relative;width:var(--hit);height:calc(var(--hit) / 2 + var(--s-1));border-radius:var(--r-full);background:var(--surface-2);border:1px solid var(--line-strong)}
+.toggle-track::after{content:"";position:absolute;top:var(--s-1);left:var(--s-1);width:calc(var(--hit) / 2 - var(--s-1) - 2px);aspect-ratio:1;border-radius:var(--r-full);background:var(--line-strong)}
+.toggle[aria-checked=true] .toggle-track{background:var(--ink);border-color:var(--ink)}
+.toggle[aria-checked=true] .toggle-track::after{background:var(--surface);transform:translateX(calc(var(--hit) / 2 - var(--s-1)))}
+@media (prefers-reduced-motion:no-preference){.toggle-track,.toggle-track::after{transition:background var(--dur-1) var(--ease),transform var(--dur-1) var(--ease)}}
 .field output{color:var(--ink);font-family:var(--font-data);letter-spacing:0;text-transform:none;margin-left:6px}
 input[type=text],input[type=number],select{font:500 16px var(--font-body);color:var(--ink);background:var(--bg);border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;min-height:44px;width:100%}
 input[type=range]{width:100%;min-height:var(--hit);margin:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer}   /* a 44px target around a 4px track */
@@ -258,6 +275,13 @@ body[data-run="1"] .notice{display:none}
 .staff .ph{stroke:var(--accent);stroke-width:3;stroke-linecap:round;pointer-events:none}
 @keyframes phpulse{from{stroke-width:var(--pw,10);opacity:.55}to{stroke-width:3;opacity:1}}
 @media (prefers-reduced-motion:no-preference){.staff .ph.pulse{animation:phpulse .14s ease-out}.staff .ph.pulse2{--pw:15;animation:phpulse .2s ease-out}}
+.hwy{display:none;width:100%;height:clamp(280px,50vh,460px);border-radius:var(--r-lg);background:var(--bg)}
+/* With the highway chosen (Settings › Preferences), it takes the staff's place while a run plays. The staff stays laid out underneath, out of sight, so its measurements hold. */
+[data-view=hwy] body[data-state="run"] #rows{position:absolute;inset:0 0 auto;visibility:hidden;pointer-events:none}
+[data-view=hwy] body[data-state="run"] #rows .ph{visibility:hidden}
+[data-view=hwy] body[data-state="run"] .lvmtr{display:none}
+[data-view=hwy] body[data-state="run"] .bigcount{place-items:start center;padding-top:var(--s-4);background:none}   /* the count-in sits over the far end of the road, so the first notes can be seen coming */
+[data-view=hwy] body[data-state="run"] #hwy{display:block}   /* only while playing: before a run the staff is where you pick the exercise to start on, and after it the staff is the review */
 .cap{font-size:13px;color:var(--muted);margin:8px 0 0}
 .pads{display:none;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 body[data-input="kb"] .pads{display:grid}
@@ -805,6 +829,10 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <div class="field"><label for="pulse">Visual pulse</label>
           <select id="pulse"><option value="on">On</option><option value="off">Off</option></select></div>
       </div>
+      <button class="toggle" id="view" type="button" role="switch" aria-checked="false" aria-labelledby="viewLbl" aria-describedby="viewHint">
+        <span class="toggle-text"><span class="toggle-title" id="viewLbl">Visualisation</span><span class="toggle-meta" id="viewHint">Highway, L and R lanes: the strokes come towards you in place of the staff while you play</span></span>
+        <span class="toggle-state" aria-hidden="true"></span><span class="toggle-track" aria-hidden="true"></span>
+      </button>
       <div class="field"><label for="vol">Click volume <output id="volOut"></output></label><input type="range" id="vol" min="0" max="100" step="1"></div>
       <p class="hint mic-only">Use headphones for the click. A click from the speakers is picked up by the microphone and counted as a stroke.</p>
     </section>
@@ -1096,7 +1124,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     <section class="panel" id="help-how">
       <h3>How it works</h3>
       <p>The app plays a click and listens to your pad through the microphone. It matches each hit to the stroke that was due and measures how early or late it was, in milliseconds. Nothing is uploaded. Everything stays in this browser.</p>
-      <p>Pick a sticking, press Start on the Play page and play along with the moving line. The numbers appear when you stop.</p>
+      <p>Pick a sticking, press Start on the Play page and play each stroke as the line reaches it. The numbers appear when you stop.</p>
     </section>
 
     <section class="panel" id="help-start">
@@ -1104,7 +1132,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <ol>
         <li><b>Settings:</b> pick a tempo, use headphones for the click, tap Test microphone and hit the pad. The level bar should cross the trigger line on every stroke.</li>
         <li><b>Library:</b> press <b>New</b> to write a routine or <b>Import</b> to bring one in. One exercise plays on its own. Two or more make a routine, played in order.</li>
-        <li><b>Play:</b> set the tempo, click level and how long each exercise plays, then press Start. Hold − or + to keep going, or tap the tempo for steps of 10, a slider and the tempos you play most. After the count-in, play on the moving line and press Stop when you are done. Your result appears first, with <b>Again</b> and <b>Done</b>. The staff keeps its colours and numbers so you can see which strokes were off. Done brings the controls back.</li>
+        <li><b>Play:</b> set the tempo, click level and how long each exercise plays, then press Start. Hold − or + to keep going, or tap the tempo for steps of 10, a slider and the tempos you play most. After the count-in, play each stroke as the line reaches it (or, with the highway, as it reaches the line), and press Stop when you are done. Your result appears first, with <b>Again</b> and <b>Done</b>. The staff keeps its colours and numbers so you can see which strokes were off. Done brings the controls back.</li>
       </ol>
       <p>No microphone? Under Settings &rsaquo; Device, set Input to "Keyboard or pads" and press <b>F</b> for left, <b>J</b> for right. This is a test mode, and its timing is rougher than a pad with a microphone.</p>
     </section>
@@ -1116,7 +1144,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>Library:</b> your saved routines, each with Edit and Play. <b>New</b> starts a routine, <b>Import</b> adds one from a file or a link, and <b>Export</b> saves the whole library as one file that Import reads back (it can also be hosted as a library). A title such as "Rudiment: Single stroke roll" groups the routine under Rudiment. Routines with no group go under Other. The ⋮ on a routine has Download and Delete. Delete asks for a second tap, and Undo follows. The chevron opens a routine to show its exercises.</li>
         <li><b>An unsaved routine</b> is what you are working on. It is kept as you type, but a saved routine changes only when you press Save. The app asks before you open another routine and lose unsaved work. The editor opens full screen from Edit, and Back returns you.</li>
         <li><b>Progress:</b> <b>History</b> lists your runs by exercise or routine, with Play. <b>Scores</b> shows each exercise (sorted by accuracy) and each routine: tempo, accuracy, trend, early or late, and evenness. <b>Achievements</b> shows your practice days for the last four weeks, a streak that forgives one rest day a week, and badges.</li>
-        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
+        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, the Visualisation switch, click volume, colours), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
       </ul>
     </section>
 
@@ -1125,6 +1153,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <ul>
         <li><b>Each row is one pass</b> of an exercise. The top row is playing and the next passes sit beneath it. Rows slide up as each pass ends.</li>
         <li><b>The moving line</b> reaches each note exactly when it is due. Strike as it arrives.</li>
+        <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same shallow note, a frame with coloured glass: play as it lands on the pad at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A note is dim in the distance and solid as it comes near. When you play, the pad lights and a flash shows where the note was: above the line is early, below is late. Once judged, a stroke takes the colour of its timing and the verdict appears under its lane.</li>
         <li><b>Letter colours:</b> green is on time, blue and slanted is early, pink and underlined is late, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as green.</li>
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
         <li><b>The gauge</b> shows how early or late you played on average over the last 32 strokes. Left is early, right is late.</li>
@@ -1266,7 +1295,7 @@ LRLR LRLR LRLR LRLR  x8</pre>
       </div>
       <h4>Between exercises and the visual pulse</h4>
       <p><b>Between exercises</b> can be a 4-beat count-in or <b>Straight on</b> (the default). Straight on starts the next exercise with no pause, and only the notation marks the change: the rows slide up and the new exercise starts on the next beat.</p>
-      <p><b>Visual pulse</b> (Settings &rsaquo; Preferences) swells the moving line on every click, more on the first beat of a pass. Turn it off for a plain line.</p>
+      <p><b>Visual pulse</b> (Settings &rsaquo; Preferences) swells the line on every click, more on the first beat of a pass. Turn it off for a plain line.</p>
       <p><b>Colours</b> (Settings &rsaquo; Preferences) switches to a colour-blind safe set: blue for early, orange for late, grey for on time. Early notes also lean, late notes are underlined, and results at or above target carry a tick, so colour is never the only signal.</p>
       <h4>Saving and importing</h4>
       <p><b>Save</b> keeps the routine in <b>your library</b>. If you change only the title, Save renames it. If you change the exercises, Save keeps the original and adds a new routine, so past runs still replay as played. The <b>&#8942;</b> beside Save has <b>Save as new</b> (a copy without changes) and <b>Download file</b> (a .txt to send).</p>
@@ -1461,6 +1490,7 @@ RLRR LRLL RLRR LRLL</pre>
       <div class="rowswrap">
       <div class="lvmtr" id="lvMtr" hidden aria-hidden="true"><i></i></div>
       <div class="bigcount" id="bigCount" hidden aria-hidden="true"></div>
+      <canvas class="hwy" id="hwy" aria-hidden="true"></canvas>
       <div class="rows" id="rows" tabindex="0"><div class="rows-track" id="rowsTrack"></div></div>
       <p class="hint" id="rowEnd" hidden></p>
       </div>
@@ -2649,7 +2679,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.102';                           /* shown beside the title */
+const VERSION='1.5.113';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -2699,6 +2729,7 @@ S.eachUnit=S.eachUnit==='pass'?'pass':'min';
 S.eachVal=S.eachUnit==='pass'?clamp(Math.round(+S.eachVal)||8,1,200):clamp(+S.eachVal||1,0.25,60);
 S.gap=+S.gap===0?0:4;
 S.pulse=S.pulse!==false;
+S.view=S.view==='hwy'?'hwy':'staff';
 S.palette=S.palette==='cb'?'cb':'std';
 S.layout=S.layout==='phone'||S.layout==='desktop'?S.layout:'auto';
 S.resultHelp=S.resultHelp===true;
@@ -2707,7 +2738,7 @@ if(typeof S.libId!=='string')S.libId='';
 /* When each library routine was last opened, on this device, newest first: the picker lists the latest ones at the top. */
 S.libOpened=Array.isArray(S.libOpened)?S.libOpened.filter(o=>o&&typeof o.id==='string'&&isFinite(+o.t)).slice(0,20).map(o=>({id:o.id,t:+o.t})):[];
 S.startExercise=1;
-const PORTABLE=['bpm','tol','accent','others','vol','click','eachUnit','eachVal','gap','pulse','palette','theme'];   /* settings that travel in an export. Microphone, latency and sensitivity belong to the device and stay out. */
+const PORTABLE=['bpm','tol','accent','others','vol','click','eachUnit','eachVal','gap','pulse','view','palette','theme'];   /* settings that travel in an export. Microphone, latency and sensitivity belong to the device and stay out. */
 S.expSel=(S.expSel&&typeof S.expSel==='object')?{hist:S.expSel.hist!==false,lib:S.expSel.lib!==false,lists:S.expSel.lists!==false,set:S.expSel.set!==false}:{hist:true,lib:true,lists:true,set:true};   /* what the Export dialog ticks, remembered */
 if(!isFinite(+S.lastExport))S.lastExport=0;
 if(!isFinite(+S.expRuns))S.expRuns=0;
@@ -4131,6 +4162,280 @@ function paintRows(r,cursor,heard){
   });
   movePlayhead(r,cursor,heard);placeLvMeter(r,cursor);
   lastCur=r&&!r.ended?cursor:null;syncWindow(lastCur);
+  drawHwy(r,heard);
+}
+/* ---------- the highway: the strokes as two lanes, L and R, running towards a line in perspective ----------
+   Each stroke is a note in its hand's lane: a frame with glass in its hand's colour, wide and shallow so its front edge is plainly
+   the moment to play. Every note has the same outline; an accent's glass flares and a ghost note's is empty. The line has a pad in
+   each lane, the same frame and glass, that each note lands on and that lights when it is played. Once judged, a stroke takes the
+   colour of its timing, with the verdict written under the lane as the second cue. */
+const HW={col:null,colKey:'',obs:false,fade:{}};
+const HW_TOP=2.2,HW_ROUND=0.15;                 /* a note's depth on the line, and its corners, as parts of its front face's height */
+const HW_PAST=0.8;                                  /* seconds behind the line still read, for the verdicts */
+function hwColours(){
+  const de=document.documentElement,key=de.dataset.theme+'|'+(de.dataset.palette||'');
+  if(HW.col&&HW.colKey===key)return HW.col;
+  const cs=getComputedStyle(de),v=n=>cs.getPropertyValue(n).trim();
+  HW.colKey=key;
+  return HW.col={bg:v('--bg'),surface:v('--surface'),ink:v('--ink'),muted:v('--muted'),line:v('--line'),strong:v('--line-strong'),
+    accent:v('--accent'),L:v('--hand-l'),R:v('--hand-r'),shade:v('--shade'),shine:v('--shine'),ok:v('--ok'),early:v('--early'),late:v('--late'),fd:v('--font-display'),fb:v('--font-body')};
+}
+/* Seconds of music between the line and the far end: about three beats, the same for the whole run so the speed never jumps. */
+function hwAhead(plan){
+  const b=plan.segs.reduce((a,sg)=>a+sg.beat,0)/plan.segs.length;
+  return clamp(3*b,1.2,3.5);
+}
+function hwWatch(){
+  if(HW.obs)return;HW.obs=true;
+  const cv=$('hwy'),redraw=()=>{if(run&&!run.ended)drawHwy(run);};   /* redrawn at once when paused */
+  if(window.ResizeObserver)new ResizeObserver(redraw).observe(cv);
+  new MutationObserver(()=>{HW.col=null;HW.fade={};HW.spr=null;redraw();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-palette']});
+}
+function hwRound(x,X,Y,w,h,rad){
+  x.beginPath();
+  if(x.roundRect)x.roundRect(X,Y,w,h,rad);else x.rect(X,Y,w,h);
+}
+/* A note's front face drawn once, in detail, at its size on the line, into a canvas of its own: a bevelled frame, glass set in
+   it with a streak of light, and a soft shadow under it. Each frame then stamps it, scaled by distance, so the detail costs
+   nothing per frame; its top is drawn each frame, so it follows the highway's lines. Its colours come from the theme, so there
+   is one for each theme, kind and colour, made again on a resize. */
+function hwSprite(C,kind,glass,w,fh,dpr){
+  const key=kind+'|'+glass+'|'+Math.round(w)+'|'+Math.round(fh*10)+'|'+dpr;
+  if(!HW.spr||HW.spr.size>80)HW.spr=new Map();
+  if(HW.spr.has(key))return HW.spr.get(key);
+  const tz=0,up=kind==='A'?fh*2.4:0,pad=3,SW=w+pad*2,SH=up+tz+fh+pad*2,q=dpr*2;
+  const cv=document.createElement('canvas');cv.width=Math.ceil(SW*q);cv.height=Math.ceil(SH*q);
+  const x=cv.getContext('2d');x.scale(q,q);
+  const F=(col,a)=>hwFade(x,col,a);
+  const l=pad,top=pad+up+tz,y=top+fh,rad=fh*HW_ROUND*2,fr=kind==='A'?3.5:2,lit=kind!=='g';
+  const face=(o,r)=>hwRound(x,l+o,top+o,w-o*2,fh-o*2,[0,0,r,r]);
+  /* the shadow, just under the front edge */
+  const sh=x.createLinearGradient(0,y-1,0,y+pad);sh.addColorStop(0,F(C.shade,0.28));sh.addColorStop(1,F(C.shade,0));
+  x.fillStyle=sh;x.fillRect(l+2,y-1,w-4,pad+1);
+  /* an accent's flare, behind the note so it never covers the edge */
+  if(kind==='A')hwGlow(x,l+w/2,top-tz*0.5,w*0.55,up,F(glass,0.5),F(glass,0));
+  /* the frame, bevelled: lit along the top, in shade along the bottom */
+  face(0,rad);x.fillStyle=C.strong;x.fill();
+  const bv=x.createLinearGradient(0,top,0,y);
+  bv.addColorStop(0,F(C.shine,0.35));bv.addColorStop(0.45,F(C.shine,0));bv.addColorStop(1,F(C.shade,0.3));
+  x.fillStyle=bv;x.fill();
+  x.fillStyle=F(C.shine,0.6);x.fillRect(l+rad,top-0.5,w-rad*2,1);   /* the crease between the top and the front */
+  /* the glass: lit for a stroke, empty for a ghost note */
+  const gA=lit?1:0.16,gw=w-fr*2,gh=fh-fr*2;
+  if(gw>1&&gh>0.5){
+    face(fr,Math.max(0,rad-fr));x.fillStyle=F(glass,gA);x.fill();
+    const gg=x.createLinearGradient(0,top+fr,0,top+fr+gh);
+    gg.addColorStop(0,F(C.shine,lit?0.3:0));gg.addColorStop(1,F(C.shade,lit?0.25:0.15));x.fillStyle=gg;x.fill();
+    x.fillStyle=F(C.shade,0.3);x.fillRect(l+fr,top+fr,gw,Math.min(1,gh));   /* the glass sits below the frame */
+    if(lit){   /* the streak of light */
+      const sy=top+fr+gh*0.3,sh2=Math.max(1,gh*0.18);
+      hwRound(x,l+fr+gw*0.06,sy,gw*0.4,sh2,sh2/2);x.fillStyle=F(C.shine,0.6);x.fill();
+    }
+  }
+  const o={cv:cv,ox:pad,oy:pad+up+tz+fh,SW:SW,SH:SH};
+  HW.spr.set(key,o);return o;
+}
+/* A soft glow rising from a point: the top half of an oval, from c0 at its centre to c1 at its edge */
+function hwGlow(x,cx,cy,rx,ry,c0,c1){
+  x.save();x.translate(cx,cy);x.scale(1,ry/rx);
+  const g=x.createRadialGradient(0,0,0,0,0,rx);g.addColorStop(0,c0);g.addColorStop(1,c1);
+  x.fillStyle=g;x.fillRect(-rx,-rx,rx*2,rx);x.restore();
+}
+/* A colour from the theme with an alpha, for gradients that fade out (fading to "transparent" can grey them). */
+function hwFade(x,col,a){
+  const k=col+'|'+a;if(HW.fade[k])return HW.fade[k];
+  x.fillStyle='#000';x.fillStyle=col;const c=x.fillStyle;
+  let v=c;
+  if(c[0]==='#'){const n=parseInt(c.slice(1),16);v='rgba('+(n>>16)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
+  else{const m=c.match(/[\d.]+/g);if(m)v='rgba('+m[0]+','+m[1]+','+m[2]+','+a+')';}
+  return HW.fade[k]=v;
+}
+function drawHwy(r,heard){
+  const cv=$('hwy');
+  if(!cv||S.view!=='hwy'||document.body.dataset.state!=='run')return;
+  hwWatch();
+  const W=cv.clientWidth,H=cv.clientHeight;
+  if(!W||!H)return;
+  const dpr=Math.min(2,window.devicePixelRatio||1),pw=Math.round(W*dpr),ph=Math.round(H*dpr);
+  if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;}
+  const x=cv.getContext('2d');
+  x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,W,H);
+  let plan=null,t=0,live=false;
+  if(r&&r.plan&&!r.ended){plan=r.plan;t=heard!==undefined?heard:heardNow()-r.t0;live=true;}
+  const C=hwColours(),F=(col,a)=>hwFade(x,col,a);
+  const still=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const A=plan?hwAhead(plan):2,K=2.6;
+  const sOf=d=>1/(1+K*d),sF=sOf(1);
+  /* the far end of the road sits just under the top edge, so the whole height is road */
+  const hitY=Math.round(H*0.8),topY=Math.max(8,H*0.03),horY=(topY-hitY*sF)/(1-sF),cx=W/2,road=Math.min(W-40,520);
+  const yOf=s=>horY+(hitY-horY)*s;
+  const dMin=(1/((H-horY)/(hitY-horY))-1)/K;   /* the depth at the bottom edge */
+  const sN=sOf(dMin),yF=yOf(sF),yN=yOf(sN);
+  const edge=(s,e,out)=>cx+e*(road/2+out)*s;
+  const band=(e,o0,o1)=>{   /* a band along the road's edge, from o0 to o1 px out at full size */
+    x.beginPath();x.moveTo(edge(sF,e,o0),yF);x.lineTo(edge(sF,e,o1),yF);x.lineTo(edge(sN,e,o1),yN);x.lineTo(edge(sN,e,o0),yN);x.closePath();
+  };
+  /* the road: it comes out of the page's colour in the distance and is surface by the time it reaches you */
+  const rg=x.createLinearGradient(0,yF,0,hitY);
+  rg.addColorStop(0,C.bg);rg.addColorStop(0.5,C.surface);rg.addColorStop(1,C.surface);
+  band(-1,0,-road/2);x.fillStyle=rg;x.fill();band(1,0,-road/2);x.fill();
+  /* each lane a shade down at its centre, so the two read as grooves */
+  [-1,1].forEach(e=>{
+    const lg=x.createLinearGradient(cx+e*road*0.02,0,cx+e*road*0.48,0);
+    lg.addColorStop(0,F(C.shade,0));lg.addColorStop(0.5,F(C.shade,0.05));lg.addColorStop(1,F(C.shade,0));
+    band(e,0,-road/2);x.fillStyle=lg;x.fill();
+  });
+  /* the rails, solid and growing as they come near, with a shadow outside */
+  [-1,1].forEach(e=>{band(e,0,7);x.fillStyle=C.strong;x.fill();band(e,7,11);x.fillStyle=F(C.shade,0.1);x.fill();});
+  /* the centre line, dashed and moving with the road */
+  x.strokeStyle=C.line;x.lineWidth=1.5;x.setLineDash([10,12]);x.lineDashOffset=still?0:-(t/A)*120;
+  x.beginPath();x.moveTo(cx,yF);x.lineTo(cx,yN);x.stroke();x.setLineDash([]);
+  const across=(d,col,lw)=>{const s=sOf(d),y=yOf(s);x.strokeStyle=col;x.lineWidth=lw*Math.max(0.5,s);x.beginPath();x.moveTo(edge(s,-1,0),y);x.lineTo(edge(s,1,0),y);x.stroke();};
+  if(plan){
+    /* a line at every beat, and a stronger one where each pass begins; the next one to reach the line a little brighter */
+    let dNext=9;
+    plan.segs.forEach(sg=>{const j=Math.ceil((t-sg.t0)/sg.beat-1e-6),d=(sg.t0+j*sg.beat-t)/A;if(j*sg.beat<=sg.end-sg.t0+1e-6&&d>=0&&d<dNext)dNext=d;});
+    plan.segs.forEach(sg=>{
+      const nb=Math.round((sg.end-sg.t0)/sg.beat);
+      const j0=Math.max(0,Math.ceil((t+dMin*A-sg.t0)/sg.beat)),j1=Math.min(nb,Math.floor((t+A-sg.t0)/sg.beat));
+      for(let j=j0;j<=j1;j++){
+        const d=(sg.t0+j*sg.beat-t)/A,pass=isInt(j/sg.passBeats);
+        across(d,pass||Math.abs(d-dNext)<1e-6?C.strong:C.line,pass?3:(Math.abs(d-dNext)<1e-6?2.5:1.5));
+      }
+    });
+  }
+  /* the line to play on, thicker for a moment on each click */
+  let pulse=0;
+  if(live&&S.pulse&&r.pulseIdx>=0&&!still){
+    const c=plan.clicks[r.pulseIdx];if(c)pulse=clamp(1-(t-c.t)/(c.a>=2?0.2:0.14),0,1)*(c.a>=2?1.5:1);
+  }
+  const laneX=(h,s)=>cx+(h==='L'?-1:1)*road/4*s;
+  const tw=road*0.4,th=Math.max(26,road*0.09);
+  /* the strokes in sight, and the last judged one in each lane for the pads and the verdicts */
+  const last={L:null,R:null},tol=(r&&r.tol)||S.tol,vis=[];
+  const tone=res=>res.miss?C.muted:(Math.abs(res.ms)<=tol?C.ok:(res.ms<0?C.early:C.late));
+  if(plan){
+    const cells=plan.cells,lo0=t-HW_PAST;
+    let lo=0,hi=cells.length;
+    while(lo<hi){const m=(lo+hi)>>1;if(cells[m].t<lo0)lo=m+1;else hi=m;}
+    for(let i=lo;i<cells.length&&cells[i].t<=t+A;i++){
+      const c=cells[i];if(c.rest)continue;
+      const n=plan.segs[c.seg].notes[c.pos],res=live?r.res.get(c.slot):null;
+      if(res&&c.t<=t)last[hnd(n)]={c:c,res:res};
+      if((c.t-t)/A>=dMin-0.02)vis.push({c:c,n:n,res:res});
+    }
+  }
+  /* a note's size on the line: wide and shallow, the same outline for every stroke, so its front edge is the moment to play */
+  const pW=tw*0.86,NH=Math.max(12,th*0.3),under=hitY+8;
+  /* a note: a frame, the same for every stroke, with glass set in it. The glass is lit for a stroke, empty for a ghost note,
+     and lit with a flare behind it for an accent, whose frame is a little heavier. Its front edge sits on the stroke's moment,
+     and it is faint in the distance and solid near the line. */
+  /* each note is a box of the same depth, so its top runs back along the highway towards the vanishing point */
+  const dz=NH*HW_TOP/Math.max(1,hitY-horY-NH),DD=(1/(1-Math.min(0.9,dz))-1)/K;
+  const corners=(h,d,w)=>{
+    const s=sOf(d),y=yOf(s),xc=laneX(h,s),s2=sOf(d+DD),y2=yOf(s2),xc2=laneX(h,s2);
+    return {s:s,y:y,s2:s2,y2:y2,fl:[xc-w*s/2,y-NH*s],fr:[xc+w*s/2,y-NH*s],bl:[xc2-w*s2/2,y2-NH*s2],br:[xc2+w*s2/2,y2-NH*s2],
+      lo:[xc-w*s/2,y],ro:[xc+w*s/2,y],blo:[xc2-w*s2/2,y2],bro:[xc2+w*s2/2,y2]};
+  };
+  const at=(k,u,v)=>{const f=[k.fl[0]+(k.fr[0]-k.fl[0])*u,k.fl[1]+(k.fr[1]-k.fl[1])*u],b=[k.bl[0]+(k.br[0]-k.bl[0])*u,k.bl[1]+(k.br[1]-k.bl[1])*u];
+    return [f[0]+(b[0]-f[0])*v,f[1]+(b[1]-f[1])*v];};
+  const quad=(...p)=>{x.beginPath();x.moveTo(p[0][0],p[0][1]);for(let i=1;i<p.length;i++)x.lineTo(p[i][0],p[i][1]);x.closePath();};
+  const top=(k,u0,v0)=>quad(at(k,u0,v0),at(k,1-u0,v0),at(k,1-u0,1-v0),at(k,u0,1-v0));
+  /* a note: a frame, the same for every stroke, with glass set in it. The glass is lit for a stroke, empty for a ghost note,
+     and lit with a flare behind it for an accent, whose frame is a little heavier. Its front edge sits on the stroke's moment,
+     and it is faint in the distance and solid near the line. A pad is the same box in wire. */
+  x.imageSmoothingQuality='high';
+  const note=(h,d,wk,kind,glass,alpha,near)=>{
+    const w=pW*wk,k=corners(h,d,w),s=k.s;
+    const a=alpha*clamp((1-d)*4,0,1)*(near?1:1-clamp(d*1.15,0,0.7));if(a<=0.01)return;
+    x.globalAlpha=a;
+    if(kind==='P'){   /* the pad: the box in wire, with a trace of glass, that a note drops into */
+      x.lineJoin='round';
+      quad(k.blo,k.bro,k.br,k.bl);x.strokeStyle=F(glass,0.35);x.lineWidth=1;x.stroke();   /* the back, seen through it */
+      x.beginPath();x.moveTo(k.lo[0],k.lo[1]);x.lineTo(k.blo[0],k.blo[1]);x.moveTo(k.ro[0],k.ro[1]);x.lineTo(k.bro[0],k.bro[1]);x.stroke();
+      top(k,0,0);x.fillStyle=F(glass,0.07);x.fill();x.strokeStyle=F(glass,0.9);x.lineWidth=1.5;x.stroke();
+      quad(k.lo,k.ro,k.fr,k.fl);x.fillStyle=F(glass,0.1);x.fill();x.strokeStyle=glass;x.lineWidth=2;x.stroke();
+      x.globalAlpha=1;return;
+    }
+    const o=hwSprite(C,kind,glass,w,NH,dpr),fr=(kind==='A'?3.5:2)/w,lit=kind!=='g';
+    x.drawImage(o.cv,laneX(h,s)-(w/2+o.ox)*s,k.y-o.oy*s,o.SW*s,o.SH*s);
+    top(k,0,0);x.fillStyle=C.strong;x.fill();x.fillStyle=F(C.shine,0.35);x.fill();
+    top(k,fr,0.14);x.fillStyle=F(glass,lit?1:0.16);x.fill();if(lit){x.fillStyle=F(C.shine,0.3);x.fill();}
+    x.globalAlpha=1;
+  };
+  /* the strokes in sight: the ones that have reached the line fade on their pad, oldest first so the newest is on top;
+     then the coming ones far to near */
+  const kindOf=c=>c.dy==='A'||c.dy==='g'?c.dy:'n';
+  const drawNotes=list=>list.forEach(o=>{
+    const c=o.c,h=hnd(o.n),res=o.res;
+    let d=(c.t-t)/A,alpha=1,glass=C[h];
+    if(d<0){alpha=clamp(1+d*A/0.5,0,1);d=0;}
+    if(res){glass=tone(res);if(res.miss)alpha*=0.4;}
+    /* flams and drags: the grace notes come just before, narrower and empty, in the other lane */
+    const gr=graceOf(o.n),gh=graceHand(o.n);
+    for(let q=gr;q>=1;q--){const dg=d-0.05*q/A*1.2;if(dg>=0)note(gh,dg,0.5,'g',C[gh],alpha);}
+    const k=kindOf(c);
+    note(h,d,1,res&&k==='g'?'n':k,glass,alpha,d===0);
+  });
+  /* the pads: one in each lane on the line, a wire frame the size of a note, that catches it. It takes the colour of
+     the timing for a moment when played. */
+  ['L','R'].forEach(h=>{
+    const v=last[h],hit=v&&!v.res.miss&&t-v.c.t>=0&&t-v.c.t<0.45;
+    note(h,0,1,'P',hit?tone(v.res):C[h],1,true);
+  });
+  x.lineCap='round';across(0,C.accent,3+pulse*5);x.lineCap='butt';
+  drawNotes(vis.filter(o=>o.c.t<=t));
+  /* a hit lights its pad in the colour of the timing, with a burst. It is the same for every stroke: how hard you played is only
+     measured when a run ends, so it cannot yet show here. */
+  const hash=n=>{const v=Math.sin(n*12.9898)*43758.5453;return v-Math.floor(v);};
+  ['L','R'].forEach(h=>{
+    const v=last[h];if(!v||v.res.miss)return;
+    const age=t-v.c.t;if(age<0||age>0.45)return;
+    const k=1-age/0.45,big=0.6,col=tone(v.res),sx=laneX(h,1)-pW/2;
+    hwGlow(x,laneX(h,1),hitY-NH*0.5,pW*(0.5+0.15*big),NH*(1.5+big*3.5),F(col,0.6*k),F(col,0));
+    if(still)return;
+    x.strokeStyle=col;x.lineWidth=2;x.lineCap='round';
+    for(let i=0;i<6;i++){   /* sparks, rising off the pad */
+      const r0=hash(v.c.t*7+i),r1=hash(v.c.t*13+i*3),px=sx+pW*(0.08+0.84*r0),rise=(1-k)*(NH*1.5+NH*4*big*r1),py=hitY-NH-rise;
+      x.globalAlpha=k;x.beginPath();x.moveTo(px,py);x.lineTo(px+(r0-0.5)*4,py-5-4*big);x.stroke();
+    }
+    x.globalAlpha=1;x.lineCap='butt';
+  });
+  drawNotes(vis.filter(o=>o.c.t>t).reverse());
+  /* where the stroke was when you played it: a flash of its edge, above the line if early and below if late */
+  const hitAt=o=>o.c.t+o.res.ms/1000,shot={L:null,R:null};
+  vis.forEach(o=>{if(!o.res||o.res.miss||hitAt(o)>t)return;const h=hnd(o.n);if(!shot[h]||hitAt(o)>hitAt(shot[h]))shot[h]=o;});
+  ['L','R'].forEach(h=>{
+    const v=shot[h];if(!v)return;
+    const age=t-hitAt(v);if(age>0.45)return;
+    const s=sOf(-v.res.ms/1000/A),y=yOf(s),w=pW*s;
+    x.globalAlpha=1-age/0.45;x.fillStyle=tone(v.res);
+    x.fillRect(laneX(h,s)-w/2-4,y-2,w+8,4);
+    x.globalAlpha=1;
+  });
+  /* haze over the far end, so the strokes come out of the distance */
+  const hzY=yOf(sOf(0.55)),hz=x.createLinearGradient(0,0,0,hzY);
+  hz.addColorStop(0,C.bg);hz.addColorStop(0.2,F(C.bg,0.85));hz.addColorStop(1,F(C.bg,0));
+  x.fillStyle=hz;x.fillRect(0,0,W,hzY);
+  x.fillStyle=C.muted;x.font='800 22px '+C.fd;x.textAlign='center';x.textBaseline='middle';
+  ['L','R'].forEach(h=>x.fillText(h,laneX(h,1),under+16));
+  if(!plan)return;
+  /* the verdict of each lane's last stroke, under its lane, fading */
+  x.font='600 13px '+C.fb;
+  ['L','R'].forEach(h=>{
+    const v=last[h];if(!v)return;
+    const age=t-v.c.t;if(age>HW_PAST)return;
+    const res=v.res;let txt;
+    if(res.miss)txt='missed';
+    else{
+      const ms=Math.round(res.ms);
+      txt=Math.abs(res.ms)<=tol?'on time':(ms<0?'early ':'late ')+Math.abs(ms)+' ms';
+      if(res.wrong)txt+=' · →'+res.wrong;
+    }
+    x.globalAlpha=clamp((HW_PAST-age)/0.3,0,1);
+    x.fillStyle=tone(res);x.fillText(txt,laneX(h,1),Math.min(H-10,under+36));
+    x.globalAlpha=1;
+  });
 }
 /* A finished run, rebuilt from what was saved: its passes drawn again and every stroke given back its result. The review on the Play page and the staff on a run's own page both come from this. */
 let rvModel=null;
@@ -7062,6 +7367,8 @@ function closeTempo(){
   const m=$('tempoModal');if(m.hidden)return;
   m.hidden=true;$('bpmOpen').focus({preventScroll:true});
 }
+function applyView(){document.documentElement.dataset.view=S.view;}
+function syncView(){$('view').setAttribute('aria-checked',String(S.view==='hwy'));}
 function applyTheme(){
   const d=S.theme==='dark',b=$('themeBtn');
   document.documentElement.dataset.theme=S.theme;
@@ -7146,6 +7453,7 @@ function wire(){
   $('palette').addEventListener('change',e=>{S.palette=e.target.value;applyTheme();save();});
   $('layout').addEventListener('change',e=>{S.layout=e.target.value;save();syncLayout();});
   if(wideMQ)wideMQ.addEventListener('change',syncLayout);
+  $('view').addEventListener('click',()=>{S.view=S.view==='hwy'?'staff':'hwy';syncView();applyView();save();if(run&&!run.ended)drawHwy(run);});
   $('pulse').addEventListener('change',e=>{S.pulse=e.target.value==='on';save();if(!S.pulse)clearPulse();});
   $('csvBtn').addEventListener('click',downloadCsv);
   document.querySelectorAll('[data-help]').forEach(b=>b.addEventListener('click',()=>{
@@ -7317,7 +7625,7 @@ function init(){
   $('accent').value=S.accent;
   $('tol').value=String(S.tol);
   $('gap').value=String(S.gap);
-  $('pulse').value=S.pulse?'on':'off';$('palette').value=S.palette;$('layout').value=S.layout;
+  $('pulse').value=S.pulse?'on':'off';syncView();$('palette').value=S.palette;$('layout').value=S.layout;
   syncEach();
   $('ver').textContent='v'+VERSION;
   renderLibrary();
@@ -7326,7 +7634,7 @@ function init(){
   $('vol').value=S.vol;$('volOut').textContent=S.vol+'%';
   $('latency').value=S.latency==null?'':S.latency;
   initStrips();initTaps();wireBuilder();setInputMode();updateLatUI();
-  wire();applyTheme();syncLayout();
+  wire();applyTheme();applyView();syncLayout();
   showTab('play');
   onRoutineChanged();
   seedLibraries();

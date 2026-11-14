@@ -106,6 +106,31 @@ audioTest('starting a run from the welcome closes it, so the results are not hid
   assert.deepEqual(p.errors, []);
 });
 
+audioTest('Visualisation: off by default, the staff; switched on, the highway takes its place only while a run plays', async () => {
+  const shown = (p, sel) => p.evaluate(s => { const e = document.querySelector(s), cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden'; }, sel);
+  const start = async p => { await p.keyboard.press('Space'); await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 }); };
+  const staff = await open({ seeded: true, noise: -50, latCal: true, input: 'kb', eachUnit: 'pass', eachVal: 2 });
+  assert.equal(await staff.getAttribute('#view', 'aria-checked'), 'false');
+  await start(staff);
+  assert.ok(await shown(staff, '#rows'), 'the staff while playing, by default');
+  assert.ok(!(await shown(staff, '#hwy')));
+  assert.deepEqual(staff.errors, []);
+  const p = await open({ seeded: true, noise: -50, latCal: true, input: 'kb', eachUnit: 'pass', eachVal: 2, view: 'hwy' });
+  assert.equal(await p.getAttribute('#view', 'aria-checked'), 'true');
+  assert.ok(await shown(p, '#rows'), 'before a run the staff is still there to pick the exercise');
+  assert.ok(!(await shown(p, '#hwy')));
+  await start(p);
+  await p.waitForTimeout(300);
+  assert.ok(await shown(p, '#hwy'), 'the highway while playing');
+  assert.ok(!(await shown(p, '#rows')));
+  assert.ok(await p.evaluate(() => { const c = document.getElementById('hwy'); return c.width > 0 && c.getContext('2d').getImageData(0, 0, c.width, c.height).data.some(v => v); }), 'the highway is drawn');
+  await p.evaluate(() => document.getElementById('view').click());   /* switched off mid-run: back to the staff */
+  assert.equal(await p.getAttribute('#view', 'aria-checked'), 'false');
+  assert.ok(await shown(p, '#rows'), 'switched off, the staff again');
+  assert.ok(!(await shown(p, '#hwy')));
+  assert.deepEqual(p.errors, []);
+});
+
 micTest('cancelling Auto calibrate stops its clicks, so starting again does not stack them', async () => {
   /* Count the short clicks Auto calibrate schedules, and forget each one once it is stopped or has played. */
   const p = await open({ seeded: true, noise: -50 }, null, () => {
