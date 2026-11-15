@@ -1165,7 +1165,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>Each row is one pass</b> of an exercise. The top row is playing and the next passes sit beneath it. Rows slide up as each pass ends.</li>
         <li><b>The moving line</b> reaches each note exactly when it is due. Strike as it arrives.</li>
         <li><b>A dot under a note</b> means the stroke was heard. Its timing comes a moment later, once the note's on-time window has closed and a later hit can no longer be the better match: then the letter takes the colour of early, on time or late.</li>
-        <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket lights up for a moment and a flash shows where the note was: above the line is early, below is late. Under its lane it says heard. A moment later, once the note's window has closed, the stroke is judged: it takes the colour of its timing and the verdict replaces heard.</li>
+        <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket lights up for a moment, and under its lane it says heard. A moment later, once the note's window has closed, the stroke is judged: it takes the colour of its timing and the verdict replaces heard.</li>
         <li><b>Letter colours:</b> green is on time, blue and slanted is early, pink and underlined is late, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as green.</li>
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
         <li><b>The gauge</b> shows how early or late you played on average over the last 32 strokes. Left is early, right is late.</li>
@@ -2976,7 +2976,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.129';                           /* shown beside the title */
+const VERSION='1.5.130';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4789,17 +4789,6 @@ function drawHwy(r,heard){
     x.globalAlpha=1;x.lineCap='butt';
   });
   drawNotes(vis.filter(o=>o.c.t>t).reverse());
-  /* where the stroke was when you played it: a flash of its edge, above the line if early and below if late */
-  const hitAt=o=>o.c.t+o.res.ms/1000,shot={L:null,R:null};
-  vis.forEach(o=>{if(!o.res||o.res.miss||hitAt(o)>t)return;const h=hnd(o.n);if(!shot[h]||hitAt(o)>hitAt(shot[h]))shot[h]=o;});
-  ['L','R'].forEach(h=>{
-    const v=shot[h];if(!v)return;
-    const age=t-hitAt(v);if(age>0.45)return;
-    const s=sOf(-v.res.ms/1000/A),y=yOf(s),w=pW*s;
-    x.globalAlpha=1-age/0.45;x.fillStyle=tone(v.res);
-    x.fillRect(laneX(h,s)-w/2-4,y-2,w+8,4);
-    x.globalAlpha=1;
-  });
   /* haze over the far end, so the strokes come out of the distance */
   const hzY=yOf(sOf(0.55)),hz=x.createLinearGradient(0,0,0,hzY);
   hz.addColorStop(0,C.bg);hz.addColorStop(0.2,F(C.bg,0.85));hz.addColorStop(1,F(C.bg,0));
