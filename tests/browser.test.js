@@ -618,6 +618,48 @@ async function runOnce(settings, practice, init) {
   return out;
 }
 
+audioTest('Export run saves the run just played with its loudness, only when the loudness was kept', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: '8 zRzL', eachUnit: 'pass', eachVal: 1, seeded: true });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  await p.evaluate(() => {
+    const T = window.__T, r = T.run(), pl = r.plan, v = new Float32Array(4000);
+    for (let k = 0; k < 4000; k++) v[k] = k % 250 < 20 ? 0.5 : 0.01;
+    r.env = { t: 0, dt: 0.001, v, n: 3000, thr: -30 };   /* as a microphone run with buzz strokes keeps it */
+    r.dev = [['h', 0.25, -6], ['b', 0.31, -14]];
+    pl.slots.forEach(s => {
+      const hand = pl.segs[s.seg].notes[s.pos].slice(-1);
+      T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } });
+    });
+  });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  assert.equal(await p.isVisible('#advExport'), true);
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#advExport')]);
+  assert.match(dl.suggestedFilename(), /^pocket-run-\d{8}-\d{4}\.json$/);
+  const f = JSON.parse(require('fs').readFileSync(await dl.path(), 'utf8'));
+  assert.equal(f.v, 2);
+  assert.equal(f.runs.length, 1);
+  assert.match(f.items[f.runs[0].exercises[0].k], /zRzL$/);   /* the exercise travels as a hash, as in a history export */
+  const tr = f.trace;
+  assert.equal(tr.slots.length, 2);
+  assert.deepEqual(tr.slots.map(s => s.bz), [1, 1]);
+  assert.ok(tr.slots.every(s => Math.abs(s.ms - 5) <= 1));
+  assert.deepEqual(tr.det, [['h', 0.25, -6], ['b', 0.31, -14]]);
+  assert.equal(tr.env.db.length, 3000);
+  assert.equal(tr.env.db[0], -6);
+  assert.equal(tr.env.db[100], -40);
+  /* a run with no loudness kept has no Export run */
+  await p.click('#advAgain');
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && !window.__T.run().ended, null, { timeout: 8000 });
+  await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } })); });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  assert.equal(await p.isVisible('#advExport'), false);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
 audioTest('a run whose sound falls behind the screen is stopped, not saved, and the audio rebuilt', async () => {
   /* The audio clock runs at 80% of real time, as a broken iPhone audio setup might: the clicks fall further and further behind. */
   const p = await open({ input: 'kb', bpm: 60, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 4, seeded: true }, null, () => {
@@ -955,6 +997,33 @@ audioTest('a routine shows the most a flawless run could score, and a flawless r
   const [sc, mx] = got.split('|');
   assert.equal(sc, max.replace('Max score: ', ''), 'a flawless run scores the maximum');
   assert.equal(mx, '/ ' + sc);
+});
+
+audioTest('a stroke shows nothing when it is heard, and its timing only once its window has closed', async () => {
+  const p = await open({ input: 'kb', bpm: 60, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && window.__T.run().t0 > 0, null, { timeout: 8000 });
+  const card = () => p.evaluate(() => {
+    const c = [...document.querySelectorAll('svg.staff g.cd')].find(g => g._slot === 0), v = window.__T.run().res.get(0);
+    return c ? { cls: c.getAttribute('class').split(/\s+/), ft: (c.querySelector('.ft') || {}).textContent, pend: !!(v && v.pend) } : null;
+  });
+  /* the first stroke, 5 ms late, played as it is due */
+  await p.evaluate(async () => {
+    const T = window.__T, r = T.run(), s = r.plan.slots[0], ctx = T.ctx(), due = r.t0 + s.t;
+    while (ctx.currentTime < due - 0.02) await new Promise(f => setTimeout(f, 10));
+    T.hit({ t: due + 0.005, kb: true, f: null, det: { hand: 'R', conf: 1 } });
+  });
+  let c = null;
+  for (let k = 0; k < 40 && !(c && c.pend); k++) { await p.waitForTimeout(25); c = await card(); }
+  assert.ok(c && c.pend, 'heard: ' + JSON.stringify(c));
+  assert.equal(c.ft, '');
+  assert.ok(!['ok', 'early', 'late', 'heard'].some(k => c.cls.includes(k)), 'no mark before the window closes');
+  for (let k = 0; k < 80 && c && !['ok', 'early', 'late', 'miss'].some(k => c.cls.includes(k)); k++) { await p.waitForTimeout(50); c = await card(); }
+  assert.ok(c && c.cls.includes('ok'), 'judged on time: ' + JSON.stringify(c));
+  assert.equal(c.pend, false);
+  assert.ok(!c.cls.includes('heard'));
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
 });
 
 audioTest('the live score counts up as strokes are judged, drops the streak on a slip, matches the final score, and is hidden for practice', async () => {
