@@ -665,3 +665,36 @@ test('findings: the second note of each double', () => {
   assert.equal(f[0].role, 'double2');
   assert.match(c.findingText(f[0], pl), /^The second note of each double lands \d+ ms later/);
 });
+
+/* ---------- drills from findings ---------- */
+const drillRun = (text, off) => { const pl = fplan(text), g = gauss(rng(1)); const sr = fakeRun(pl, (sg, sl) => g() * 6 + off(sl)); return { pl, sr, f: c.findings(pl, sr, 20) }; };
+const parsesAsOne = d => { const p = c.parseRoutine(d.text); assert.deepEqual(plain(p.errors), [], d.text); assert.equal(p.exercises.length, 1, d.text); };
+
+test('drills: a late change of sticking gives the whole beats around it, 10 BPM slower', () => {
+  const { pl, sr, f } = drillRun('RLRL RLRL RLRR RRLR', sl => sl.pos === 13 ? 20 : 0);
+  const d = c.drillOf(pl, sr, f[0]);
+  assert.equal(d.text, '16 RLRR RRLR');
+  assert.equal(d.bpm, 50);
+  assert.equal(d.beats, 2);
+  parsesAsOne(d);
+});
+test('drills: the window can wrap into the previous pass', () => {
+  const { pl, sr, f } = drillRun('RLRR RLRL RLRL RLRL', sl => sl.pos === 0 ? 20 : 0);
+  const d = c.drillOf(pl, sr, f[0]);
+  assert.equal(d.text, '16 RLRL RLRR');   /* the last beat of one pass, then the first of the next */
+  parsesAsOne(d);
+});
+test('drills: a stroke role gives a drill, and a place in the beat does not', () => {
+  const { pl, sr, f } = drillRun('RRLL RRLL', sl => sl.pos % 2 ? 15 : 0);
+  const role = f.find(x => x.role === 'double2'), beat = f.find(x => x.kind === 'beat');
+  assert.equal(c.drillOf(pl, sr, role).text, '16 RRLL RRLL');
+  assert.equal(c.drillOf(pl, sr, beat), null);
+});
+test('drills: triplets keep their grouping and the tempo never goes below 40 BPM', () => {
+  const { pl, sr, f } = drillRun('8t RLR LRL RLR LRR', sl => sl.pos === 10 ? 20 : 0);
+  const d = c.drillOf(pl, sr, f[0]);
+  assert.equal(d.text, '8t RLR LRR RLR');
+  parsesAsOne(d);
+  pl.segs[0].bpm = 45;
+  assert.equal(c.drillOf(pl, sr, f[0]).bpm, 40);
+});

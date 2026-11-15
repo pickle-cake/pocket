@@ -608,7 +608,7 @@ audioTest('a finding after a run marks its strokes on the review staff, with an 
   await p.waitForTimeout(300);
   /* the hands differ too, since only the right hand is late, so the finding may come second */
   const note = await p.evaluate(() => document.querySelector('#advice [data-mk]').parentElement.innerText);
-  assert.match(note, /^Stroke 3 \(R\) lands \d+ ms later than the rest of the exercise\. Show on staff$/, note);
+  assert.match(note, /^Stroke 3 \(R\) lands \d+ ms later than the rest of the exercise\. Show on staff Practise at 110 BPM$/, note);
   const btn = p.locator('#advice [data-mk]').first();
   assert.equal(await btn.getAttribute('aria-pressed'), 'false');
   await btn.click();
@@ -623,6 +623,16 @@ audioTest('a finding after a run marks its strokes on the review staff, with an 
   await btn.click();
   assert.equal(await p.evaluate(() => document.querySelectorAll('#rows g.cd.mk').length), 0);
   assert.equal(await btn.getAttribute('aria-pressed'), 'false');
+  /* the drill: the beats around the stroke, 10 BPM slower, loaded on Play but not started */
+  await p.locator('#advice [data-mk] ~ [data-drill]').first().click();
+  if (await p.locator('#confirmModal').isVisible()) await p.click('#cfDiscard');   /* the routine was never saved */
+  const after = await p.evaluate(() => ({ text: document.getElementById('routineText').value, bpm: document.getElementById('bpm').value, sum: document.getElementById('playSummary').textContent, state: document.body.dataset.state, review: document.body.dataset.review || '' }));
+  assert.match(after.text, /^title: .*Drill/im, after.text);
+  assert.match(after.text, /^16 RLRL( RLRL)*$/m, after.text);
+  assert.equal(after.bpm, '110');
+  assert.match(after.sum, /^110 BPM.* plays for 1 minute$/, after.sum);
+  assert.notEqual(after.state, 'run');
+  assert.notEqual(after.review, '1');
   assert.deepEqual(p.errors, []);
 });
 

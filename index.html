@@ -2557,6 +2557,49 @@ function findingText(f,plan){
   s=(multi?'In exercise '+f.ex+', ':'')+s;
   return s.charAt(0).toUpperCase()+s.slice(1);
 }
+/* ---------- practise the change: a short exercise built from the strokes around a finding ---------- */
+/* around strokes either side of the stroke a finding names, slower BPM below the run, played for mins minutes (the app sets the
+   length, so it shows as the Length setting); a drill longer than maxBeats is not offered. */
+const DRILL={around:2,slower:10,maxBeats:16,mins:1};
+/* The position a group finding is clearest at: the most missed, or the furthest off in the finding's direction. */
+function drillPos(f,plan,seg){
+  const Q=seg[f.seg],sg=plan.segs[f.seg],by=new Map();
+  if(!Q||!Q.sm)return -1;
+  f.ks.forEach(k=>{
+    const p=plan.slots[sg.first+k].pos,v=Q.sm[k];
+    by.set(p,(by.get(p)||0)+(f.what==='miss'?(v===null?1:0):(v===null?0:v*Math.sign(f.d))));
+  });
+  let best=-1,bs=-Infinity;
+  by.forEach((s,p)=>{if(s>bs){bs=s;best=p;}});
+  return best;
+}
+/* A drill for a seam, a stroke or a stroke's role in the sticking: the strokes either side of it, widened to whole beats so every
+   stroke keeps its place in the beat, written as a routine line. It can run over the end of a pass into the next. Null when the
+   finding has no place in the sticking (a place in the beat, settling) or the drill would be too long. */
+function drillOf(plan,seg,f){
+  if(!f||!(f.kind==='seam'||f.kind==='ctx'||f.kind==='pos'))return null;
+  const sg=plan.segs[f.seg];if(!sg)return null;
+  const n=sg.notes,N=n.length,idx=[];
+  for(let i=0;i<N;i++)if(n[i]!=='_')idx.push(i);
+  const S=idx.length;if(S<2)return null;
+  let a,b;   /* the first and last stroke, counted from the first stroke of a pass, so they can fall in the pass before or after */
+  if(f.kind==='seam'){let j=idx.findIndex(i=>i>=f.seam.at);if(j<0)j=S;a=j-2;b=j+1;}
+  else{const j=idx.indexOf(drillPos(f,plan,seg));if(j<0)return null;a=j-DRILL.around;b=j+DRILL.around;}
+  const md=(x,m)=>((x%m)+m)%m,inB=[];
+  let acc=0;for(let i=0;i<N;i++){inB.push(rb9(acc));acc+=1/sg.subs[i];}
+  const cellOf=j=>Math.floor(j/S)*N+idx[md(j,S)],off=c=>Math.floor(c/N)*sg.passBeats+inB[md(c,N)];
+  let s=cellOf(a),e=cellOf(b)+1;
+  for(let k=0;k<3*N&&!isInt(off(s));k++)s--;
+  for(let k=0;k<3*N&&!isInt(off(e));k++)e++;
+  if(!isInt(off(s))||!isInt(off(e)))return null;
+  const beats=Math.round(off(e)-off(s));
+  if(beats<1||beats>DRILL.maxBeats)return null;
+  const notes=[],gs=[],subs=[];
+  for(let c=s;c<e;c++){notes.push(n[md(c,N)]);gs.push(c===s||!!sg.groupStart[md(c,N)]);subs.push(sg.subs[md(c,N)]);}
+  const sig=sg.sig?{n:beats,d:sg.sig.d,groups:defGroups(beats,sg.sig.d)}:null;
+  return {notes:notes,strokes:notes.filter(x=>x!=='_').length,beats:beats,bpm:Math.max(40,Math.round(sg.bpm)-DRILL.slower),
+    text:showPattern(notes,gs,subs,0,sig)};
+}
 function fmtTime(s){
   s=Math.max(0,Math.round(s));
   return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
@@ -3149,7 +3192,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.144';                           /* shown beside the title */
+const VERSION='1.5.145';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5184,14 +5227,46 @@ function coachItems(r){
   if(!parts.length)parts.push({t:'Timing is even across both hands and all strokes.'});
   return parts;
 }
-/* A note's text, with a button that marks its strokes on the review staff when it is a finding and the run is over. */
+/* A note's text. When it is a finding and the run is over, buttons follow: one marks its strokes on the review staff, and one
+   loads a drill of the strokes around it, slower. */
 function coachNote(el,it){
   el.textContent=it?it.t:'';
-  if(!it||!it.f||!view||!view.ended||!markSlotsFor(it.f))return;
-  const b=document.createElement('button');b.type='button';b.className='btn link inl';b.textContent='Show on staff';
-  b.dataset.mk=findKey(it.f);b.setAttribute('aria-pressed',String(markOn()&&markKey===b.dataset.mk));
-  b.addEventListener('click',()=>toggleMark(it.f));
-  el.append(' ',b);
+  if(!it||!it.f||!view||!view.ended)return;
+  if(markSlotsFor(it.f)){
+    const b=document.createElement('button');b.type='button';b.className='btn link inl';b.textContent='Show on staff';
+    b.dataset.mk=findKey(it.f);b.setAttribute('aria-pressed',String(markOn()&&markKey===b.dataset.mk));
+    b.addEventListener('click',()=>toggleMark(it.f));
+    el.append(' ',b);
+  }
+  const d=drillFor(it.f);
+  if(d){
+    const b=document.createElement('button');b.type='button';b.className='btn link inl';b.dataset.drill='';
+    b.textContent='Practise at '+d.bpm+' BPM';
+    b.addEventListener('click',()=>practiseDrill(d));
+    el.append(' ',b);
+  }
+}
+/* A drill for a finding of the run on the review, if its text reads back as one exercise. */
+function drillFor(f){
+  let d;
+  try{d=drillOf(view.plan,view.seg,f);}catch(e){return null;}
+  if(!d)return null;
+  const p=parseRoutine(d.text);
+  return p.errors.length||p.exercises.length!==1?null:d;
+}
+/* Puts the drill on the Play page at its slower tempo, named after the routine it came from. It does not start. */
+function practiseDrill(d){
+  if(run&&!run.ended)return;
+  const from=curName().replace(/ drill$/,''),name=from==='Unsaved routine'?'Drill':from+' drill';
+  guard(()=>{
+    setRoutineText(setHeader(d.text,'title',name));
+    S.bpm=d.bpm;$('bpm').value=S.bpm;
+    S.eachUnit='min';S.eachVal=DRILL.mins;$('eachUnit').value=S.eachUnit;$('eachVal').value=S.eachVal;syncEach();
+    lastRun=null;refreshPreview();renderAdvice();setReview(false);
+    save();syncInfo();
+    setStatus('Loaded a drill of the strokes around it at '+d.bpm+' BPM. Press Start to play it.');
+    showTab('play');window.scrollTo(0,0);
+  });
 }
 /* Coaching after a run: the first note is the headline (#advHead), the rest are listed under it. */
 function coachList(r){
