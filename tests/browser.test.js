@@ -999,7 +999,7 @@ audioTest('a routine shows the most a flawless run could score, and a flawless r
   assert.equal(mx, '/ ' + sc);
 });
 
-audioTest('a stroke shows a dot as soon as it is heard, and its timing only once its window has closed', async () => {
+audioTest('a stroke shows nothing when it is heard, and its timing only once its window has closed', async () => {
   const p = await open({ input: 'kb', bpm: 60, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true });
   await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && window.__T.run().t0 > 0, null, { timeout: 8000 });
@@ -1014,12 +1014,11 @@ audioTest('a stroke shows a dot as soon as it is heard, and its timing only once
     T.hit({ t: due + 0.005, kb: true, f: null, det: { hand: 'R', conf: 1 } });
   });
   let c = null;
-  for (let k = 0; k < 40 && !(c && c.cls.includes('heard')); k++) { await p.waitForTimeout(25); c = await card(); }
-  assert.ok(c && c.cls.includes('heard'), 'heard: ' + JSON.stringify(c));
-  assert.equal(c.pend, true);
-  assert.equal(c.ft, '●');
-  assert.ok(!['ok', 'early', 'late'].some(k => c.cls.includes(k)), 'no verdict before the window closes');
-  for (let k = 0; k < 80 && c && c.cls.includes('heard'); k++) { await p.waitForTimeout(50); c = await card(); }
+  for (let k = 0; k < 40 && !(c && c.pend); k++) { await p.waitForTimeout(25); c = await card(); }
+  assert.ok(c && c.pend, 'heard: ' + JSON.stringify(c));
+  assert.equal(c.ft, '');
+  assert.ok(!['ok', 'early', 'late', 'heard'].some(k => c.cls.includes(k)), 'no mark before the window closes');
+  for (let k = 0; k < 80 && c && c.pend; k++) { await p.waitForTimeout(50); c = await card(); }
   assert.ok(c && c.cls.includes('ok'), 'judged on time: ' + JSON.stringify(c));
   assert.equal(c.pend, false);
   assert.ok(!c.cls.includes('heard'));
