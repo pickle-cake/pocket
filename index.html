@@ -2961,7 +2961,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.138';                           /* shown beside the title */
+const VERSION='1.5.139';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3270,10 +3270,12 @@ async function ensureAudio(needMic){
            Fall back to the older main-thread node, running the same detector. */
         const sp=ctx.createScriptProcessor(256,1,1);
         const det=new OnsetDetector(ctx.sampleRate,ev=>onNodeMsg({data:ev}));
+        /* Each buffer is placed by its own time, when the browser gives one, so a buffer the page missed does not move every hit after it. */
         let fr=null;
         sp.onaudioprocess=e=>{
           const ch=e.inputBuffer.getChannelData(0);
-          if(fr===null)fr=Math.round((e.playbackTime||ctx.currentTime)*ctx.sampleRate);
+          if(e.playbackTime>0)fr=Math.round(e.playbackTime*ctx.sampleRate);
+          else if(fr===null)fr=Math.round(ctx.currentTime*ctx.sampleRate);
           det.process(ch,fr);fr+=ch.length;
         };
         src.connect(sp);sp.connect(ctx.destination);
@@ -3516,10 +3518,9 @@ function heardNow(){
   }
   return now-(ctx.outputLatency||0);
 }
-function kbTime(ts){
-  const o=ctx.getOutputTimestamp?ctx.getOutputTimestamp():null;
-  return (o&&o.performanceTime)?o.contextTime+(ts-o.performanceTime)/1000:ctx.currentTime;
-}
+/* The point on the audio clock that was coming out of the speakers when an event with page time ts happened: a key or pad hit is
+   judged against the clicks as they were heard, with the same safeguards as the screen. */
+function kbTime(ts){return heardNow()-(performance.now()-ts)/1000;}
 async function lockScreen(){try{if(navigator.wakeLock&&!wake)wake=await navigator.wakeLock.request('screen');}catch(e){wake=null;}}
 function unlockScreen(){try{if(wake){wake.release();wake=null;}}catch(e){wake=null;}}
 
