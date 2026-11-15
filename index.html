@@ -2969,7 +2969,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.133';                           /* shown beside the title */
+const VERSION='1.5.134';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -6487,13 +6487,14 @@ function frame(){
   const heard=heardNow()-r.t0;
   while(r.cur+1<cells.length&&cells[r.cur+1].t<=heard)r.cur++;
   /* The rows shift up when a pass ends. With a count-in before a new bar they shift as it starts.
-     Otherwise the cursor first steps onto the lower row and the rows shift up a moment later. */
+     Otherwise the cursor first steps onto the lower row and the rows shift up a moment later: at most 0.15 s, so a long first note
+     (a buzz, a half note) does not hold them back. */
   const total=totalPasses(plan);
   const shiftAt=g=>{
     const pa=passAt(plan,g),sg=segs[pa.si];
     if(pa.p===0&&pa.si>0&&S.gap>0)return sg.leadStart;
     const c=cells[sg.cell0+pa.p*sg.N];
-    return c.t+0.6*c.d;
+    return c.t+Math.min(0.6*c.d,0.15);
   };
   let g=r.showG;
   while(g+1<total&&heard>=shiftAt(g+1))g++;
