@@ -2193,9 +2193,15 @@ function buzzStats(slots,res,bnc,seg){
     let n=0,last=th;
     for(const t of ts){if(t>th+0.004&&t<=end){n++;last=t;}}
     const gap=nx&&nx.seg===s.seg?nx.t-s.t:9;
-    out.push({n:n,fill:gap<=BUZZ_MAX?Math.min(1,(last-th+0.015)/gap):null});
+    out.push({i:i,n:n,fill:gap<=BUZZ_MAX?Math.min(1,(last-th+0.015)/gap):null});
   });
   return out;
+}
+/* The bounces of each buzz stroke in order, one character each: 0-9 (9 is nine or more), or - for a buzz stroke missed.
+   Saved with the run, so an export shows which buzz strokes sounded like single strokes. */
+function buzzCounts(slots,res,bnc,seg){
+  const n=new Map(buzzStats(slots,res,bnc,seg).map(x=>[x.i,x.n]));
+  return slots.map((s,i)=>!s.bz||(seg!==undefined&&s.seg!==seg)?'':n.has(i)?String(Math.min(9,n.get(i))):'-').join('');
 }
 /* The note on buzz strokes after a run, or '' when there were too few to judge. */
 function buzzNote(st){
@@ -2785,7 +2791,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.119';                           /* shown beside the title */
+const VERSION='1.5.120';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -2885,7 +2891,8 @@ function cleanRun(x){
       da:+b.da>0?Math.floor(+b.da):undefined,dg:+b.dg>0?Math.floor(+b.dg):undefined,ex:+b.ex>0?Math.floor(+b.ex):undefined,sp:typeof b.sp==='string'&&b.sp.length%4===0&&b.sp.length<=SPMAX&&/^[A-Za-z0-9_-]+$/.test(b.sp)?b.sp:undefined,q:typeof b.q==='string'&&b.q.length<=SPMAX&&/^[obmr]+$/.test(b.q)?b.q:undefined,
       an:+b.an>0?Math.floor(+b.an):undefined,ac:+b.ac>0?Math.floor(+b.ac):undefined,as:typeof b.as==='number'&&isFinite(b.as)?b.as:undefined,
       gn:+b.gn>0?Math.floor(+b.gn):undefined,gc:+b.gc>0?Math.floor(+b.gc):undefined,gs:typeof b.gs==='number'&&isFinite(b.gs)?b.gs:undefined,
-      bc:+b.bc>0?Math.floor(+b.bc):undefined,bn:typeof b.bn==='number'&&b.bn>=0&&b.bn<100?b.bn:undefined,bf:typeof b.bf==='number'&&b.bf>=0&&b.bf<=100?b.bf:undefined});
+      bc:+b.bc>0?Math.floor(+b.bc):undefined,bn:typeof b.bn==='number'&&b.bn>=0&&b.bn<100?b.bn:undefined,bf:typeof b.bf==='number'&&b.bf>=0&&b.bf<=100?b.bf:undefined,
+      bb:typeof b.bb==='string'&&b.bb.length<=SPMAX&&/^[0-9-]+$/.test(b.bb)?b.bb:undefined});
   });
   if(!exercises.length)return null;
   const o={id:x.id.slice(0,40),t:+x.t,mode:x.mode==='routine'?'routine':'single',rk:typeof x.rk==='string'?x.rk.slice(0,40):null,
@@ -4919,7 +4926,7 @@ function buzzSaved(r,si){
   const st=buzzStats(r.plan.slots,r.res,r.bnc||[],si);
   if(!st.length)return {};
   const fl=st.filter(x=>x.fill!==null).map(x=>x.fill);
-  return {bc:st.length,bn:Math.round(mean(st.map(x=>x.n))*10)/10,bf:fl.length?Math.round(mean(fl)*100):undefined};
+  return {bc:st.length,bn:Math.round(mean(st.map(x=>x.n))*10)/10,bf:fl.length?Math.round(mean(fl)*100):undefined,bb:buzzCounts(r.plan.slots,r.res,r.bnc||[],si)};
 }
 function dynSaved(r,si){   /* accents and ghost notes judged in this exercise: how many, how many were clear, and how even they were */
   const o={};

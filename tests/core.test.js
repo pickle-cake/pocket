@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['parseStrokes', 'nameMarkers', 'fmtPattern', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzStats', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
+  'graceSlot', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzStats', 'buzzCounts', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
 
 const runPoints = (codes, lv) => c.scoreParts([[codes, 1]], lv);
 const plan = (text, opt) => {
@@ -238,6 +238,16 @@ test('buzz stats can take one exercise', () => {
   const res = new Map(s.map((x, i) => [i, { ms: 0 }])), bnc = [0.02, 0.04, 1.02];
   assert.deepEqual(plain(c.buzzStats(s, res, bnc, 1).map(x => x.n)), [1]);
   assert.equal(c.buzzStats(s, res, bnc).length, 2);
+});
+
+test('buzz counts give the bounces of each buzz stroke, - for a miss', () => {
+  const s = [0, 1, 2, 3, 4].map(k => ({ t: k * 0.5, seg: k < 4 ? 0 : 1, bz: k !== 1 }));
+  const res = new Map([[0, { ms: 0 }], [1, { ms: 0 }], [2, { miss: true }], [3, { ms: 0 }], [4, { ms: 0 }]]);
+  const bnc = [0.02, 0.04, 1.52];
+  for (let b = 1; b <= 12; b++) bnc.push(2 + b * 0.02);   /* twelve bounces are written as 9 */
+  assert.equal(c.buzzCounts(s, res, bnc), '2-19');
+  assert.equal(c.buzzCounts(s, res, bnc, 0), '2-1');
+  assert.equal(c.buzzCounts(s, res, bnc, 1), '9');
 });
 
 test('mastery is measured in strokes a minute, so sixteenths count for more than eighths', () => {
