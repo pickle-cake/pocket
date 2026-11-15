@@ -2427,11 +2427,13 @@ const TIGHT_TOL=15,tightClear=(run,b)=>b.due>0&&b.within/b.due>=TARGET&&(run.tol
 /* Cleared with even strokes: at the target with a loudness spread of 2 dB or less (most cleared exercises are between 2 and 3). Keyboard play has no levels. */
 const EVEN_DB=2,evenClear=b=>b.due>0&&b.within/b.due>=TARGET&&heardEnough(b)&&typeof b.ls==='number'&&b.ls<=EVEN_DB;
 /* Per pattern: how it is going at the tempo you played it at most recently. */
+/* The key an exercise or routine's scores are kept under: the same sticking at a different click or accent rule is kept apart. */
+const statKey=(k,lv,dy)=>k+'|'+lv+(dy?'|'+dy:'');
 function patStats(runs,sum){
   const m=new Map();
   runs.forEach(run=>run.exercises.forEach(b=>{
     if(!(b.due>0)||!(b.heard>0)||run.lv==='off')return;   /* an exercise nothing was heard in was not played */
-    const mk=b.k+'|'+run.lv+(run.dy?'|'+run.dy:'');   /* the same sticking with a different accent rule is a different exercise */
+    const mk=statKey(b.k,run.lv,run.dy);   /* the same sticking with a different accent rule is a different exercise */
     let e=m.get(mk);if(!e){e={k:b.k,lv:run.lv,dy:run.dy||'',recs:[]};m.set(mk,e);}
     const hd=heardEnough(b);
     e.recs.push({t:run.t,bpm:b.bpm||run.bpm,pct:b.within/b.due,avg:hd?b.avg:null,ls:hd?b.ls:null,da:b.da||0,dg:b.dg||0,tc:tightClear(run,b),ec:evenClear(b)});
@@ -2448,7 +2450,7 @@ function patStats(runs,sum){
       da:last.da||0,dg:last.dg||0,runs:e.recs.length,used:recent.length,trend:at.slice(-12).map(x=>x.pct),t:last.t,bias:bias.length?bias.reduce((a,x)=>a+x.avg,0)/bias.length:NaN,even:ev.length?ev.reduce((a,x)=>a+x.ls,0)/ev.length:NaN});
   });
   if(sum){
-    const idx=new Map(out.map(e=>[e.k+'|'+e.lv+(e.dy?'|'+e.dy:''),e]));
+    const idx=new Map(out.map(e=>[statKey(e.k,e.lv,e.dy),e]));
     Object.keys(sum.pat).forEach(key=>{
       const q=sum.pat[key],d=idx.get(key);
       if(!d){const r=q.tr.slice(-3);out.push({tc:!!q.tc,ec:!!q.ec,k:q.k,lv:q.lv,dy:q.dy||'',bpm:q.bpm,recent:r.reduce((a,x)=>a+x,0)/r.length,last:q.tr[q.tr.length-1],cleared:q.cleared||null,clearedT:q.clearedT,runs:q.runs,used:r.length,trend:q.tr.slice(),t:q.t,bias:q.avg==null?NaN:q.avg,even:NaN});}
@@ -2463,7 +2465,7 @@ function routineStats(runs,sum){
   const m=new Map();
   runs.forEach(run=>{
     if(!run.rk||run.lv==='off')return;
-    const mk=run.rk+'|'+run.lv+(run.dy?'|'+run.dy:'');
+    const mk=statKey(run.rk,run.lv,run.dy);
     let e=m.get(mk);if(!e){e={rk:run.rk,lv:run.lv,dy:run.dy||'',ne:run.ne,runs:0,t:0,cleared:0,recs:[]};m.set(mk,e);}
     e.runs++;if(run.t>=e.t)e.t=run.t;
     /* a run counts as one score: strokes on time over all its exercises, bias and loudness spread weighted by strokes */
@@ -2488,7 +2490,7 @@ function routineStats(runs,sum){
   return [...m.values()].sort((a,b)=>b.t-a.t);
 }
 function clearedBefore(runs,k,lv,sum,dy){
-  dy=dy||'';const sk=k+'|'+lv+(dy?'|'+dy:'');
+  dy=dy||'';const sk=statKey(k,lv,dy);
   let m=sum&&sum.pat[sk]?sum.pat[sk].cleared:0;
   runs.forEach(run=>run.exercises.forEach(b=>{if(run.lv===lv&&(run.dy||'')===dy&&b.k===k&&b.due>0&&b.within/b.due>=TARGET)m=Math.max(m,b.bpm||run.bpm);}));
   return m;
@@ -2575,7 +2577,7 @@ function foldRun(sum,run){
   if(run.lv==='off')return;
   run.exercises.forEach(b=>{
     if(!(b.due>0)||!(b.heard>0))return;
-    const key=b.k+'|'+run.lv+(run.dy?'|'+run.dy:''),bpm=b.bpm||run.bpm,pct=b.within/b.due;
+    const key=statKey(b.k,run.lv,run.dy),bpm=b.bpm||run.bpm,pct=b.within/b.due;
     let e=sum.pat[key];if(!e){e={k:b.k,lv:run.lv,dy:run.dy||'',runs:0,t:0,bpm:bpm,tr:[],cleared:0,clearedT:0,avg:null};sum.pat[key]=e;}
     e.runs++;e.t=run.t;
     if(bpm!==e.bpm){e.bpm=bpm;e.tr=[];}
@@ -2586,7 +2588,7 @@ function foldRun(sum,run){
     if(evenClear(b))e.ec=1;
   });
   if(run.rk){
-    const key=run.rk+'|'+run.lv+(run.dy?'|'+run.dy:'');
+    const key=statKey(run.rk,run.lv,run.dy);
     let e=sum.rt[key];if(!e){e={rk:run.rk,lv:run.lv,dy:run.dy||'',ne:run.ne,runs:0,t:0,cleared:0};sum.rt[key]=e;}
     e.runs++;e.t=run.t;
     if(run.exercises.length>=run.ne&&run.exercises.every(b=>b.due>0&&b.within/b.due>=TARGET))e.cleared=Math.max(e.cleared,run.bpm);
@@ -2960,7 +2962,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.136';                           /* shown beside the title */
+const VERSION='1.5.137';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3107,23 +3109,25 @@ function unpackRecs(o){
     (q.pat||[]).forEach(e=>{
       const k=items[e&&e.k];if(typeof k!=='string'||!Array.isArray(e.tr)||!e.tr.length||!LEVELS.some(l=>l.v===e.lv))return;
       const dy=/^[gbm2-7RL]?s?$/.test(e.dy)?e.dy:'';
-      sum.pat[k+'|'+e.lv+(dy?'|'+dy:'')]={k:k,lv:e.lv,dy:dy,runs:num(e.runs),t:num(e.t),bpm:num(e.bpm),tr:e.tr.slice(-12).map(num),cleared:num(e.cleared),clearedT:num(e.clearedT),avg:e.avg==null?null:num(e.avg),tc:e.tc?1:undefined,ec:e.ec?1:undefined};
+      sum.pat[statKey(k,e.lv,dy)]={k:k,lv:e.lv,dy:dy,runs:num(e.runs),t:num(e.t),bpm:num(e.bpm),tr:e.tr.slice(-12).map(num),cleared:num(e.cleared),clearedT:num(e.clearedT),avg:e.avg==null?null:num(e.avg),tc:e.tc?1:undefined,ec:e.ec?1:undefined};
     });
-    Object.keys(q.rt||{}).forEach(key=>{const e=q.rt[key];if(e&&typeof e.rk==='string'&&LEVELS.some(l=>l.v===e.lv))sum.rt[e.rk+'|'+e.lv+(/^[gbm2-7RL]?s?$/.test(e.dy)&&e.dy?'|'+e.dy:'')]={rk:e.rk.slice(0,40),lv:e.lv,dy:/^[gbm2-7RL]?s?$/.test(e.dy)?e.dy:'',ne:Math.max(1,num(e.ne)),runs:num(e.runs),t:num(e.t),cleared:num(e.cleared)};});
+    Object.keys(q.rt||{}).forEach(key=>{const e=q.rt[key];if(e&&typeof e.rk==='string'&&LEVELS.some(l=>l.v===e.lv))sum.rt[statKey(e.rk,e.lv,/^[gbm2-7RL]?s?$/.test(e.dy)&&e.dy)]={rk:e.rk.slice(0,40),lv:e.lv,dy:/^[gbm2-7RL]?s?$/.test(e.dy)?e.dy:'',ne:Math.max(1,num(e.ne)),runs:num(e.runs),t:num(e.t),cleared:num(e.cleared)};});
   }
   const names={};
   if(o.names&&typeof o.names==='object')Object.keys(o.names).forEach(k=>{if(typeof o.names[k]==='string'&&o.names[k].trim())names[k.slice(0,400)]=o.names[k].trim().slice(0,80);});
   return {runs:runs,sum:sum,names:names,nu:Math.max(1,Math.round(num(o.nu))||1),lib:cleanLib(o.lib,items,o.v)};
 }
+/* A run as exported: each sticking replaced by its hash, hk(text), which also files the text under that hash. */
+function packRun(r,hk){
+  const o=Object.assign({},r,{exercises:r.exercises.map(b=>Object.assign({},b,{k:hk(b.k)}))});
+  if(r.sk)o.sk=r.sk.map(b=>({i:b.i,k:hk(b.k)}));
+  if(r.rp)o.rp=Object.assign({},r.rp,{x:hk(r.rp.x)});
+  return o;
+}
 function packRecs(sel){   /* sel says which parts to include; none given means the records as kept in this browser (no settings) */
   sel=sel||{hist:true,lib:true,lists:true,set:false};
   const items={},hk=t=>{const h=hashOf(t);items[h]=t;return h;};
-  const runs=(sel.hist?recs.runs:[]).map(r=>{
-    const o=Object.assign({},r,{exercises:r.exercises.map(b=>Object.assign({},b,{k:hk(b.k)}))});
-    if(r.sk)o.sk=r.sk.map(b=>({i:b.i,k:hk(b.k)}));
-    if(r.rp)o.rp=Object.assign({},r.rp,{x:hk(r.rp.x)});
-    return o;
-  });
+  const runs=(sel.hist?recs.runs:[]).map(r=>packRun(r,hk));
   const q=recs.sum,out={v:2};
   if(sel.hist)out.sum={runs:q.runs,sec:q.sec,cr:q.cr||0,cs:q.cs||0,pf:q.pf||0,hs:q.hs||{},hr:q.hr||{},days:q.days,rt:q.rt,pat:Object.keys(q.pat).map(k=>Object.assign({},q.pat[k],{k:hk(q.pat[k].k)}))};
   if(sel.lib)out.lib=recs.lib.map(e=>({id:e.id,x:hk(e.x),t:e.t}));
@@ -4208,6 +4212,19 @@ function staffLine(sg,opt){
      joined and splits the lower beam; a space on a beat line starts a new beam. */
   const beat=i=>Math.floor(off[i]+1e-6),bm=i=>sg.notes[i]==='_'?0:beamsOf(subs[i]);
   const sx=i=>xc(i)+SX;
+  /* the second beam (sixteenths) within a top beam, and the third (thirty-seconds) within a second: runs of notes that short
+     are joined, and a lone one gets a stub pointing into its run */
+  const inner=(lvl,a,b)=>{
+    const y=TOP+(lvl-1)*7;
+    for(let i=a;i<=b;){
+      if(bm(i)<lvl){i++;continue;}
+      let j=i;while(j+1<=b&&bm(j+1)>=lvl&&!sg.groupStart[j+1])j++;
+      if(j>i)svg.appendChild(mk('rect',{class:'beam',x:sx(i)-0.8,y:y,width:sx(j)-sx(i)+1.6,height:4.2}));
+      else svg.appendChild(mk('rect',{class:'beam',x:i<b?sx(i)-0.8:sx(i)-9,y:y,width:9.8,height:4.2}));
+      if(lvl<3)inner(lvl+1,i,j);
+      i=j+1;
+    }
+  };
   for(let a=0;a<N;){
     if(bm(a)<1){a++;continue;}
     let b=a;while(b+1<N&&bm(b+1)>=1&&(!sg.groupStart[b+1]||(subs[b+1]===subs[b]&&!isInt(off[b+1]))))b++;
@@ -4215,27 +4232,7 @@ function staffLine(sg,opt){
       for(let l=0;l<bm(a);l++)svg.appendChild(mk('path',{class:'flag',d:'M'+sx(a)+','+(TOP+l*7)+' c1,9 10,11 9,22'}));
     }else{
       svg.appendChild(mk('rect',{class:'beam',x:sx(a)-0.8,y:TOP,width:sx(b)-sx(a)+1.6,height:4.2}));
-      for(let i=a;i<=b;){
-        if(bm(i)<2){i++;continue;}
-        let j=i;while(j+1<=b&&bm(j+1)>=2&&!sg.groupStart[j+1])j++;
-        if(j>i)svg.appendChild(mk('rect',{class:'beam',x:sx(i)-0.8,y:TOP+7,width:sx(j)-sx(i)+1.6,height:4.2}));
-        else{
-          const dir=i<b?1:-1;
-          svg.appendChild(mk('rect',{class:'beam',x:dir>0?sx(i)-0.8:sx(i)-9,y:TOP+7,width:9.8,height:4.2}));
-        }
-        /* third beam, for thirty-second notes */
-        for(let k=i;k<=j;){
-          if(bm(k)<3){k++;continue;}
-          let m=k;while(m+1<=j&&bm(m+1)>=3&&!sg.groupStart[m+1])m++;
-          if(m>k)svg.appendChild(mk('rect',{class:'beam',x:sx(k)-0.8,y:TOP+14,width:sx(m)-sx(k)+1.6,height:4.2}));
-          else{
-            const dir3=k<j?1:-1;
-            svg.appendChild(mk('rect',{class:'beam',x:dir3>0?sx(k)-0.8:sx(k)-9,y:TOP+14,width:9.8,height:4.2}));
-          }
-          k=m+1;
-        }
-        i=j+1;
-      }
+      inner(2,a,b);
     }
     a=b+1;
   }
@@ -5190,14 +5187,14 @@ function guide(){
   const n=recs.runs.length,sig=n+':'+(n?recs.runs[n-1].id:'');
   if(guideMemo.sig!==sig){
     guideMemo={sig:sig,pat:new Map(),rt:new Map()};
-    patStats(recs.runs,recs.sum).forEach(e=>guideMemo.pat.set(e.k+'|'+e.lv+(e.dy?'|'+e.dy:''),e));
-    routineStats(recs.runs,recs.sum).forEach(e=>guideMemo.rt.set(e.rk+'|'+e.lv+(e.dy?'|'+e.dy:''),e));
+    patStats(recs.runs,recs.sum).forEach(e=>guideMemo.pat.set(statKey(e.k,e.lv,e.dy),e));
+    routineStats(recs.runs,recs.sum).forEach(e=>guideMemo.rt.set(statKey(e.rk,e.lv,e.dy),e));
   }
   return guideMemo;
 }
 function exerciseGuide(sg){
   if(!scoreOn)return 'practice';
-  const e=guide().pat.get(patKey(sg.notes,sg.groupStart,sg.subs,sg.defSub,sg.sig)+'|'+S.click+(dynCode()?'|'+dynCode():''));
+  const e=guide().pat.get(statKey(patKey(sg.notes,sg.groupStart,sg.subs,sg.defSub,sg.sig),S.click,dynCode()));
   if(!e)return 'new';
   return e.cleared?'cleared at '+e.cleared:'not cleared yet';
 }
@@ -5961,9 +5958,7 @@ function listRow(title,mono,sub,dy,pc,onOpen,chev,run){   /* chev: {open} swaps 
   m.append(n,b);
   if(dy){const d=document.createElement('span');d.className='rm dy';d.textContent=dy;m.appendChild(d);}
   if(chev)m.setAttribute('aria-expanded',String(chev.open));
-  const a=accHtml(pc),ac=document.createElement('span');ac.className='ac '+a[1];ac.textContent=a[0];
-  const u=document.createElement('small');u.textContent='ACC';ac.appendChild(u);
-  const ra=document.createElement('span');ra.className='ra';ra.appendChild(ac);if(run)ra.appendChild(replayBtn(run));ra.appendChild(rowArrow(chev?(chev.open?'up':'down'):'more'));
+  const a=accHtml(pc),ra=document.createElement('span');ra.className='ra';statSpan(ra,a[0],'ACC','ac '+a[1]);if(run)ra.appendChild(replayBtn(run));ra.appendChild(rowArrow(chev?(chev.open?'up':'down'):'more'));
   row.append(m,ra);
   row.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||t===m)onOpen();});
   return row;
@@ -6116,31 +6111,23 @@ function renderRunPage(r){
     }
     page.appendChild(lbl('All exercises'));
     played.forEach(x=>{
-      const b=x.b,row=document.createElement('div');row.className='row num';
-      const en=document.createElement('span');en.className='rn';en.textContent=String(x.i||'');
-      const n=document.createElement('span');n.className='rt seq';n.textContent=showKey(b.k);
-      const sn=document.createElement('span');sn.className='sn';
-      const stat=(txt,unit,cls)=>{const m=document.createElement('span');if(cls)m.className=cls;m.textContent=txt;if(unit){const u=document.createElement('small');u.textContent=unit;m.appendChild(u);}sn.appendChild(m);};
+      const b=x.b,{row,ra}=exRow(x.i,b.k);
+      const sn=document.createElement('span');sn.className='sn';row.insertBefore(sn,ra);
+      const stat=(txt,unit,cls)=>statSpan(sn,txt,unit,cls);
       const c=off?['—','muted']:accCell(pctOf(x));
       stat(c[0],'ACC',c[1]);
       const hd=heardEnough(b);
       stat(hd&&typeof b.avg==='number'?fmtMs(b.avg,1):'—','ms',hd&&typeof b.avg==='number'?biasCls(b.avg):'muted');
       stat(hd&&typeof b.ls==='number'?'±'+b.ls.toFixed(1):'—','dB');
-      const ra=document.createElement('span');ra.className='ra';ra.appendChild(practiseBtn(b.k,x.i,r));
+      ra.appendChild(practiseBtn(b.k,x.i,r));
       if(played.length>1)ra.appendChild(kebab('More actions',[{t:'Delete',fn:()=>dropExercise(r,b),arm:true,danger:true}]));
-      row.append(en,n,sn,ra);page.appendChild(row);});
+      page.appendChild(row);});
     const sk=items.length-played.length;
     if(sk){   /* not played: kept out of the scores, listed here so a stray one can be deleted */
-      const d=document.createElement('details'),sm=document.createElement('summary');sm.textContent=sk+' not played';d.appendChild(sm);
-      d.style.cssText='border:0;border-top:1px solid var(--line);border-radius:0;background:none';
-      sm.style.cssText='font:600 13px var(--font-data);text-transform:none;letter-spacing:0;padding:10px 0;color:var(--muted)';
+      const d=document.createElement('details'),sm=document.createElement('summary');d.className='how';sm.textContent=sk+' not played';d.appendChild(sm);
       const inner=document.createElement('div');
       items.filter(x=>!x.b).forEach(x=>{
-        const row=document.createElement('div');row.className='row num';
-        const en=document.createElement('span');en.className='rn';en.textContent=String(x.i||'');
-        const n=document.createElement('span');n.className='rt seq';n.textContent=showKey(x.k);
-        const ra=document.createElement('span');ra.className='ra';ra.appendChild(kebab('More actions',[{t:'Delete',fn:()=>dropExercise(r,(r.sk||[]).find(q=>q.i===x.i&&q.k===x.k)||{i:0}),arm:true,danger:true}]));
-        row.append(en,n,ra);
+        const {row,ra}=exRow(x.i,x.k);ra.appendChild(kebab('More actions',[{t:'Delete',fn:()=>dropExercise(r,(r.sk||[]).find(q=>q.i===x.i&&q.k===x.k)||{i:0}),arm:true,danger:true}]));
         inner.appendChild(row);
       });
       d.appendChild(inner);page.appendChild(d);
@@ -6335,9 +6322,7 @@ async function exportRecs(){
    seconds. The loudness is not kept anywhere else; this file is the only copy. */
 function runTrace(r,rec){
   const items={},hk=t=>{const h=hashOf(t);items[h]=t;return h;};
-  const o=Object.assign({},rec,{exercises:rec.exercises.map(b=>Object.assign({},b,{k:hk(b.k)}))});
-  if(rec.sk)o.sk=rec.sk.map(b=>({i:b.i,k:hk(b.k)}));
-  if(rec.rp)o.rp=Object.assign({},rec.rp,{x:hk(rec.rp.x)});
+  const o=packRun(rec,hk);
   const e=r.env,db=[];
   for(let k=0;k<e.n;k++)db.push(e.v[k]>0?+(20*Math.log10(e.v[k]+1e-6)).toFixed(1):null);
   return {v:2,app:VERSION,runs:[o],items:items,trace:{
@@ -6888,6 +6873,15 @@ document.addEventListener('pointerdown',ev=>{if(rowMenu&&!rowMenu.contains(ev.ta
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&rowMenu)closeRowMenu();});
 /* a scroll closes it, except a small nudge of the page itself, such as a phone settling as the menu opens */
 window.addEventListener('scroll',ev=>{if(rowMenu&&!(ev.target===document&&Math.abs(scrollY-menuY)<=30))closeRowMenu();},true);window.addEventListener('resize',closeRowMenu);
+/* A row of a run's exercise list: its number and sticking, and an empty actions cell for the caller to fill. */
+function exRow(i,k){
+  const row=document.createElement('div');row.className='row num';
+  const en=document.createElement('span');en.className='rn';en.textContent=String(i||'');
+  const n=document.createElement('span');n.className='rt seq';n.textContent=showKey(k);
+  const ra=document.createElement('span');ra.className='ra';
+  row.append(en,n,ra);
+  return {row,ra};
+}
 function statSpan(n,txt,unit,cls){const e=document.createElement('span');if(cls)e.className=cls;e.textContent=txt;if(unit){const u=document.createElement('small');u.textContent=unit;e.appendChild(u);}n.appendChild(e);}
 const newMenu=()=>{const m=document.createElement('div');m.className='card menu';m.setAttribute('role','menu');return m;};
 const menuBtn=text=>{const x=document.createElement('button');x.type='button';x.setAttribute('role','menuitem');x.textContent=text;return x;};
@@ -7351,7 +7345,7 @@ function pulseNote(exercises){
   return exercises.some(b=>b.sig&&b.sig.d===8)?' (per eighth note)':(exercises.some(b=>b.sig&&b.sig.d===2)?' (per half note)':'');
 }
 function routineGuide(){
-  const e=guide().rt.get(routineKeyOf(allExercises().map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig)))+'|'+S.click+(dynCode()?'|'+dynCode():''));
+  const e=guide().rt.get(statKey(routineKeyOf(allExercises().map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig))),S.click,dynCode()));
   return e&&e.cleared?' · routine cleared at '+e.cleared+' BPM':'';
 }
 function refreshPreview(){
@@ -7806,9 +7800,9 @@ function holdStep(btn,dir,setBpm){
 /* The tempo sheet. Its chips are the tempos you play: last time and cleared on this exercise or routine, then recent runs, slowest first. */
 function tempoChips(){
   const out=[],seen=new Set(),add=(v,why)=>{v=Math.round(v);if(v>=40&&v<=220&&!seen.has(v)&&out.length<5){seen.add(v);out.push([v,why]);}};
-  const ex=currentExercises(),dy=dynCode()?'|'+dynCode():'',key=b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig);
+  const ex=currentExercises(),dy=dynCode(),key=b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig);
   let e=null;
-  if(ex.length)e=S.mode==='single'?guide().pat.get(key(ex[0])+'|'+S.click+dy):guide().rt.get(routineKeyOf(allExercises().map(key))+'|'+S.click+dy);
+  if(ex.length)e=S.mode==='single'?guide().pat.get(statKey(key(ex[0]),S.click,dy)):guide().rt.get(statKey(routineKeyOf(allExercises().map(key)),S.click,dy));
   if(e&&e.bpm)add(e.bpm,'Last time');
   if(e&&e.cleared)add(e.cleared,'Cleared');
   for(let i=recs.runs.length-1;i>=0&&out.length<5;i--)add(recs.runs[i].bpm,'Recent');
