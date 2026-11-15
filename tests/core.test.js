@@ -242,20 +242,25 @@ test('buzz stats can take one exercise', () => {
   assert.equal(c.buzzStats(s, res, bnc).length, 2);
 });
 
-test('buzz singles: no bounce, or a group of buzz strokes under one bounce each', () => {
-  /* RLRL zRzLzRzL zRzLzRzL zR: groups of four from the start of a run of buzz strokes, misses left out of the average */
-  const s = [], st = [];
-  for (let k = 0; k < 13; k++) s.push({ t: k * 0.4, seg: 0, bz: k >= 4 });
-  [1, 0, 1, 1, 2, 3, 1, 2].forEach((n, j) => st.push({ i: 4 + j, n: n }));   /* slot 12 is not in st: missed */
-  const ones = c.buzzSingles(s, st);
-  assert.deepEqual([...ones].sort((a, b) => a - b), [4, 5, 6, 7]);   /* 1 0 1 1 averages 0.75 */
-  /* 2 3 1 2 is a buzz group; the last group is slot 12 alone (missed), so slot 8..11 decide; the 0 at 12 is flagged on its own */
-  assert.ok(!ones.has(10));
-  const st2 = st.concat([{ i: 12, n: 0 }]);
-  assert.ok(c.buzzSingles(s, st2).has(12));
+test('buzz singles: a group of buzz strokes with few bounces, or a few and as loud as the plain strokes', () => {
+  /* RLRL zRzLzRzL zRzLzRzL: groups of four from the start of a run of buzz strokes, misses left out of the average */
+  const s = [], st = [], res = new Map();
+  for (let k = 0; k < 20; k++) s.push({ t: k * 0.4, seg: 0, bz: k >= 4 });
+  [0, 1, 2, 3].forEach(i => res.set(i, { ms: 0, db: -20 }));   /* the plain strokes, at -20 dB */
+  const g = (i, n, db) => { st.push({ i: i, n: n, db: db }); res.set(i, { ms: 0, db: db }); };
+  [1, 0, 1, 2].forEach((n, j) => g(4 + j, n, -26));     /* averages 1: singles, however quiet */
+  [2, 1, 2, 1].forEach((n, j) => g(8 + j, n, -21));     /* averages 1.5 and 1 dB quieter: singles */
+  [2, 1, 2, 1].forEach((n, j) => g(12 + j, n, -23));    /* 1.5 but 3 dB quieter: buzzes */
+  [3, 2, 1].forEach((n, j) => g(16 + j, n, -20));       /* 2, as loud: buzzes; slot 19 missed */
+  const ones = c.buzzSingles(s, st, res);
+  assert.deepEqual([...ones].sort((a, b) => a - b), [4, 5, 6, 7, 8, 9, 10, 11]);
+  /* with no plain strokes to compare, only the bounces count */
+  assert.deepEqual([...c.buzzSingles(s, st)].sort((a, b) => a - b), [4, 5, 6, 7]);
+  /* a stroke with no bounce among buzzes is not a single on its own */
+  assert.equal(c.buzzSingles(s, [{ i: 4, n: 0 }, { i: 5, n: 4 }, { i: 6, n: 3 }, { i: 7, n: 3 }]).size, 0);
   /* a buzz in another exercise does not join the run */
   const s3 = [{ t: 0, seg: 0, bz: true }, { t: 0.4, seg: 1, bz: true }];
-  assert.equal(c.buzzSingles(s3, [{ i: 0, n: 1 }, { i: 1, n: 0 }]).size, 1);
+  assert.equal(c.buzzSingles(s3, [{ i: 0, n: 0 }, { i: 1, n: 0 }]).size, 0);
 });
 
 test('buzz counts give the bounces of each buzz stroke, - for a miss', () => {

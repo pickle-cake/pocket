@@ -1359,7 +1359,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Accent and Other strokes</b> (Play page) lay accents and ghost notes over the loaded exercise. Accent picks the loud strokes: the first of each group, each beat, each bar, every 2nd to 7th stroke (counted across passes, so it drifts if the count does not divide the pass), or the right or left hand. Rests are never accented. Other strokes can be Normal or Ghost. The staff shows accents with &gt; and ghost notes in brackets.</li>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
         <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. Hits just before it (up to 80 ms for a flam, 120 ms for a drag) are its grace notes and are not counted as extras. While an exercise has them, the microphone also accepts a clearly louder strike soon after a hit, so a soft grace does not hide the main stroke. A grace as loud as the main stroke can, so play it softer. Keyboard play has no graces, so use one key per main stroke.</li>
-        <li><b>Buzz strokes:</b> only the start of each buzz is scored, as early or late against the click. The bounces after it are not extras. A soft buzz that starts while the stroke before still rings is still heard as a stroke when it lands near its click. With the microphone, Pocket also counts the bounces it hears: the small number beside each buzz stroke on the staff, during the run and in History. After the run it says how many each buzz had on average, how far it rang towards the next stroke, and how many sounded like single strokes (no bounces, or a group of buzzes with under one bounce each). This is experimental: a pad and microphone hear bounces differently, so treat it as a guide. Keyboard play scores the start only.</li>
+        <li><b>Buzz strokes:</b> only the start of each buzz is scored, as early or late against the click. The bounces after it are not extras. A soft buzz that starts while the stroke before still rings is still heard as a stroke when it lands near its click. With the microphone, Pocket also counts the bounces it hears: the small number beside each buzz stroke on the staff, during the run and in History. After the run it says how many each buzz had on average, how far it rang towards the next stroke, and how many sounded like single strokes (a group of four buzzes in a row with 1 bounce or fewer each on average, or up to 1.5 and almost as loud as your plain strokes, since a buzz pressed into the pad is quieter). This is experimental: a pad and microphone hear bounces differently, so treat it as a guide. Keyboard play scores the start only.</li>
         <li><b>Records and storage:</b> records are saved in this browser only. Export keeps a copy or moves it to another device, and Import brings it back. The app reminds you if you have never exported, or the last copy is two weeks old. On iPhone and iPad, Safari can clear a site's data after about a week without use, so add the page to your Home Screen. <b>Settings &rsaquo; Data &rsaquo; Storage</b> shows what takes space. Stroke detail (what rebuilds a run's staff) may use about 40% of what the browser allows. Past that, the oldest runs lose their detail first and keep their totals.</li>
       </ul>
     </section>
@@ -2198,22 +2198,30 @@ function buzzStats(slots,res,bnc,seg){
     const v=res.get(i);if(!v||v.miss)return;
     const b=buzzRing(slots,i,v,bnc),nx=slots[i+1];
     const gap=nx&&nx.seg===s.seg?nx.t-s.t:9;
-    out.push({i:i,n:b.n,fill:gap<=BUZZ_MAX?Math.min(1,(b.last-b.th+0.015)/gap):null});
+    out.push({i:i,n:b.n,db:typeof v.db==='number'?v.db:null,fill:gap<=BUZZ_MAX?Math.min(1,(b.last-b.th+0.015)/gap):null});
   });
   return out;
 }
-/* The buzz strokes that sounded like single strokes, as slot indexes. A pad rings a little after a single stroke too, so one
-   bounce alone proves nothing: a stroke counts as a single when no bounce was heard, or when it is in a group of buzz strokes
-   in a row (up to four, from the start of the run) that averaged under one bounce each. Played on a pad, singles came to
-   0 or 1 each and at most 3 in a group of four; buzzes to at least 5 a group. */
-function buzzSingles(slots,st){
-  const n=new Map(st.map(x=>[x.i,x.n])),out=new Set();
+/* The buzz strokes that sounded like single strokes, as slot indexes. A pad rings a little after a single stroke too, and a buzz
+   can miss a bounce, so one stroke alone proves nothing. Buzz strokes in a row are judged in groups of up to four, from the start
+   of the run: a group is singles when it averaged 1 bounce or fewer, or up to 1.5 and was less than 2 dB quieter than the plain
+   strokes of its exercise (the median of those with no accent or ghost). Pressed into the pad, a buzz is quieter than a stroke.
+   With no plain strokes to compare, only the bounces count. Played on a pad, singles averaged at most 1.5 a group and were within
+   1 dB of the plain strokes; buzzes that low were at least 2 dB quieter. */
+function buzzSingles(slots,st,res){
+  const n=new Map(st.map(x=>[x.i,x])),out=new Set(),ref=new Map();
+  if(res){
+    const by=new Map();
+    slots.forEach((s,i)=>{const v=res.get(i);if(s.bz||s.dy||!v||v.miss||typeof v.db!=='number')return;if(!by.has(s.seg))by.set(s.seg,[]);by.get(s.seg).push(v.db);});
+    by.forEach((a,k)=>{a.sort((x,y)=>x-y);ref.set(k,a[a.length>>1]);});
+  }
   let run=[];
   const flush=()=>{
     for(let a=0;a<run.length;a+=4){
-      const ch=run.slice(a,a+4).filter(i=>n.has(i));if(!ch.length)continue;
-      const m=mean(ch.map(i=>n.get(i)));
-      ch.forEach(i=>{if(n.get(i)===0||(ch.length>=2&&m<1))out.add(i);});
+      const ch=run.slice(a,a+4).filter(i=>n.has(i));if(ch.length<2)continue;
+      const m=mean(ch.map(i=>n.get(i).n)),pl=ref.get(slots[ch[0]].seg),dbs=ch.map(i=>n.get(i).db).filter(x=>x!==null);
+      const loud=pl!==undefined&&dbs.length>0&&mean(dbs)>pl-2;
+      if(m<=1||(m<=1.5&&loud))ch.forEach(i=>out.add(i));
     }
     run=[];
   };
@@ -2819,7 +2827,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.121';                           /* shown beside the title */
+const VERSION='1.5.122';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3524,7 +3532,7 @@ function finalizeSlot(i){
     Q.posSum[pos]+=ms;Q.posCnt[pos]++;
     r.trace.push({ms:ms,hand:hand,wrong:wrong});if(r.trace.length>STRIP_MAX)r.trace.shift();
   }
-  r.res.set(i,{ms:ms,wrong:wrong?det.hand:null});
+  r.res.set(i,{ms:ms,wrong:wrong?det.hand:null,db:h.kb?null:strokeDb(h.pk,h.raw)});
 }
 /* Calibration shows its running answer while you play. The reading is the latency you would get if the run ended now. */
 function latLive(r){
@@ -4649,7 +4657,7 @@ function reviewModel(rec){
       const i=bySeg[si][j];if(i===undefined)return;
       if(d.r==='m'){res.set(i,{miss:true});return;}
       const exp=hnd(plan.segs[si].notes[plan.slots[i].pos]);
-      res.set(i,{ms:d.ms,wrong:d.w?(exp==='R'?'L':'R'):null});
+      res.set(i,{ms:d.ms,wrong:d.w?(exp==='R'?'L':'R'):null,db:d.db});
     }));
     /* the bounces of each buzz stroke, saved in order from 1.5.120 */
     const bzn=new Map();
@@ -4813,7 +4821,7 @@ function insightParts(r){
     }
     if(wi>=0&&Math.abs(wv)>=6)parts.push((r.plan.segs.length>1?'In exercise '+sg.idx+', stroke ':'Stroke ')+sg.notes.slice(0,wi+1).filter(n=>n!=='_').length+' ('+hnd(sg.notes[wi])+') drifts most, '+Math.abs(wv).toFixed(0)+' ms '+(wv>0?'late':'early')+'.');
   }
-  if(!r.kb&&r.plan.slots.some(x=>x.bz)){const st=buzzStats(r.plan.slots,r.res,r.bnc||[]),bn=buzzNote(st,buzzSingles(r.plan.slots,st).size);if(bn)parts.push(bn);}
+  if(!r.kb&&r.plan.slots.some(x=>x.bz)){const st=buzzStats(r.plan.slots,r.res,r.bnc||[]),bn=buzzNote(st,buzzSingles(r.plan.slots,st,r.res).size);if(bn)parts.push(bn);}
   const lvs=levelStats(r.lv);
   if(lvs&&lvs.diff!==null&&Math.abs(lvs.diff)>=3)parts.push('Your '+(lvs.diff<0?'left':'right')+' hand is '+Math.abs(lvs.diff).toFixed(0)+' dB quieter than your '+(lvs.diff<0?'right':'left')+'.');
   if(!parts.length)parts.push('Timing is even across both hands and all strokes.');
@@ -4967,7 +4975,7 @@ function buzzSaved(r,si){
   const st=buzzStats(r.plan.slots,r.res,r.bnc||[],si);
   if(!st.length)return {};
   const fl=st.filter(x=>x.fill!==null).map(x=>x.fill);
-  return {bc:st.length,bn:Math.round(mean(st.map(x=>x.n))*10)/10,bf:fl.length?Math.round(mean(fl)*100):undefined,bb:buzzCounts(r.plan.slots,r.res,r.bnc||[],si),bs:buzzSingles(r.plan.slots,st).size||undefined};
+  return {bc:st.length,bn:Math.round(mean(st.map(x=>x.n))*10)/10,bf:fl.length?Math.round(mean(fl)*100):undefined,bb:buzzCounts(r.plan.slots,r.res,r.bnc||[],si),bs:buzzSingles(r.plan.slots,st,r.res).size||undefined};
 }
 function dynSaved(r,si){   /* accents and ghost notes judged in this exercise: how many, how many were clear, and how even they were */
   const o={};
