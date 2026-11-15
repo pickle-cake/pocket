@@ -592,3 +592,76 @@ test('audio clock: a clock that stops for half a second is caught', () => {
   assert.equal(v.ok, false);
   assert.ok(v.slip > 0.45, JSON.stringify(v));
 });
+
+/* ---------- findings ---------- */
+/* a seeded random number generator and normal scatter, so the synthetic runs are the same every time */
+const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const gauss = r => () => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
+/* a run's per-exercise results: off(sg, slot, pass) gives each stroke's offset in ms, or null for a miss */
+const fakeRun = (pl, off) => pl.segs.map(sg => {
+  const sm = [];
+  for (let k = 0; k < sg.passes * sg.strokes; k++) { const sl = pl.slots[sg.first + k]; sm.push(off(sg, sl, Math.floor(sl.k / sg.N))); }
+  return { sm };
+});
+const fplan = (text, passes) => {
+  const p = c.parseRoutine(text);
+  const ex = c.resolveExercises(p.exercises, { unit: 'pass', v: passes || 8 }, { bpm: 60, subdiv: 4 });
+  return c.buildPlan(ex, { gapBeats: 0, clickMode: 'strokes', dyn: null });
+};
+
+test('findings: a late stroke at a change of sticking is found and named', () => {
+  const pl = fplan('RLRR RRLR'), g = gauss(rng(1));
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 + (sl.pos === 5 ? 18 : 0)), 20);
+  assert.ok(f.length);
+  assert.equal(f[0].what, 'ms');
+  assert.deepEqual(plain(f[0].pos), [5]);
+  assert.ok(f[0].d >= 12 && f[0].d <= 24, String(f[0].d));
+  assert.match(c.findingText(f[0], pl), /^Stroke 6 \(R\), at the change from RLRR to RRLR, lands \d+ ms later than the rest of the exercise\.$/);
+});
+
+test('findings: an early stroke reads as earlier', () => {
+  const pl = fplan('RLRR RRLR'), g = gauss(rng(2));
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 - (sl.pos === 5 ? 18 : 0)), 20);
+  assert.match(c.findingText(f[0], pl), /lands \d+ ms earlier/);
+});
+
+test('findings: random scatter rarely gives a finding', () => {
+  let hits = 0;
+  for (let s = 0; s < 200; s++) {
+    const pl = fplan('RLRR RRLR'), g = gauss(rng(100 + s));
+    if (c.findings(pl, fakeRun(pl, () => g() * 8), 20).length) hits++;
+  }
+  assert.ok(hits <= 10, hits + ' of 200 runs of scatter gave a finding');
+});
+
+test('findings: a stroke that is often not heard', () => {
+  const pl = fplan('RLRL RLRL'), g = gauss(rng(3)), r = rng(4);
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => sl.pos === 3 && r() < 0.6 ? null : g() * 6), 20).filter(x => x.what === 'miss');
+  assert.ok(f.length);
+  assert.ok(f[0].pos.includes(3));
+  assert.match(c.findingText(f[0], pl), /not heard \d+ of \d+ times/);
+});
+
+test('findings: a first pass off time and later passes on time', () => {
+  const pl = fplan('RLRL RLRL'), g = gauss(rng(5));
+  const f = c.findings(pl, fakeRun(pl, (sg, sl, p) => p === 0 ? 40 * (sl.pos % 2 ? 1 : -1) + g() * 4 : g() * 4), 20);
+  const s = f.find(x => x.what === 'settle');
+  assert.ok(s);
+  assert.match(c.findingText(s, pl), /^The first pass was 100% off time and later passes \d+%\. It takes a pass to settle\.$/);
+});
+
+test('findings: every exercise of a routine is read, each against itself', () => {
+  const pl = fplan('RLRL RLRL\nRLRR RRLR'), g = gauss(rng(6));
+  /* the first exercise is 15 ms late throughout, which says nothing; in the second, stroke 6 is late */
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 + (sg.idx === 1 ? 15 : sl.pos === 5 ? 18 : 0)), 20);
+  assert.ok(f.length);
+  assert.ok(f.every(x => x.ex === 2));
+  assert.match(c.findingText(f[0], pl), /^In exercise 2, stroke 6 \(R\)/);
+});
+
+test('findings: the second note of each double', () => {
+  const pl = fplan('RRLL RRLL'), g = gauss(rng(7));
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 + (sl.pos % 2 ? 15 : 0)), 20);
+  assert.equal(f[0].role, 'double2');
+  assert.match(c.findingText(f[0], pl), /^The second note of each double lands \d+ ms later/);
+});

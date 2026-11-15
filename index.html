@@ -2369,6 +2369,183 @@ function buzzNote(st,ns){
   else if(fl.length>=4&&mean(fl)<0.7)s+=' There are gaps between them: let each buzz ring until the next stroke.';
   return s;
 }
+/* ---------- findings: where in the music a run goes wrong ---------- */
+/* The on-time window for a stroke: the window tol, capped at 40% of the stroke spacing (sl.w is half of it), so at a fast tempo neighbouring strokes stay apart. */
+const slotWin=(sl,tol)=>Math.min(tol,Math.round(sl.w*800));
+/* A finding is only reported when it is large, repeated and clearly beyond the player's own scatter: at least minN strokes from
+   minPasses passes, a shift of at least ms, and at least se standard errors. An exercise tests about 30 groups, so se is 3.5, not 2:
+   at 2 a run of pure scatter reports something more often than not, at 3 one run in 20, at 3.5 about one in 100. A miss finding needs miss more of the group missed
+   than of the rest, and settling needs settle more of the first pass off time than of the later passes. */
+const FIND={minN:6,minPasses:3,se:3.5,ms:6,miss:0.15,settle:0.2};
+/* The hand or rest at each position, as the finding copy writes a group: RLRR. */
+const stickOf=notes=>notes.map(n=>n==='_'?'_':hnd(n)).join('');
+/* Each position's roles in the sticking, worked out from the notes due. wrap marks a role that reads the pass before, so it does
+   not hold in the first pass, where the count-in comes before. */
+function strokeRoles(sg){
+  const n=sg.notes,N=n.length,idx=[];
+  for(let i=0;i<N;i++)if(n[i]!=='_')idx.push(i);
+  const S=idx.length,out=n.map(()=>[]);
+  if(S<2)return out;
+  const at=j=>idx[((j%S)+S)%S],h=j=>hnd(n[at(j)]);
+  /* whether a rest comes between stroke j-1 and stroke j */
+  const rest=j=>{const a=at(j-1),b=at(j);return a<b?b-a>1:(N-1-a)+b>0;};
+  for(let j=0;j<S;j++){
+    const i=at(j),r=[],wrap=j<2;
+    const second=k=>!rest(k)&&h(k)===h(k-1)&&(rest(k-1)||h(k-1)!==h(k-2));
+    if(rest(j))r.push('rest');
+    else if(second(j))r.push('double2');
+    else if(h(j)!==h(j-1)&&second(j-1))r.push('afterDouble');
+    if(second(j+1))r.push('double1');
+    r.forEach(x=>out[i].push({role:x,wrap:wrap}));
+  }
+  return out;
+}
+/* Where the sticking changes inside an exercise: between two groups (spaces in the pattern) that are played differently, and at the
+   end of a pass going back to its start. Each seam is the 2 strokes before it and the 2 after. */
+function seamsOf(sg){
+  const n=sg.notes,N=n.length,starts=[];
+  for(let i=0;i<N;i++)if(i===0||sg.groupStart[i])starts.push(i);
+  if(starts.length<2)return [];
+  const grp=starts.map((s,g)=>n.slice(s,g+1<starts.length?starts[g+1]:N)),idx=[];
+  for(let i=0;i<N;i++)if(n[i]!=='_')idx.push(i);
+  const S=idx.length,out=[];
+  starts.forEach((s,g)=>{
+    const prev=grp[(g-1+grp.length)%grp.length],cur=grp[g];
+    if(stickOf(prev)===stickOf(cur))return;
+    let j=idx.findIndex(i=>i>=s);if(j<0)j=S;
+    const before=[j-2,j-1].map(k=>idx[(k+S)%S]),after=[j,j+1].map(k=>idx[k%S]);
+    out.push({at:s,from:stickOf(prev),to:stickOf(cur),before:before,after:after,pass:g===0});
+  });
+  return out;
+}
+/* Where each position falls in its beat, as a name, or '' on the beat and for other places. */
+function beatPlaces(sg){
+  let acc=0;
+  return sg.subs.map(s=>{
+    const f=Math.round((acc-Math.floor(acc+1e-9))*1e6)/1e6;acc+=1/s;
+    return ({0.25:'e',0.5:'and',0.75:'a',0.333333:'trip2',0.666667:'trip3'})[f]||'';
+  });
+}
+/* The findings for a run: plan is the run's plan, seg its per-exercise results (sm offsets in ms, null for a miss, one per stroke due in
+   order), tol the on-time window in ms. Each finding compares a group of strokes with the same exercise's other strokes, so a
+   constant latency cancels out. Sorted by score: how many strokes would have been on time had the group matched the rest. */
+function findings(plan,seg,tol){
+  const out=[];
+  plan.segs.forEach((sg,si)=>{
+    const Q=seg[si];if(!Q||!Q.sm||Q.sm.length<FIND.minN*2)return;
+    const len=Q.sm.length,sl=k=>plan.slots[sg.first+k],pass=k=>Math.floor(sl(k).k/sg.N),posOf=k=>sl(k).pos;
+    const last=pass(len-1);
+    const groups=[];   /* {kind,ks,...} */
+    const all=[];for(let k=0;k<len;k++)all.push(k);
+    for(let i=0;i<sg.N;i++)if(sg.notes[i]!=='_')groups.push({kind:'pos',pos:[i],ks:all.filter(k=>posOf(k)===i)});
+    const seams=seamsOf(sg);
+    seams.forEach(sm=>{
+      const inB=new Set(sm.before),inA=new Set(sm.after);
+      /* at the pass seam, the strokes before it need a next pass and the strokes after it a pass before */
+      const ks=all.filter(k=>{const p=posOf(k);return (inB.has(p)&&(!sm.pass||pass(k)<sg.passes-1))||(inA.has(p)&&(!sm.pass||pass(k)>0));});
+      groups.push({kind:'seam',seam:sm,pos:[...new Set(sm.before.concat(sm.after))].sort((a,b)=>a-b),ks:ks});
+    });
+    const roles=strokeRoles(sg),byRole=new Map();
+    roles.forEach((rs,i)=>rs.forEach(x=>{const g=byRole.get(x.role)||{kind:'ctx',role:x.role,pos:[],ks:[]};g.pos.push(i);all.forEach(k=>{if(posOf(k)===i&&!(x.wrap&&pass(k)===0))g.ks.push(k);});byRole.set(x.role,g);}));
+    byRole.forEach(g=>{g.ks.sort((a,b)=>a-b);groups.push(g);});
+    /* the stroke after an accent and the one before it, when they are not accents themselves */
+    const dy=k=>sl(k).dy||'';
+    if(all.some(k=>dy(k)==='A')){
+      groups.push({kind:'ctx',role:'afterAcc',ks:all.filter(k=>k>0&&dy(k)!=='A'&&dy(k-1)==='A')});
+      groups.push({kind:'ctx',role:'beforeAcc',ks:all.filter(k=>k+1<len&&dy(k)!=='A'&&dy(k+1)==='A')});
+    }
+    const places=beatPlaces(sg),byPlace=new Map();
+    places.forEach((p,i)=>{if(p&&sg.notes[i]!=='_'){const g=byPlace.get(p)||{kind:'beat',place:p,pos:[],ks:[]};g.pos.push(i);byPlace.set(p,g);}});
+    byPlace.forEach(g=>{g.ks=all.filter(k=>g.pos.indexOf(posOf(k))>=0);groups.push(g);});
+    const seamAt=i=>seams.find(s=>s.after.indexOf(i)>=0)||seams.find(s=>s.before.indexOf(i)>=0)||null;
+    /* the player's scatter in this exercise: each heard stroke against the average of its own position, so a stroke that is
+       steadily early or late does not count as scatter */
+    const heardAll=all.filter(k=>Q.sm[k]!==null),pm=new Map();
+    heardAll.forEach(k=>{const p=posOf(k),o=pm.get(p)||[];o.push(Q.sm[k]);pm.set(p,o);});
+    const spread=heardAll.length>2?sd(heardAll.map(k=>Q.sm[k]-mean(pm.get(posOf(k))))):0;
+    /* how far strokes a land from strokes b, and the standard error of that, taking each side's spread as at least the
+       exercise's, so a small group that happens to be tight does not look certain */
+    const shift=(a,b)=>{
+      const x=a.map(k=>Q.sm[k]),y=b.map(k=>Q.sm[k]),sx=Math.max(spread,x.length>1?sd(x):0),sy=Math.max(spread,y.length>1?sd(y):0);
+      return {d:mean(x)-mean(y),se:Math.sqrt(sx*sx/x.length+sy*sy/y.length)};
+    };
+    const sure=v=>Math.abs(v.d)>=FIND.ms&&Math.abs(v.d)>=FIND.se*v.se;
+    const found=[],seen=new Map();
+    const add=f=>{
+      /* the same strokes found twice: keep the name that says most (a role or a place in the beat over a single position) */
+      const key=f.what+'|'+f.ks.join(','),rank={ctx:3,beat:2,seam:1,pos:0},o=seen.get(key);
+      if(o&&rank[o.kind]>=rank[f.kind])return;
+      if(o)found.splice(found.indexOf(o),1);
+      seen.set(key,f);found.push(f);
+    };
+    const base={seg:si,ex:sg.idx};
+    groups.forEach(g=>{
+      if(!g.ks.length)return;
+      const inG=new Set(g.ks),rest=all.filter(k=>!inG.has(k));
+      const heard=g.ks.filter(k=>Q.sm[k]!==null),heardR=rest.filter(k=>Q.sm[k]!==null);
+      const info=Object.assign({},base,{kind:g.kind,role:g.role,place:g.place,seam:g.kind==='seam'?g.seam:(g.kind==='pos'?seamAt(g.pos[0]):null),pos:g.pos||[...new Set(g.ks.map(posOf))].sort((a,b)=>a-b),ks:g.ks,slots:g.ks.map(k=>sg.first+k)});
+      /* timing: the group's average against the rest of the exercise */
+      if(heard.length>=FIND.minN&&heardR.length>=FIND.minN&&new Set(heard.map(pass)).size>=FIND.minPasses){
+        const v=shift(heard,heardR),d=v.d;
+        if(sure(v)){
+          let score=0;
+          heard.forEach(k=>{const w=slotWin(sl(k),tol),was=Math.abs(Q.sm[k])<=w,could=Math.abs(Q.sm[k]-d)<=w;score+=(could?1:0)-(was?1:0);});
+          add(Object.assign({what:'ms',d:Math.round(d),n:heard.length,heard:heard,score:Math.max(0,score)},info));
+        }
+      }
+      /* misses: a stroke or a change that is missed more often than the rest */
+      if((g.kind==='pos'||g.kind==='seam')&&g.ks.length>=FIND.minN&&rest.length>=FIND.minN&&new Set(g.ks.map(pass)).size>=FIND.minPasses){
+        const m=g.ks.length-heard.length,mr=rest.length-heardR.length,pa=m/g.ks.length,pb=mr/rest.length,pp=(m+mr)/len;
+        const se=Math.sqrt(pp*(1-pp)*(1/g.ks.length+1/rest.length));
+        if(m>=3&&pa-pb>=FIND.miss&&pa-pb>=FIND.se*se)add(Object.assign({what:'miss',miss:m,n:g.ks.length,score:Math.round(m-pb*g.ks.length)},info));
+      }
+    });
+    /* a wide group that is only off because a narrower one inside it is: the rest of the wide group, without the narrow one,
+       is no different from the strokes outside it. The narrow one says more, so the wide one goes. */
+    const ms=found.filter(f=>f.what==='ms');
+    ms.forEach(f=>{
+      const inF=new Set(f.ks),outside=heardAll.filter(k=>!inF.has(k));
+      const inner=ms.some(g=>{
+        if(g===f||g.ks.length>=f.ks.length||Math.sign(g.d)!==Math.sign(f.d)||Math.abs(g.d)<=Math.abs(f.d)||!g.ks.every(k=>inF.has(k)))return false;
+        const inG=new Set(g.ks),left=f.heard.filter(k=>!inG.has(k));
+        return left.length<FIND.minN||!sure(shift(left,outside));
+      });
+      if(inner)found.splice(found.indexOf(f),1);
+    });
+    found.forEach(f=>{delete f.heard;out.push(f);});
+    /* settling: the first pass against the later ones, counting a miss or a stroke off time as a slip */
+    if(last>=FIND.minPasses-1){
+      const slip=k=>Q.sm[k]===null||Math.abs(Q.sm[k])>slotWin(sl(k),tol);
+      const first=all.filter(k=>pass(k)===0),later=all.filter(k=>pass(k)>0);
+      if(first.length>=FIND.minN&&later.length>=FIND.minN){
+        const a=first.filter(slip).length,b=later.filter(slip).length,pa=a/first.length,pb=b/later.length,pp=(a+b)/len;
+        const se=Math.sqrt(pp*(1-pp)*(1/first.length+1/later.length));
+        if(pa-pb>=FIND.settle&&pa-pb>=FIND.se*se)out.push(Object.assign({what:'settle',kind:'pass',first:pa,later:pb,n:first.length,score:Math.round(a-pb*first.length),pos:[],ks:first,slots:first.map(k=>sg.first+k)},base));
+      }
+    }
+  });
+  return out.sort((a,b)=>b.score-a.score||(Math.abs(b.d||0)*b.n)-(Math.abs(a.d||0)*a.n));
+}
+/* A finding as a sentence. The microphone cannot tell the hands apart, so it names the strokes, never the hand that played them. */
+function findingText(f,plan){
+  const sg=plan.segs[f.seg],multi=plan.segs.length>1;
+  const num=i=>sg.notes.slice(0,i+1).filter(x=>x!=='_').length;
+  const change=s=>s.pass?'going back to the start ('+s.from+' to '+s.to+')':'at the change from '+s.from+' to '+s.to;
+  const ROLE={double2:'the second note of each double',double1:'the first note of each double',afterDouble:'the stroke after each double',rest:'the first stroke after a rest',afterAcc:'the stroke after each accent',beforeAcc:'the stroke before each accent'};
+  const PLACE={e:'the “e” of each beat',and:'the “&” of each beat',a:'the “a” of each beat',trip2:'the second note of each triplet',trip3:'the third note of each triplet'};
+  const plural=f.kind==='seam';
+  let who;
+  if(f.what==='settle')return (multi?'In exercise '+f.ex+', the':'The')+' first pass was '+Math.round(f.first*100)+'% off time and later passes '+Math.round(f.later*100)+'%. It takes a pass to settle.';
+  if(f.kind==='pos'){who='stroke '+num(f.pos[0])+' ('+hnd(sg.notes[f.pos[0]])+')'+(f.seam?', '+change(f.seam)+',':'');}
+  else if(f.kind==='seam')who='the strokes '+change(f.seam);
+  else if(f.kind==='beat')who=PLACE[f.place];
+  else who=ROLE[f.role];
+  let s;
+  if(f.what==='miss')s=who+' '+(plural?'were':'was')+' not heard '+f.miss+' of '+f.n+' times, more often than the rest of the exercise.';
+  else s=who+' '+(plural?'land':'lands')+' '+Math.abs(f.d)+' ms '+(f.d>0?'later':'earlier')+' than the rest of the exercise.';
+  s=(multi?'In exercise '+f.ex+', ':'')+s;
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
 function fmtTime(s){
   s=Math.max(0,Math.round(s));
   return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
@@ -2961,7 +3138,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.139';                           /* shown beside the title */
+const VERSION='1.5.140';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3550,8 +3727,7 @@ function beginRun(mode){
     nextClick:0,pulseIdx:-1,nextFin:0,pending:new Map(),cur:-1,showSeg:0,gridSeg:-1,
     errs:[],lv:[],seq:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,streak:0,best:0,checked:0,bad:0,trace:[],res:new Map(),showG:0,missRun:0,trail:[],live:'',pts:0,sk:0,hud:scoreOn&&mode==='play'&&!!LV_PTS[S.click],tm:[],
     fin:new Set(),paused:false,ci:null,bnc:[],bzn:new Map(),lastPk:0,dyc:lat?'':dynCode(),dyl:[],
-    seg:plan.segs.map(sg=>({errs:[],lv:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,checked:0,bad:0,sc:[],sm:[],sb:[],sy:[],sw:[],ev:[],da:0,dg:0,
-      posSum:new Array(sg.N).fill(0),posCnt:new Array(sg.N).fill(0)})),
+    seg:plan.segs.map(sg=>({errs:[],lv:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,checked:0,bad:0,sc:[],sm:[],sb:[],sy:[],sw:[],ev:[],da:0,dg:0})),
     dirty:true,ended:false,totalExercises:routineParsed.exercises.length,
     startExercise:S.mode==='routine'?S.startExercise:1
   };
@@ -3600,7 +3776,7 @@ function tick(){
 }
 /* The score as the run goes. Strokes judged too soft or too loud only count against it when the run ends, so the final score can come out a little lower. */
 /* The on-time window for a stroke: the setting, capped at 40% of the stroke spacing (sl.w is half of it), so at a fast tempo neighbouring strokes stay apart. */
-const slotTol=sl=>Math.min(S.tol,Math.round(sl.w*800));
+const slotTol=sl=>slotWin(sl,S.tol);
 /* The window, as said beside a score when it is not the standard one. */
 /* The window's bonus, as its own line on a score card; none at the widest window. */
 const winNote=tol=>winMult(tol)>1?'\u00b1'+(tol||20)+' ms window: points \u00d7'+winMult(tol):'';
@@ -3697,7 +3873,6 @@ function finalizeSlot(i){
     r.seq.push({db:db,hand:hand,dy:sl.dy||''});if(r.seq.length>STRIP_MAX)r.seq.shift();   /* one entry per stroke due, so a miss leaves a gap in the level bars */
     r.missRun=0;if(r.mode==='lat')latLive(r);
     if(on){r.within++;Q.within++;r.streak++;if(r.streak>r.best)r.best=r.streak;}else r.streak=0;
-    Q.posSum[pos]+=ms;Q.posCnt[pos]++;
     r.trace.push({ms:ms,hand:hand,wrong:wrong});if(r.trace.length>STRIP_MAX)r.trace.shift();
   }
   r.res.set(i,{ms:ms,wrong:wrong?det.hand:null,db:h.kb?null:strokeDb(h.pk,h.raw)});
@@ -4985,14 +5160,8 @@ function insightParts(r){
     const d=mean(r.hand.R)-mean(r.hand.L);
     if(Math.abs(d)>=4)parts.push('Your '+(d>0?'right':'left')+' hand lands '+Math.abs(d).toFixed(0)+' ms later than your '+(d>0?'left':'right')+'.');
   }
-  if(r.gridSeg>=0){
-    const sg=r.plan.segs[r.gridSeg],Q=r.seg[r.gridSeg];
-    let wi=-1,wv=0;
-    for(let i=0;i<sg.N;i++){
-      if(Q.posCnt[i]>=3){const a=Q.posSum[i]/Q.posCnt[i];if(Math.abs(a)>Math.abs(wv)){wv=a;wi=i;}}
-    }
-    if(wi>=0&&Math.abs(wv)>=6)parts.push((r.plan.segs.length>1?'In exercise '+sg.idx+', stroke ':'Stroke ')+sg.notes.slice(0,wi+1).filter(n=>n!=='_').length+' ('+hnd(sg.notes[wi])+') drifts most, '+Math.abs(wv).toFixed(0)+' ms '+(wv>0?'late':'early')+'.');
-  }
+  /* the costliest place in the music where the strokes go wrong, in any exercise of the run */
+  if(r.seg){const f=findings(r.plan,r.seg,S.tol)[0];if(f)parts.push(findingText(f,r.plan));}
   if(!r.kb&&r.plan.slots.some(x=>x.bz)){const st=buzzStats(r.plan.slots,r.res,r.bnc||[]),bn=buzzNote(st,buzzSingles(r.plan.slots,st,r.res).size);if(bn)parts.push(bn);}
   const lvs=levelStats(r.lv);
   if(lvs&&lvs.diff!==null&&Math.abs(lvs.diff)>=3)parts.push('Your '+(lvs.diff<0?'left':'right')+' hand is '+Math.abs(lvs.diff).toFixed(0)+' dB quieter than your '+(lvs.diff<0?'right':'left')+'.');
