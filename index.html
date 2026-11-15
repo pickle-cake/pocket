@@ -1358,7 +1358,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Accent and Other strokes</b> (Play page) lay accents and ghost notes over the loaded exercise. Accent picks the loud strokes: the first of each group, each beat, each bar, every 2nd to 7th stroke (counted across passes, so it drifts if the count does not divide the pass), or the right or left hand. Rests are never accented. Other strokes can be Normal or Ghost. The staff shows accents with &gt; and ghost notes in brackets.</li>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
         <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. Hits just before it (up to 80 ms for a flam, 120 ms for a drag) are its grace notes and are not counted as extras. While an exercise has them, the microphone also accepts a clearly louder strike soon after a hit, so a soft grace does not hide the main stroke. A grace as loud as the main stroke can, so play it softer. Keyboard play has no graces, so use one key per main stroke.</li>
-        <li><b>Buzz strokes:</b> only the start of each buzz is scored, as early or late against the click. The bounces after it are not extras. With the microphone, Pocket also counts the bounces it hears, and after the run says how many each buzz had and how far it rang towards the next stroke. This is experimental: a pad and microphone hear bounces differently, so treat it as a guide. Keyboard play scores the start only.</li>
+        <li><b>Buzz strokes:</b> only the start of each buzz is scored, as early or late against the click. The bounces after it are not extras. A soft buzz that starts while the stroke before still rings is still heard as a stroke when it lands near its click. With the microphone, Pocket also counts the bounces it hears, and after the run says how many each buzz had and how far it rang towards the next stroke. This is experimental: a pad and microphone hear bounces differently, so treat it as a guide. Keyboard play scores the start only.</li>
         <li><b>Records and storage:</b> records are saved in this browser only. Export keeps a copy or moves it to another device, and Import brings it back. The app reminds you if you have never exported, or the last copy is two weeks old. On iPhone and iPad, Safari can clear a site's data after about a week without use, so add the page to your Home Screen. <b>Settings &rsaquo; Data &rsaquo; Storage</b> shows what takes space. Stroke detail (what rebuilds a run's staff) may use about 40% of what the browser allows. Past that, the oldest runs lose their detail first and keep their totals.</li>
       </ul>
     </section>
@@ -2165,13 +2165,29 @@ function buzzAt(slots,t){
   const j=lo-1;
   return j>=0&&slots[j].bz&&t<=buzzEnd(slots,j)?j:-1;
 }
+/* A bounce can stand in for a stroke only when it is at least this share of the level of the last stroke heard (-12 dB). */
+const BOUNCE_FLOOR=0.25;
+/* The slot that a bounce heard at t may be the stroke of, or -1: a stroke still to be judged (from nextFin) whose window it falls in,
+   when it is loud enough against the last stroke heard (lastPk). The detector does not know the routine, so a soft stroke played while
+   the one before still rings, such as a buzz after a louder stroke, reaches the app as a bounce. */
+function bounceSlot(slots,t,nextFin,pk,lastPk){
+  if(!slots.length||!(pk>=lastPk*BOUNCE_FLOOR))return -1;
+  const i=nearestSlot(slots,t);
+  return i>=nextFin&&Math.abs(t-slots[i].t)<=slots[i].w?i:-1;
+}
+/* The stroke of a slot from the hits in its window: the nearest real hit, else the loudest of the bounces standing in for one,
+   which is its attack rather than the bounces that follow it. */
+function strokeOf(hits){
+  const real=hits.filter(x=>!x.bn);
+  return real.length?pickBest(real):hits.reduce((b,x)=>x.pk>b.pk?x:b);
+}
 /* How each buzz stroke sounded. bnc is the times of the bounces heard (run time, s), res the timing of each judged stroke.
    For each buzz stroke that was heard: n, the bounces after it, and fill, how much of the way to the next stroke it rang
-   (null when the next stroke is far off or in another exercise, so there is no roll to fill). */
-function buzzStats(slots,res,bnc){
+   (null when the next stroke is far off or in another exercise, so there is no roll to fill). seg, when given, takes one exercise only. */
+function buzzStats(slots,res,bnc,seg){
   const ts=bnc.slice().sort((a,b)=>a-b),out=[];
   slots.forEach((s,i)=>{
-    if(!s.bz)return;
+    if(!s.bz||(seg!==undefined&&s.seg!==seg))return;
     const v=res.get(i);if(!v||v.miss)return;
     const th=s.t+v.ms/1000,end=buzzEnd(slots,i),nx=slots[i+1];
     let n=0,last=th;
@@ -2769,7 +2785,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.118';                           /* shown beside the title */
+const VERSION='1.5.119';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -2868,7 +2884,8 @@ function cleanRun(x){
       ls:typeof b.ls==='number'&&isFinite(b.ls)?b.ls:null,ld:typeof b.ld==='number'&&isFinite(b.ld)?b.ld:null,
       da:+b.da>0?Math.floor(+b.da):undefined,dg:+b.dg>0?Math.floor(+b.dg):undefined,ex:+b.ex>0?Math.floor(+b.ex):undefined,sp:typeof b.sp==='string'&&b.sp.length%4===0&&b.sp.length<=SPMAX&&/^[A-Za-z0-9_-]+$/.test(b.sp)?b.sp:undefined,q:typeof b.q==='string'&&b.q.length<=SPMAX&&/^[obmr]+$/.test(b.q)?b.q:undefined,
       an:+b.an>0?Math.floor(+b.an):undefined,ac:+b.ac>0?Math.floor(+b.ac):undefined,as:typeof b.as==='number'&&isFinite(b.as)?b.as:undefined,
-      gn:+b.gn>0?Math.floor(+b.gn):undefined,gc:+b.gc>0?Math.floor(+b.gc):undefined,gs:typeof b.gs==='number'&&isFinite(b.gs)?b.gs:undefined});
+      gn:+b.gn>0?Math.floor(+b.gn):undefined,gc:+b.gc>0?Math.floor(+b.gc):undefined,gs:typeof b.gs==='number'&&isFinite(b.gs)?b.gs:undefined,
+      bc:+b.bc>0?Math.floor(+b.bc):undefined,bn:typeof b.bn==='number'&&b.bn>=0&&b.bn<100?b.bn:undefined,bf:typeof b.bf==='number'&&b.bf>=0&&b.bf<=100?b.bf:undefined});
   });
   if(!exercises.length)return null;
   const o={id:x.id.slice(0,40),t:+x.t,mode:x.mode==='routine'?'routine':'single',rk:typeof x.rk==='string'?x.rk.slice(0,40):null,
@@ -3226,8 +3243,19 @@ function onNodeMsg(e){
   }
   else if(m.type==='bnc'){
     const r=run;
-    if(r&&!r.ended&&!r.paused&&!r.kb)r.bnc.push(m.t-latencySec()-r.t0);
+    if(r&&!r.ended&&!r.paused&&!r.kb)bounceHeard(r,m);
   }
+}
+/* A bounce from the detector. When it lands in the window of a stroke still to be judged, it may be that stroke played softly, so it
+   joins the stroke's hits as a stand-in that any real hit beats. finalizeSlot counts it as a bounce if it is not used. */
+function bounceHeard(r,m){
+  const plan=r.plan,tc=m.t-latencySec()-r.t0;
+  const i=r.ci&&tc<r.ci.ps-0.2?-1:bounceSlot(plan.slots,tc,r.nextFin,m.pk,r.lastPk),sl=plan.slots[i];
+  if(i<0||(m.pk<Math.pow(10,S.sens/20)&&sl.dy!=='g')){r.bnc.push(tc);return;}
+  const arr=r.pending.get(i)||[];
+  arr.push({e:tc-sl.t,det:null,kb:false,pk:m.pk,raw:m.pk,bn:true});
+  r.pending.set(i,arr);
+  const b=strokeOf(arr);r.res.set(i,{ms:b.e*1000,wrong:r.res.has(i)?r.res.get(i).wrong:null});
 }
 function setMeter(v){
   const db=20*Math.log10(v+1e-6);
@@ -3310,7 +3338,7 @@ function beginRun(mode){
     mode:mode,plan:plan,w0:Date.now(),t0:ctx.currentTime+0.25,kb:S.input==='kb',
     nextClick:0,pulseIdx:-1,nextFin:0,pending:new Map(),cur:-1,showSeg:0,gridSeg:-1,
     errs:[],lv:[],seq:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,streak:0,best:0,checked:0,bad:0,trace:[],res:new Map(),showG:0,missRun:0,trail:[],live:'',pts:0,sk:0,hud:scoreOn&&mode==='play'&&!!LV_PTS[S.click],tm:[],
-    fin:new Set(),paused:false,ci:null,bnc:[],dyc:lat?'':dynCode(),dyl:[],
+    fin:new Set(),paused:false,ci:null,bnc:[],lastPk:0,dyc:lat?'':dynCode(),dyl:[],
     seg:plan.segs.map(sg=>({errs:[],lv:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,checked:0,bad:0,sc:[],sm:[],sb:[],sy:[],sw:[],ev:[],da:0,dg:0,
       posSum:new Array(sg.N).fill(0),posCnt:new Array(sg.N).fill(0)})),
     dirty:true,ended:false,totalExercises:routineParsed.exercises.length,
@@ -3428,11 +3456,11 @@ function finalizeSlot(i){
   if(!redo){r.slots++;Q.slots++;}
   r.dirty=true;
   if(!hits.length){if(!redo){r.miss++;Q.miss++;Q.ev.push({t:sl.t,ci:Q.sc.length});Q.sc.push('m');Q.sy.push(sl.dy||'n');Q.sw.push(0);Q.sm.push(null);Q.sb.push(null);r.streak=0;liveScore(r,sg,'m');r.missRun++;r.seq.push({db:null});if(r.seq.length>STRIP_MAX)r.seq.shift();}r.res.set(i,{miss:true});return;}
-  const h=pickBest(hits);
+  const h=strokeOf(hits);
   /* Hits just before the main stroke of a flam or drag are its grace notes, not extras. Hits after a buzz stroke, or before the stroke
-     that follows one, are its bounces. */
+     that follows one, are its bounces, and so are the bounces that stood in for the stroke but were not used. */
   const pb=r.plan.slots[i-1],prevBz=!!(pb&&pb.bz&&pb.seg===sl.seg);
-  const bnc=hits.filter(x=>x!==h&&!x.kb&&((sl.bz&&x.e>h.e)||(prevBz&&x.e<h.e)));
+  const bnc=hits.filter(x=>x!==h&&!x.kb&&(x.bn||(sl.bz&&x.e>h.e)||(prevBz&&x.e<h.e)));
   if(!redo)bnc.forEach(x=>r.bnc.push(sl.t+x.e));
   const ex=hits.length-1-bnc.length-(sl.gr?hits.filter(x=>x!==h&&bnc.indexOf(x)<0&&x.e<h.e&&h.e-x.e<=graceSpan(sl.gr)).length:0);
   const ms=h.e*1000,det=h.det;
@@ -3638,8 +3666,9 @@ function handleHit(h){
   const arr=r.pending.get(i)||[];
   arr.push({e:e,det:h.det,kb:h.kb,pk:h.pk,raw:h.raw});
   r.pending.set(i,arr);
+  if(!h.kb&&h.pk>0)r.lastPk=h.pk;
   /* Show the result straight away. finalizeSlot replaces it once the window has closed. */
-  const b=pickBest(arr),exp=hnd(plan.segs[sl.seg].notes[sl.pos]),det=b.det;
+  const b=strokeOf(arr),exp=hnd(plan.segs[sl.seg].notes[sl.pos]),det=b.det;
   r.res.set(i,{ms:b.e*1000,wrong:(det&&det.hand!==exp)?det.hand:null});
 }
 let heardTimer=0;
@@ -4884,6 +4913,14 @@ function replaySnap(r){
   if(typeof x!=='string'||!x||x.length>MAX_SNAP)return undefined;
   return {x:x,st:S.startExercise,ev:S.eachVal,eu:S.eachUnit,gp:S.gap};
 }
+/* Buzz strokes heard in this exercise from the microphone: bc how many, bn their average bounces, bf how far they rang to the next stroke (%), when it can be told. */
+function buzzSaved(r,si){
+  if(r.kb||!r.plan.slots.some(x=>x.bz))return {};
+  const st=buzzStats(r.plan.slots,r.res,r.bnc||[],si);
+  if(!st.length)return {};
+  const fl=st.filter(x=>x.fill!==null).map(x=>x.fill);
+  return {bc:st.length,bn:Math.round(mean(st.map(x=>x.n))*10)/10,bf:fl.length?Math.round(mean(fl)*100):undefined};
+}
 function dynSaved(r,si){   /* accents and ghost notes judged in this exercise: how many, how many were clear, and how even they were */
   const o={};
   [['A','a'],['g','g']].forEach(([dy,c])=>{
@@ -4911,7 +4948,7 @@ function recordRun(r){
     exercises:rows.map(x=>({k:x.key,bpm:x.bpm,due:x.due,within:Math.round(x.pct*x.due),heard:x.heard,
       avg:isNaN(x.avg)?null:x.avg,sd:isNaN(x.spread)?null:x.spread,miss:x.miss,i:x.idx,
       ls:x.lvl&&x.lvl.sd!==null?Math.round(x.lvl.sd*10)/10:null,ld:x.lvl&&x.lvl.diff!==null?Math.round(x.lvl.diff*10)/10:null,
-      da:x.da||undefined,dg:x.dg||undefined,ex:r.seg[x.si]&&r.seg[x.si].extras||undefined,sp:x.sc.length?packStrokes(x):undefined,q:x.q||undefined,...dynSaved(r,x.si)}))};
+      da:x.da||undefined,dg:x.dg||undefined,ex:r.seg[x.si]&&r.seg[x.si].extras||undefined,sp:x.sc.length?packStrokes(x):undefined,q:x.q||undefined,...buzzSaved(r,x.si),...dynSaved(r,x.si)}))};
   if(all){   /* exercises of the routine that were not played, so a partial run still shows the whole routine */
     const played=new Set(rows.map(x=>x.idx));
     run.sk=all.map((k,i)=>({i:i+1,k:k})).filter(b=>!played.has(b.i));
