@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['parseStrokes', 'nameMarkers', 'fmtPattern', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
+  'graceSlot', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
 
 const runPoints = (codes, lv) => c.scoreParts([[codes, 1]], lv);
 const plan = (text, opt) => {
@@ -259,6 +259,53 @@ test('a bounce stands in for a stroke only in its window, while it waits, and wh
   /* a real hit beats a stand-in; among stand-ins, the loudest is the attack */
   assert.equal(c.strokeOf([{ e: 0.001, pk: 0.3, bn: true }, { e: 0.02, pk: 0.2 }]).e, 0.02);
   assert.equal(c.strokeOf([{ e: -0.01, pk: 0.3, bn: true }, { e: 0.005, pk: 0.2, bn: true }]).e, -0.01);
+});
+
+test('detector: buzz strokes with a loud rebound half a gap after each are still scored on the line', () => {
+  /* A single, then buzz strokes 300 ms apart, each with one rebound 140 ms after it, a little louder. The first buzz is under half as
+     loud as the single still ringing, so it comes as a bounce, and so may its rebound; once a rebound comes as a hit, the next strike
+     is too soon after it for a stroke and is a bounce too. Taken at face value, buzzes score 140 ms late. */
+  const sr = 48000, n = Math.round(sr * 2.2), buf = new Float32Array(n), ev = [];
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const strike = (t, a) => {
+    const s0 = Math.round(t * sr);
+    for (let i = 0; i < sr * 0.3 && s0 + i < n; i++) {
+      const w = Math.sin(i * 0.9) * 0.7 + (rnd() - 0.5) * 0.6;
+      buf[s0 + i] += a * (Math.exp(-i / (0.003 * sr)) + 0.15 * Math.exp(-i / (0.3 * sr))) * w;   /* the attack, then the pad ringing */
+    }
+  };
+  const due = [0.2, 0.5, 0.8, 1.1, 1.4, 1.7];
+  strike(0.2, 0.6);
+  for (let k = 1; k <= 4; k++) { strike(due[k], 0.25); strike(due[k] + 0.14, 0.3); }
+  strike(1.7, 0.6);
+  const d = new c.OnsetDetector(sr, e => { if (e.type === 'hit' || e.type === 'bnc') ev.push(e); });
+  d.set({ thr: 0.02, refrac: 0.04, flam: 0, buzz: 0.18 });
+  for (let i = 0; i < n; i += 128) d.process(buf.subarray(i, i + 128), i);
+  const sl = due.map((t, k) => ({ t, w: 0.15, seg: 0, bz: k >= 1 && k <= 4 }));
+  const on = ev.filter(e => due.some(t => Math.abs(e.t - t) < 0.004));
+  assert.ok(on.some(e => e.type === 'bnc'), 'a strike on the line came as a bounce: ' + JSON.stringify(ev));
+  const per = sl.map(() => []);
+  for (const e of ev) {
+    const i = c.nearestSlot(sl, e.t);
+    if (Math.abs(e.t - sl[i].t) <= sl[i].w) per[i].push({ e: e.t - sl[i].t, pk: e.pk, bn: e.type === 'bnc' });
+  }
+  const old = per.map(h => h.length ? c.strokeOf(h).e : null), now = per.map((h, i) => h.length ? c.strokeOf(h, c.buzzSep(sl, i)).e : null);
+  assert.ok(old.some(e => e > 0.1), 'without the buzz rule a rebound wins: ' + old);
+  now.forEach((e, i) => assert.ok(e !== null && Math.abs(e) < 0.004, 'stroke ' + i + ' scored at ' + e + ' ' + JSON.stringify(per[i])));
+});
+
+test('near a buzz stroke, a stand-in nearer the click, at least half as loud and well apart beats the choice', () => {
+  const sl = [{ t: 0, seg: 0 }, { t: 0.3, seg: 0, bz: true }, { t: 0.6, seg: 0 }, { t: 0.9, seg: 1 }];
+  assert.deepEqual(sl.map((x, i) => Math.round(c.buzzSep(sl, i) * 1000)), [0, 100, 100, 0]);
+  const h = [{ e: 0.001, pk: 0.3, bn: true }, { e: 0.14, pk: 0.4 }];
+  assert.equal(c.strokeOf(h, 0.1).e, 0.001);
+  assert.equal(c.strokeOf(h, 0).e, 0.14);
+  assert.equal(c.strokeOf([{ e: 0.001, pk: 0.3, bn: true }, { e: 0.14, pk: 0.4, bn: true }], 0.1).e, 0.001);   /* the rebound came as a bounce too */
+  assert.equal(c.strokeOf([{ e: -0.14, pk: 0.4 }, { e: 0.005, pk: 0.3, bn: true }], 0.1).e, 0.005);   /* the rebound of the stroke before */
+  assert.equal(c.strokeOf([{ e: 0.001, pk: 0.15, bn: true }, { e: 0.14, pk: 0.4 }], 0.1).e, 0.14);   /* a quiet bounce near the click */
+  assert.equal(c.strokeOf([{ e: -0.06, pk: 0.4, bn: true }, { e: 0.02, pk: 0.4 }], 0.1).e, 0.02);   /* a hit nearer the click */
+  /* a buzz played 40 ms early: its own bounces after it, nearer the click, are not its stroke */
+  assert.equal(c.strokeOf([{ e: -0.04, pk: 0.4, bn: true }, { e: -0.02, pk: 0.27, bn: true }, { e: 0.0, pk: 0.21, bn: true }], 0.1).e, -0.04);
 });
 
 test('buzz stats can take one exercise', () => {

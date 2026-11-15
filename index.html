@@ -275,6 +275,8 @@ body[data-run="1"] .notice{display:none}
 .cd.early .lt{font-style:italic}      /* a second cue beside colour: early leans, late is underlined */
 .cd.late .lt{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .cd.miss .lt{fill:var(--muted);opacity:.4}
+.cd.heard .ft{fill:var(--ink)}
+@media (prefers-reduced-motion:no-preference){.cd .lt{transition:fill var(--dur-1) var(--ease)}}   /* heard to judged: the colour fades in */
 .staff .acc{stroke:var(--ink);stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;fill:none}
 .staff .gh{stroke:var(--muted);stroke-width:1.5;stroke-linecap:round;fill:none}
 .staff .lt.soft{font-size:17px;fill:var(--muted)}
@@ -1162,12 +1164,13 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <ul>
         <li><b>Each row is one pass</b> of an exercise. The top row is playing and the next passes sit beneath it. Rows slide up as each pass ends.</li>
         <li><b>The moving line</b> reaches each note exactly when it is due. Strike as it arrives.</li>
-        <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket takes the colour of your timing for a moment and a flash shows where the note was: above the line is early, below is late. Once judged, a stroke takes the colour of its timing and the verdict appears under its lane.</li>
+        <li><b>A dot under a note</b> means the stroke was heard. Its timing comes a moment later, once the note's on-time window has closed and a later hit can no longer be the better match: then the letter takes the colour of early, on time or late.</li>
+        <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket lights up for a moment and a flash shows where the note was: above the line is early, below is late. Under its lane it says heard. A moment later, once the note's window has closed, the stroke is judged: it takes the colour of its timing and the verdict replaces heard.</li>
         <li><b>Letter colours:</b> green is on time, blue and slanted is early, pink and underlined is late, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as green.</li>
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
         <li><b>The gauge</b> shows how early or late you played on average over the last 32 strokes. Left is early, right is late.</li>
         <li><b>The level bars</b> appear when a run ends. Each bar is one stroke's loudness against your own typical stroke: the middle is typical, higher is louder, and blue bars are left hand. Scroll sideways for the whole run. The number is the spread in dB, so smaller is more even. With an accent or ghost rule only the normal strokes count, since accents and ghosts are checked separately. A line below says if one hand is quieter. Clipped hits are left out, and keyboard input has no levels.</li>
-        <li><b>The loudness strip</b> appears under each line of the staff when a run with buzz strokes ends, lined up with the notes above it. It draws how loud the pad was, with a faint line where each note was due, the trigger line dashed, and a tick at the top for each bounce counted. It shows why a bounce was or was not counted: too quiet for the trigger line, or too close to the one before. Only the run you just played has it, and it is kept in memory, not saved. Keyboard input has none.</li>
+        <li><b>The loudness strip</b> appears under each line of the staff when a run ends, lined up with the notes above it. It draws how loud the pad was, with a faint line where each note was due and the trigger line dashed. Grace notes show as the smaller peaks just before their main stroke, so you can see whether a flam or drag was heard and how close it was. On buzz strokes, a tick at the top marks each bounce counted, and the strip shows why a bounce was or was not counted: too quiet for the trigger line, or too close to the one before. Only the run you just played has it, and it is kept in memory, not saved. To keep it, choose <b>Export</b> under the result: it saves that run with its loudness and every sound heard to a file. Keyboard input has none.</li>
         <li><b>Narrow screens:</b> a busy pass wraps onto two lines at a barline.</li>
         <li><b>Keys:</b> <b>Space</b> starts, pauses and resumes, <b>Enter</b> plays Again after a run, and <b>Escape</b> stops.</li>
         <li><b>Pause</b> stops the click, and Resume counts you in from the start of that pass. <b>Restart</b> goes back to your start exercise.</li>
@@ -1543,6 +1546,7 @@ RLRR LRLL RLRR LRLL</pre>
       <p class="hint" id="advBody"></p>
       <div class="btns advmain" id="advBtns1">
         <button class="btn danger" id="advDiscard" type="button" hidden>Discard</button>
+        <button class="btn" id="advExport" type="button" aria-label="Export this run with its loudness" hidden>Export</button>
         <button class="btn" id="advDone" type="button" hidden>Done</button>
         <button class="btn primary" id="advAgain" type="button">Again</button>
       </div>
@@ -2182,10 +2186,23 @@ function bounceSlot(slots,t,nextFin,pk,lastPk){
   return i>=nextFin&&Math.abs(t-slots[i].t)<=slots[i].w?i:-1;
 }
 /* The stroke of a slot from the hits in its window: the nearest real hit, else the loudest of the bounces standing in for one,
-   which is its attack rather than the bounces that follow it. */
-function strokeOf(hits){
-  const real=hits.filter(x=>!x.bn);
-  return real.length?pickBest(real):hits.reduce((b,x)=>x.pk>b.pk?x:b);
+   which is its attack rather than the bounces that follow it. sep is set for a buzz stroke and the stroke after one (see buzzSep):
+   there a strike can reach the app as a bounce while the stroke before rings, and a rebound half a gap from a strike as a hit or a
+   louder bounce. So a stand-in nearer the click than that choice, at least half as loud and at least sep seconds from it (so not
+   one of its own bounces), is the stroke. */
+function strokeOf(hits,sep){
+  const real=hits.filter(x=>!x.bn),h=real.length?pickBest(real):hits.reduce((b,x)=>x.pk>b.pk?x:b);
+  if(!(sep>0))return h;
+  const near=hits.filter(x=>x.bn&&x!==h&&x.pk>=h.pk*0.5&&Math.abs(x.e)<Math.abs(h.e)&&Math.abs(x.e-h.e)>=sep);
+  return near.length?pickBest(near):h;
+}
+/* For strokeOf: a third of the gap to the nearest stroke when slot i is a buzz stroke or the stroke after one in the same exercise,
+   else 0. */
+function buzzSep(slots,i){
+  const s=slots[i],p=slots[i-1],q=slots[i+1];
+  if(!s||!(s.bz||(p&&p.bz&&p.seg===s.seg)))return 0;
+  const g=Math.min(p?s.t-p.t:Infinity,q?q.t-s.t:Infinity);
+  return isFinite(g)&&g>0?g/3:0;
 }
 /* How each buzz stroke sounded. bnc is the times of the bounces heard (run time, s), res the timing of each judged stroke.
    For each buzz stroke that was heard: n, the bounces after it, and fill, how much of the way to the next stroke it rang
@@ -2853,7 +2870,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.123';                           /* shown beside the title */
+const VERSION='1.5.128';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3303,15 +3320,17 @@ function pushDet(){
   settleSec();   /* works out the run's shortest gap between strokes */
   sendDet({thr:thr,refrac:settleSec(),flam:on&&rn.plan.slots.some(x=>x.gr)?0.07:0,   /* flams and drags are in play: a louder strike soon after a hit counts as the main stroke */
     buzz:on&&rn.plan.slots.some(x=>x.bz)?Math.max(0.03,rn.minGap*0.6):0,   /* buzz strokes are in play: the bounces after a stroke are reported apart from the hits */
-    trace:on&&!rn.kb&&rn.plan.slots.some(x=>x.bz)});   /* and the loudness comes too, for the loudness strip after the run */
+    trace:on&&!rn.kb});   /* and the loudness comes on every microphone run, for the loudness strip after it */
 }
 function onNodeMsg(e){
   const m=e.data;
   if(m.type==='level'){setMeter(m.v);if(chk&&chk.phase==='quiet')chk.levels.push(m.v);}
   else if(m.type==='hit'){
+    devHeard(m);
     handleHit({t:m.t,kb:false,det:null,pk:m.pk,raw:m.raw});
   }
   else if(m.type==='bnc'){
+    devHeard(m);
     const r=run;
     if(r&&!r.ended&&!r.paused&&!r.kb)bounceHeard(r,m);
   }
@@ -3331,6 +3350,12 @@ function envHeard(r,m){
   if(need>e.v.length){const b=new Float32Array(Math.min(ENV_MAX,Math.max(need,e.v.length*2)));b.set(e.v.subarray(0,e.n));e.v=b;}
   e.v.set(m.v,k);if(need>e.n)e.n=need;
 }
+/* Every hit and bounce the detector reported while the loudness was kept, by run time, with its level: for Export. */
+function devHeard(m){
+  const r=run;if(!r||r.ended||r.paused||r.kb||!r.env)return;
+  if(!r.dev)r.dev=[];
+  if(r.dev.length<200000)r.dev.push([m.type==='hit'?'h':'b',+(m.t-latencySec()-r.t0).toFixed(4),+(20*Math.log10(m.pk+1e-6)).toFixed(1)]);
+}
 /* A bounce from the detector. When it lands in the window of a stroke still to be judged, it may be that stroke played softly, so it
    joins the stroke's hits as a stand-in that any real hit beats. finalizeSlot counts it as a bounce if it is not used. */
 function bounceHeard(r,m){
@@ -3340,7 +3365,7 @@ function bounceHeard(r,m){
   const arr=r.pending.get(i)||[];
   arr.push({e:tc-sl.t,det:null,kb:false,pk:m.pk,raw:m.pk,bn:true});
   r.pending.set(i,arr);
-  const b=strokeOf(arr);r.res.set(i,{ms:b.e*1000,wrong:r.res.has(i)?r.res.get(i).wrong:null});
+  const b=strokeOf(arr,buzzSep(plan.slots,i));r.res.set(i,{ms:b.e*1000,wrong:r.res.has(i)?r.res.get(i).wrong:null,pend:true});
   bzLive(r,i);
 }
 /* The bounces of a buzz stroke so far, for the number beside it on the staff. */
@@ -3548,7 +3573,7 @@ function finalizeSlot(i){
   if(!redo){r.slots++;Q.slots++;}
   r.dirty=true;
   if(!hits.length){if(!redo){r.miss++;Q.miss++;Q.ev.push({t:sl.t,ci:Q.sc.length});Q.sc.push('m');Q.sy.push(sl.dy||'n');Q.sw.push(0);Q.sm.push(null);Q.sb.push(null);r.streak=0;liveScore(r,sg,'m');r.missRun++;r.seq.push({db:null});if(r.seq.length>STRIP_MAX)r.seq.shift();}r.res.set(i,{miss:true});return;}
-  const h=strokeOf(hits);
+  const h=strokeOf(hits,buzzSep(r.plan.slots,i));
   /* Hits just before the main stroke of a flam or drag are its grace notes, not extras. Hits after a buzz stroke, or before the stroke
      that follows one, are its bounces, and so are the bounces that stood in for the stroke but were not used. */
   const pb=r.plan.slots[i-1],prevBz=!!(pb&&pb.bz&&pb.seg===sl.seg);
@@ -3759,9 +3784,10 @@ function handleHit(h){
   arr.push({e:e,det:h.det,kb:h.kb,pk:h.pk,raw:h.raw});
   r.pending.set(i,arr);
   if(!h.kb&&h.pk>0)r.lastPk=h.pk;
-  /* Show the result straight away. finalizeSlot replaces it once the window has closed. */
-  const b=strokeOf(arr),exp=hnd(plan.segs[sl.seg].notes[sl.pos]),det=b.det;
-  r.res.set(i,{ms:b.e*1000,wrong:(det&&det.hand!==exp)?det.hand:null});
+  /* Show straight away that the stroke was heard, with no verdict yet (pend): finalizeSlot gives it its timing once the
+     window has closed, so a mark never changes from one timing to another. */
+  const b=strokeOf(arr,buzzSep(plan.slots,i)),exp=hnd(plan.segs[sl.seg].notes[sl.pos]),det=b.det;
+  r.res.set(i,{ms:b.e*1000,wrong:(det&&det.hand!==exp)?det.hand:null,pend:true});
   bzLive(r,i);
 }
 let heardTimer=0;
@@ -4370,13 +4396,14 @@ function movePlayhead(r,cursor,heard){
 }
 /* One stroke's colour and reading, from its result. The same for the live run, the review after it and a saved run. */
 function paintCard(el,res,ended,tol,bz){
-  const sig=(res?(res.miss?'m':res.ms+'|'+(res.wrong||'')):'')+'#'+tol+(ended?'e':'')+'b'+(bz===undefined?'':bz);
+  const sig=(res?(res.miss?'m':res.pend?'p':res.ms+'|'+(res.wrong||'')):'')+'#'+tol+(ended?'e':'')+'b'+(bz===undefined?'':bz);
   if(sig===el._sig)return;
   el._sig=sig;
-  el.classList.remove('ok','early','late','miss','wrong');
+  el.classList.remove('ok','early','late','miss','wrong','heard');
   let ft='',tg='';
   if(res){
-    if(res.miss){el.classList.add('miss');if(ended)ft='miss';}
+    if(res.pend){el.classList.add('heard');ft='●';}   /* heard, not yet judged: a dot under it, in no timing colour */
+    else if(res.miss){el.classList.add('miss');if(ended)ft='miss';}
     else{
       el.classList.add(Math.abs(res.ms)<=tol?'ok':(res.ms<0?'early':'late'));
       if(ended)ft=fmtMs(res.ms);
@@ -4551,7 +4578,7 @@ function drawHwy(r,heard){
   const tw=road*0.4,th=Math.max(26,road*0.09);
   /* the strokes in sight, and the last judged one in each lane for the pads and the verdicts */
   const last={L:null,R:null},tol=(r&&r.tol)||S.tol,vis=[];
-  const tone=res=>res.miss?C.muted:(Math.abs(res.ms)<=tol?C.ok:(res.ms<0?C.early:C.late));
+  const tone=res=>res.miss?C.muted:res.pend?C.ink:(Math.abs(res.ms)<=tol?C.ok:(res.ms<0?C.early:C.late));   /* heard but not yet judged: no timing colour */
   if(plan){
     const cells=plan.cells,lo0=t-HW_PAST;
     let lo=0,hi=cells.length;
@@ -4667,6 +4694,7 @@ function drawHwy(r,heard){
     const age=t-v.c.t;if(age>HW_PAST)return;
     const res=v.res;let txt;
     if(res.miss)txt='missed';
+    else if(res.pend)txt='heard';
     else{
       const ms=Math.round(res.ms);
       txt=Math.abs(res.ms)<=tol?'on time':(ms<0?'early ':'late ')+Math.abs(ms)+' ms';
@@ -4982,7 +5010,7 @@ function initTaps(){
   });
 }
 function drawTrace(){if(lvStrip)lvStrip.draw();if(trStrip)trStrip.draw();}
-/* The loudness strip: after a run with buzz strokes, a thin trace of the loudness under each line of the staff, against the notes
+/* The loudness strip: after a microphone run, a thin trace of the loudness under each line of the staff, against the notes
    above it, with the trigger line dashed and a tick for each bounce counted. It comes from the run's loudness in memory and goes
    with the next run; nothing of it is saved. The review staff is rebuilt from the saved run, so its slots are found again in the
    run just played: the same stroke of the same exercise. */
@@ -5133,6 +5161,7 @@ function showResult(){
 }
 function renderAdvice(){
   const box=$('advice');
+  $('advExport').hidden=!(lastRun&&lastRun.run&&view&&view.ended&&view.env);   /* only a run with its loudness kept (the microphone) */
   if(!lastRun){box.hidden=true;$('advDiscard').hidden=true;return;}
   box.hidden=false;
   $('advFirst').hidden=true;
@@ -6194,6 +6223,26 @@ async function exportRecs(){
   const pl=(n,w)=>n+' '+w+(n===1?'':'s'),bits=[];
   if(sel.hist)bits.push(pl(totalRuns(),'run'));if(sel.lib)bits.push(pl(recs.lib.length,'routine'));if(sel.lists)bits.push(pl(S.lists.length,'library'));if(sel.set)bits.push('settings');
   $('recMsg').textContent='Exported '+bits.join(', ')+'.';$('recMsg').classList.add('flash');
+}
+/* The run just played, for a closer look: the run as History keeps it (in the export format), each stroke due with its result, every
+   hit and bounce the detector reported, and the loudness of each millisecond (dB, null where none was heard), all by run time in
+   seconds. The loudness is not kept anywhere else; this file is the only copy. */
+function runTrace(r,rec){
+  const items={},hk=t=>{const h=hashOf(t);items[h]=t;return h;};
+  const o=Object.assign({},rec,{exercises:rec.exercises.map(b=>Object.assign({},b,{k:hk(b.k)}))});
+  if(rec.sk)o.sk=rec.sk.map(b=>({i:b.i,k:hk(b.k)}));
+  if(rec.rp)o.rp=Object.assign({},rec.rp,{x:hk(rec.rp.x)});
+  const e=r.env,db=[];
+  for(let k=0;k<e.n;k++)db.push(e.v[k]>0?+(20*Math.log10(e.v[k]+1e-6)).toFixed(1):null);
+  return {v:2,app:VERSION,runs:[o],items:items,trace:{
+    sens:S.sens,thr:+e.thr.toFixed(1),latency:latencySec(),buzz:+(Math.max(0.03,r.minGap*0.6)).toFixed(4),
+    slots:r.plan.slots.map((x,i)=>{const v=r.res.get(i);return {t:+x.t.toFixed(4),seg:x.seg,pos:x.pos,bz:x.bz?1:0,dy:x.dy||'',
+      ms:v&&!v.miss?Math.round(v.ms):null,bn:x.bz&&r.bzn&&r.bzn.has(i)?r.bzn.get(i):null};}),
+    det:r.dev||[],bnc:r.bnc.map(t=>+t.toFixed(4)),env:{t:+e.t.toFixed(4),dt:e.dt,db:db}}};
+}
+async function exportRun(){
+  const r=view;if(!r||!r.env||!lastRun||!lastRun.run)return;
+  await saveFile('pocket-run-'+stamp(true)+'.json','application/json',JSON.stringify(runTrace(r,lastRun.run)));
 }
 let impPending=null;
 /* The Data page's import message. After an import it is set once the page has redrawn, so the run count does not overwrite it. */
@@ -7785,6 +7834,7 @@ function wire(){
     guard(()=>{setRoutineText(b.dataset.text);showTab('play');window.scrollTo(0,0);});
   }));
   $('advAgain').addEventListener('click',()=>startPlay());
+  $('advExport').addEventListener('click',exportRun);
   $('advDone').addEventListener('click',()=>{lastRun=null;refreshPreview();renderAdvice();setReview(false);window.scrollTo(0,0);});   /* done with these results: back to the start screen, the run stays in History */
   arm($('advDiscard'),discardRun);
   $('svBtnPref').addEventListener('click',()=>setSview('pref'));

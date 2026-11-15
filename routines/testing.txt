@@ -1,0 +1,52 @@
+# Test routines for the loudness strip, Export and the heard-then-judged marks. Play them with the microphone.
+# After each run, check the strip under the staff, then choose Export under the result to save the run with its loudness.
+# Each idea is played at 50, 70 and 90 BPM, so the exports show how the sound changes with tempo.
+# For accents and ghost notes, set Accent and Other strokes on the Play page before playing Singles.
+---
+title: Testing: Singles
+each: x4
+8 RLRL RLRL @50
+8 RLRL RLRL @70
+8 RLRL RLRL @90
+16 RLRL RLRL @50
+16 RLRL RLRL @70
+---
+title: Testing: Singles with rests
+each: x4
+8 R_L_ R_L_ @50
+8 RL__ RL__ @70
+16 R__L __R_ _L__ @90
+---
+title: Testing: Flams
+each: x4
+8 fRfL fRfL @50
+8 fRfL fRfL @70
+8 fRfL fRfL @90
+8 fRLR fLRL @70
+---
+title: Testing: Drags
+each: x4
+8 dRdL dRdL @50
+8 dRdL dRdL @70
+8 dRdL dRdL @90
+8 dRLR dLRL @70
+---
+title: Testing: Buzz strokes
+each: x4
+8 zRzL zRzL @50
+8 zRzL zRzL @70
+8 zRzL zRzL @90
+16 zRzL zRzL @50
+---
+title: Testing: Buzz strokes between singles
+each: x4
+8 RLRL zRzLzRzL @50
+8 RLRL zRzLzRzL @70
+8 RLRL zRzLzRzL @90
+8 zRLR zLRL @70
+---
+title: Testing: Everything in one line
+each: x4
+8 RLRL fRLfLR dRLdLR zRzLzRzL @50
+8 RLRL fRLfLR dRLdLR zRzLzRzL @70
+8 RLRL fRLfLR dRLdLR zRzLzRzL @90
