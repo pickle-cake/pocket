@@ -1366,7 +1366,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Latency:</b> sound reaches the page late, and the click reaches your ears late. Press <b>Auto calibrate</b> once on each device. It plays clicks through the speakers and times when the mic hears them, so you do not play. <b>Calibrate by playing</b> is the second choice: hit on each click, 80 hits or more, until the number settles. It assumes you were on the click on average. You can also type a number.</li>
         <li><b>Accent and Other strokes</b> (Play page) lay accents and ghost notes over the loaded exercise. Accent picks the loud strokes: the first of each group, each beat, each bar, every 2nd to 7th stroke (counted across passes, so it drifts if the count does not divide the pass), or the right or left hand. Rests are never accented. Other strokes can be Normal or Ghost. The staff shows accents with &gt; and ghost notes in brackets.</li>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
-        <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. Hits just before it (up to 80 ms for a flam, 120 ms for a drag) are its grace notes and are not counted as extras. While an exercise has them, the microphone also accepts a clearly louder strike soon after a hit, so a soft grace does not hide the main stroke. A grace as loud as the main stroke can, so play it softer. Keyboard play has no graces, so use one key per main stroke.</li>
+        <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. With the microphone, Pocket reads every strike in the loudness and works out which are grace notes and which is the main stroke, so a main stroke played just after its graces is still timed from the main stroke. A flam's grace comes up to 95 ms before it, and a drag's two graces up to 270 ms before it, or starting on the click when the main stroke is late. The main stroke should be the louder: a grace as loud as it can be read as the main stroke, so play graces softer. Grace notes are not counted as extras, and nor is a much quieter rebound just after a stroke. A flam or drag is judged once the window of the stroke after it has closed, so its colour comes a stroke later. Keyboard play has no graces, so use one key per main stroke.</li>
         <li><b>Buzz strokes:</b> only the start of each buzz is scored, as early or late against the click. The bounces after it are not extras. A soft buzz that starts while the stroke before still rings is still heard as a stroke when it lands near its click. With the microphone, Pocket also counts the bounces it hears: the small number beside each buzz stroke on the staff, during the run and in History. After the run it says how many each buzz had on average, how far it rang towards the next stroke, and how many sounded like single strokes (a group of four buzzes in a row with 1 bounce or fewer each on average, or up to 1.5 and almost as loud as your plain strokes, since a buzz pressed into the pad is quieter). This is experimental: a pad and microphone hear bounces differently, so treat it as a guide. Keyboard play scores the start only.</li>
         <li><b>Records and storage:</b> records are saved in this browser only. Export keeps a copy or moves it to another device, and Import brings it back. The app reminds you if you have never exported, or the last copy is two weeks old. On iPhone and iPad, Safari can clear a site's data after about a week without use, so add the page to your Home Screen. <b>Settings &rsaquo; Data &rsaquo; Storage</b> shows what takes space. Stroke detail (what rebuilds a run's staff) may use about 40% of what the browser allows. Past that, the oldest runs lose their detail first and keep their totals.</li>
       </ul>
@@ -2165,6 +2165,16 @@ function graceSlot(slots,t,from){
   const s=slots[lo];
   return s&&lo>=from&&s.gr&&s.t-t>=0.012&&s.t-t<=graceSpan(s.gr)?lo:-1;
 }
+/* The first flam or drag from slot from on whose graces could have started by time t (graceLead before its window), when t is before
+   that window. Otherwise -1. */
+function leadSlot(slots,t,from){
+  for(let j=from;j<slots.length&&slots[j].t-slots[j].w-graceLead(2)<=t;j++){
+    const s=slots[j];if(t>s.t+s.w)continue;
+    if(t>=s.t-s.w)return -1;
+    if(s.gr&&t>=s.t-s.w-graceLead(s.gr))return j;
+  }
+  return -1;
+}
 /* How long a buzz stroke can ring: until just before the next stroke, and never more than 350 ms. */
 const BUZZ_MAX=0.35;
 function buzzEnd(slots,i){const s=slots[i],n=slots[i+1];return s.t+(n&&n.seg===s.seg?Math.min(BUZZ_MAX,n.t-s.t-0.015):BUZZ_MAX);}
@@ -2203,6 +2213,102 @@ function buzzSep(slots,i){
   if(!s||!(s.bz||(p&&p.bz&&p.seg===s.seg)))return 0;
   const g=Math.min(p?s.t-p.t:Infinity,q?q.t-s.t:Infinity);
   return isFinite(g)&&g>0?g/3:0;
+}
+/* ---------- the note matcher, for flams and drags ---------- */
+/* The detector hears a soft grace note and the main stroke just after it as one hit, or misses the main stroke while the grace still
+   rings, so a flam or drag is timed from the loudness instead: every onset in it, read against the strokes that were due. */
+/* The onsets in the loudness between run times a and b: a millisecond at least 10 dB above the loudest of the 6 before it and above
+   thr (dB). Rises within 6 ms fold into one. Each onset has its time and its level, the peak of the 4 ms from it. */
+function envOnsets(env,a,b,thr){
+  const out=[],k0=Math.max(6,Math.floor((a-env.t)/env.dt)),k1=Math.min(env.n,Math.ceil((b-env.t)/env.dt)),db=k=>20*Math.log10(env.v[k]+1e-6);
+  let last=-1e9;
+  for(let k=k0;k<k1;k++){
+    const v=db(k);if(v<thr||k-last<=6)continue;
+    let m=-200;for(let j=k-6;j<k;j++)m=Math.max(m,db(j));
+    if(v-m<10)continue;
+    let p=v;for(let j=k+1;j<=k+4&&j<env.n;j++)p=Math.max(p,db(j));
+    out.push({t:env.t+(k+0.5)*env.dt,db:p});last=k;
+  }
+  return out;
+}
+/* Costs and limits of a reading. A missed stroke costs more than an extra hit, and a flam or drag heard without its grace a little.
+   A grace is 8 to 95 ms before a flam's main stroke; a drag's first grace is 30 to 270 ms before it, with at most 160 ms between strokes.
+   A main stroke quieter than its graces costs loud per 6 dB, since the grace is played softer. A hit soon after a stroke and at least
+   6 dB quieter is its rebound, which costs a little. */
+const MATCH={extra:4,miss:9,noGrace:2,flamGap:[0.008,0.095],dragSpan:[0.03,0.27],dragStep:0.16,maxGr:{1:1,2:3},loud:2,tail:1,tailDb:6,tailGap:0.12};
+const graceLead=g=>g>1?MATCH.dragSpan[1]:(g?MATCH.flamGap[1]:0);   /* how far before its window a stroke's graces can start */
+/* Every reading of slot i that starts at onset a: graces, then the main stroke inside the window, then any rebounds. */
+function matchOptions(slots,i,on,a){
+  const s=slots[i],out=[],g=s.gr||0,maxG=g?MATCH.maxGr[g]:0,nx=slots[i+1];
+  for(let m=a;m<on.length&&m<=a+maxG;m++){
+    const mt=on[m].t;if(mt>s.t+s.w)break;if(mt<s.t-s.w)continue;
+    const nG=m-a;if(!g&&nG)break;
+    if(g===1&&nG){const d=mt-on[a].t;if(d<MATCH.flamGap[0]||d>MATCH.flamGap[1])continue;}
+    if(g===2&&nG){
+      const d=mt-on[a].t;if(d<MATCH.dragSpan[0]||d>MATCH.dragSpan[1])continue;
+      let ok=true;for(let k=a+1;k<=m;k++)if(on[k].t-on[k-1].t>MATCH.dragStep)ok=false;
+      if(!ok)continue;
+    }
+    let c=0.5*((mt-s.t)/s.w)**2;   /* only a tie-breaker: the nearest wins, as pickBest does */
+    if(g&&!nG)c+=MATCH.noGrace;
+    if(nG){let gd=-1e9;for(let k=a;k<m;k++)gd=Math.max(gd,on[k].db);if(gd>on[m].db)c+=MATCH.loud*(gd-on[m].db)/6;}
+    const gr=[];for(let k=a;k<m;k++)gr.push(k);
+    const lim=mt+Math.min(MATCH.tailGap,nx?0.4*(nx.t-s.t):MATCH.tailGap),tl=[];
+    let b=m;
+    for(;;){
+      out.push({b:b,main:m,gr:gr,tl:tl.slice(),cost:c});
+      if(!(b+1<on.length&&on[b+1].t<=lim&&on[b+1].db<=on[m].db-MATCH.tailDb))break;
+      b++;tl.push(b);c+=MATCH.tail;
+    }
+  }
+  return out;
+}
+/* The cheapest reading of the onsets on (sorted by time) against the slots: for each slot, null (missed) or {main, gr, tl} as indices
+   into on. Each slot takes a run of onsets in turn, and the onsets no slot takes are extras, charged only inside an exercise (from
+   where its first graces could start to its last window), so a lead-in or a gap between exercises costs nothing. */
+function matchStrokes(slots,on){
+  const N=slots.length,M=on.length,sp=[];
+  slots.forEach((s,i)=>{const a=s.t-s.w-graceLead(s.gr);if(!i||slots[i-1].seg!==s.seg)sp.push([a,s.t+s.w]);else sp[sp.length-1][1]=s.t+s.w;});
+  const charge=on.map(o=>sp.some(z=>o.t>=z[0]&&o.t<=z[1])?MATCH.extra:0);
+  let f=new Float64Array(M+1).fill(Infinity);f[0]=0;
+  const back=[];
+  for(let i=0;i<N;i++){
+    const s=slots[i],lo=s.t-s.w-graceLead(s.gr),g=new Float64Array(M+1).fill(Infinity),bk=new Array(M+1);
+    let best=Infinity,bp=-1;
+    for(let p=0;p<=M;p++){
+      if(p>0)best+=charge[p-1];   /* the onsets passed over since the best state are extras */
+      if(f[p]<best){best=f[p];bp=p;}
+      if(best===Infinity)continue;
+      if(best+MATCH.miss<g[p]){g[p]=best+MATCH.miss;bk[p]={from:bp,o:null};}
+      if(p<M&&on[p].t>=lo&&on[p].t<=s.t+s.w)
+        for(const o of matchOptions(slots,i,on,p)){const v=best+o.cost,q=o.b+1;if(v<g[q]){g[q]=v;bk[q]={from:bp,o:o};}}
+    }
+    back.push(bk);f=g;
+  }
+  let bestV=Infinity,p=0;
+  for(let q=0;q<=M;q++){if(f[q]===Infinity)continue;let v=f[q];for(let k=q;k<M;k++)v+=charge[k];if(v<bestV){bestV=v;p=q;}}
+  const res=new Array(N);
+  for(let i=N-1;i>=0;i--){const b=back[i][p];res[i]=b.o;p=b.from;}
+  return res;
+}
+/* The main stroke of flam or drag slot i, read from the loudness: {t, db, gr, tl} (run times of its graces and rebounds), or null when
+   none was heard. The strokes either side of it in the same exercise are read too, so their hits are not taken for its own, which is
+   why a flam or drag is judged once the window of the stroke after it has closed (see judgeAt). */
+function graceMain(slots,i,env,thr){
+  const s=slots[i],p=slots[i-1],n=slots[i+1],sub=[s],at=p&&p.seg===s.seg?1:0;
+  if(at)sub.unshift(p);
+  if(n&&n.seg===s.seg)sub.push(n);
+  const z=sub[sub.length-1],on=envOnsets(env,sub[0].t-sub[0].w-graceLead(sub[0].gr),z.t+z.w+0.001,thr);
+  if(!on.length)return null;
+  const r=matchStrokes(sub,on)[at];
+  if(!r)return null;
+  return {t:on[r.main].t,db:on[r.main].db,gr:r.gr.map(k=>on[k].t),tl:r.tl.map(k=>on[k].t)};
+}
+/* The run time after which slot i can be judged: the end of its window, or for a flam or drag read from the loudness, the end of the
+   next stroke's window in the same exercise. */
+function judgeAt(slots,i,env){
+  const s=slots[i],n=slots[i+1];
+  return env&&s.gr&&n&&n.seg===s.seg?n.t+n.w:s.t+s.w;
 }
 /* How each buzz stroke sounded. bnc is the times of the bounces heard (run time, s), res the timing of each judged stroke.
    For each buzz stroke that was heard: n, the bounces after it, and fill, how much of the way to the next stroke it rang
@@ -2870,7 +2976,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.128';                           /* shown beside the title */
+const VERSION='1.5.129';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3498,8 +3604,7 @@ function tick(){
   }
   const L=r.kb?0:latencySec();
   while(r.nextFin<plan.slots.length){
-    const sl=plan.slots[r.nextFin];
-    if(r.t0+sl.t>now-L-sl.w-0.07)break;
+    if(r.t0+judgeAt(plan.slots,r.nextFin,!r.kb&&r.env)>now-L-0.07)break;
     finalizeSlot(r.nextFin);r.nextFin++;
   }
   if(r.mode==='lat'&&r.missRun>=(r.errs.length?LAT.quiet:LAT.noHit)){endRun();return;}
@@ -3568,18 +3673,26 @@ function restEvents(r){
 function finalizeSlot(i){
   const r=run,sl=r.plan.slots[i],sg=r.plan.segs[sl.seg],Q=r.seg[sl.seg],pos=sl.pos,exp=hnd(sg.notes[pos]);
   const hits=r.pending.get(i)||[];r.pending.delete(i);
+  const pre=(r.preGr&&r.preGr.get(i))||[];if(r.preGr)r.preGr.delete(i);
+  /* A flam or drag heard through the microphone is read from the loudness (graceMain), so its main stroke is found even when the
+     detector heard it and its graces as one hit. */
+  const gm=sl.gr&&!r.kb&&r.env?graceMain(r.plan.slots,i,r.env,r.env.thr):null;
   /* A pass replayed after a pause shows its new result but is not counted twice. */
   const redo=r.fin.has(i);r.fin.add(i);
   if(!redo){r.slots++;Q.slots++;}
   r.dirty=true;
-  if(!hits.length){if(!redo){r.miss++;Q.miss++;Q.ev.push({t:sl.t,ci:Q.sc.length});Q.sc.push('m');Q.sy.push(sl.dy||'n');Q.sw.push(0);Q.sm.push(null);Q.sb.push(null);r.streak=0;liveScore(r,sg,'m');r.missRun++;r.seq.push({db:null});if(r.seq.length>STRIP_MAX)r.seq.shift();}r.res.set(i,{miss:true});return;}
-  const h=strokeOf(hits,buzzSep(r.plan.slots,i));
+  if(!gm&&pre.length&&!redo){r.extras+=pre.length;Q.extras+=pre.length;}
+  if(!hits.length&&!gm){if(!redo){r.miss++;Q.miss++;Q.ev.push({t:sl.t,ci:Q.sc.length});Q.sc.push('m');Q.sy.push(sl.dy||'n');Q.sw.push(0);Q.sm.push(null);Q.sb.push(null);r.streak=0;liveScore(r,sg,'m');r.missRun++;r.seq.push({db:null});if(r.seq.length>STRIP_MAX)r.seq.shift();}r.res.set(i,{miss:true});return;}
+  const all=gm?hits.concat(pre):hits,at=t=>x=>Math.abs(sl.t+x.e-t)<=0.006;
+  const h=gm?(all.find(at(gm.t))||{e:gm.t-sl.t,det:null,kb:false,pk:Math.pow(10,gm.db/20),raw:Math.pow(10,gm.db/20)}):strokeOf(hits,buzzSep(r.plan.slots,i));
   /* Hits just before the main stroke of a flam or drag are its grace notes, not extras. Hits after a buzz stroke, or before the stroke
      that follows one, are its bounces, and so are the bounces that stood in for the stroke but were not used. */
   const pb=r.plan.slots[i-1],prevBz=!!(pb&&pb.bz&&pb.seg===sl.seg);
-  const bnc=hits.filter(x=>x!==h&&!x.kb&&(x.bn||(sl.bz&&x.e>h.e)||(prevBz&&x.e<h.e)));
+  const bnc=all.filter(x=>x!==h&&!x.kb&&(x.bn||(sl.bz&&x.e>h.e)||(prevBz&&x.e<h.e)));
   if(!redo)bnc.forEach(x=>r.bnc.push(sl.t+x.e));
-  const ex=hits.length-1-bnc.length-(sl.gr?hits.filter(x=>x!==h&&bnc.indexOf(x)<0&&x.e<h.e&&h.e-x.e<=graceSpan(sl.gr)).length:0);
+  /* With the matcher, the hits it read as graces or rebounds are not extras either. */
+  const ex=gm?all.filter(x=>x!==h&&bnc.indexOf(x)<0&&!gm.gr.concat(gm.tl).some(t=>at(t)(x))).length
+    :hits.length-1-bnc.length-(sl.gr?hits.filter(x=>x!==h&&bnc.indexOf(x)<0&&x.e<h.e&&h.e-x.e<=graceSpan(sl.gr)).length:0);
   const ms=h.e*1000,det=h.det;
   const hand=det?det.hand:exp;   /* only a key names the hand; a microphone stroke counts as the hand it was due on */
   const wrong=!!det&&det.hand!==exp;
@@ -3655,7 +3768,7 @@ function resumeRun(){
   const fi=plan.slots.findIndex(x=>x.t>=ps-1e-6);
   if(fi>=0){
     r.nextFin=Math.min(r.nextFin,fi);
-    for(let k=fi;k<plan.slots.length;k++){r.pending.delete(k);r.res.delete(k);}
+    for(let k=fi;k<plan.slots.length;k++){r.pending.delete(k);r.res.delete(k);if(r.preGr)r.preGr.delete(k);}
   }
   r.cur=fc-1;r.paused=false;r.clk=null;   /* the pause is not a slip: measure afresh */
   {const now=ctx.currentTime;for(let j=0;j<cin;j++)queueClick(r,T+j*beat,j===0?2:(sg.gst.indexOf(j)>=0?1:0),now);}
@@ -3697,7 +3810,7 @@ function stopRun(){
   const r=run;if(!r||r.ended)return;
   if(!r.paused)tick();
   if(run===r&&!r.ended){
-    for(const i of [...r.pending.keys()].sort((a,b)=>a-b)){if(i>=r.nextFin)finalizeSlot(i);}
+    for(const i of [...new Set([...r.pending.keys(),...(r.preGr?r.preGr.keys():[])])].sort((a,b)=>a-b)){if(i>=r.nextFin)finalizeSlot(i);}
     endRun();
   }
 }
@@ -3776,8 +3889,10 @@ function handleHit(h){
     if(bj>=0&&!h.kb){r.bnc.push(tc);bzLive(r,bj);return;}
     const outside=tc<plan.slots[0].t-sl.w||tc>plan.slots[plan.slots.length-1].t+sl.w;
     if(outside||inLead(plan,tc))return;
-    r.extras++;r.seg[sl.seg].extras++;r.dirty=true;
-    const rc=restAt(r,tc);if(rc&&!r.restHit.has(rc)){r.restHit.add(rc);r.seg[rc.seg].ev.push({t:rc.t,c:'m'});liveScore(r,r.plan.segs[rc.seg],'m');}   /* a hit on a rest is a miss */
+    /* A hit in the run-up to a flam or drag may be one of its graces: the matcher decides when that stroke is judged. */
+    const gj=leadSlot(plan.slots,tc,Math.max(i,r.nextFin));
+    if(gj>=0&&!h.kb&&r.env&&!restAt(r,tc)){if(!r.preGr)r.preGr=new Map();const a=r.preGr.get(gj)||[];a.push({e:tc-plan.slots[gj].t,det:h.det,kb:false,pk:h.pk,raw:h.raw});r.preGr.set(gj,a);return;}
+    extraHit(r,tc,sl.seg);
     return;
   }
   const arr=r.pending.get(i)||[];
@@ -3789,6 +3904,11 @@ function handleHit(h){
   const b=strokeOf(arr,buzzSep(plan.slots,i)),exp=hnd(plan.segs[sl.seg].notes[sl.pos]),det=b.det;
   r.res.set(i,{ms:b.e*1000,wrong:(det&&det.hand!==exp)?det.hand:null,pend:true});
   bzLive(r,i);
+}
+/* An extra hit at run time tc, in exercise seg. A hit on a rest is also a miss. */
+function extraHit(r,tc,seg){
+  r.extras++;r.seg[seg].extras++;r.dirty=true;
+  const rc=restAt(r,tc);if(rc&&!r.restHit.has(rc)){r.restHit.add(rc);r.seg[rc.seg].ev.push({t:rc.t,c:'m'});liveScore(r,r.plan.segs[rc.seg],'m');}
 }
 let heardTimer=0;
 function flashHeard(h){

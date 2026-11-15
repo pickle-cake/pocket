@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['parseStrokes', 'nameMarkers', 'fmtPattern', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
+  'graceSlot', 'leadSlot', 'envOnsets', 'matchStrokes', 'graceMain', 'judgeAt', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
 
 const runPoints = (codes, lv) => c.scoreParts([[codes, 1]], lv);
 const plan = (text, opt) => {
@@ -139,6 +139,79 @@ test('graceSlot finds a flam only just before its main stroke', () => {
   assert.equal(c.graceSlot(s, t - 0.005, 0), -1);
   assert.equal(c.graceSlot(s, t - 0.2, 0), -1);
   assert.equal(c.graceSlot(s, t - 0.04, 2), -1);
+});
+
+/* A loudness trace like the detector's: one peak a millisecond, each strike decaying over about 15 ms, on a quiet floor. */
+const strikes = (t0, len, hits) => {
+  const n = Math.round(len / 0.001), v = new Float32Array(n);
+  for (let k = 0; k < n; k++) {
+    const t = t0 + k * 0.001;
+    let x = 0.002;
+    for (const [ht, db] of hits) if (t >= ht) x += Math.pow(10, db / 20) * Math.exp(-(t - ht) / 0.015);
+    v[k] = x;
+  }
+  return { t: t0, dt: 0.001, v, n };
+};
+const near = (a, b, ms) => Math.abs(a - b) <= ms / 1000;
+
+test('envOnsets finds each strike in the loudness, with its level', () => {
+  const env = strikes(1, 1, [[1.2, -6], [1.25, -20], [1.6, 0]]);
+  const on = c.envOnsets(env, 1, 2, -40);
+  assert.equal(on.length, 3);
+  assert.ok(near(on[0].t, 1.2, 1.5) && near(on[1].t, 1.25, 1.5) && near(on[2].t, 1.6, 1.5));
+  assert.ok(Math.abs(on[2].db) < 1 && on[1].db < on[0].db);
+  assert.equal(c.envOnsets(env, 1, 2, -3).length, 1);   /* only the loudest is over a -3 dB trigger line */
+});
+
+test('graceMain times a flam from its main stroke, not the grace before it', () => {
+  const s = plan('8 R fL R L').plan.slots, t = s[1].t;
+  const env = strikes(0, s[3].t + 0.5, [[s[0].t, -6], [t - 0.04, -22], [t + 0.005, -6], [s[2].t, -6], [s[3].t, -6]]);
+  const m = c.graceMain(s, 1, env, -40);
+  assert.ok(near(m.t, t + 0.005, 1.5));
+  assert.equal(m.gr.length, 1);
+  assert.ok(near(m.gr[0], t - 0.04, 1.5));
+});
+
+test('graceMain reads a drag whether its graces come before the click or start on it', () => {
+  const s = plan('dR R dL L').plan.slots;
+  const env = strikes(0, s[3].t + 0.5, [
+    [s[0].t - 0.15, -24], [s[0].t - 0.1, -24], [s[0].t - 0.01, -8], [s[1].t, -8],
+    [s[2].t, -24], [s[2].t + 0.05, -24], [s[2].t + 0.1, -6], [s[3].t, -8]]);
+  const a = c.graceMain(s, 0, env, -40), b = c.graceMain(s, 2, env, -40);
+  assert.ok(near(a.t, s[0].t - 0.01, 1.5));
+  assert.equal(a.gr.length, 2);
+  assert.ok(near(b.t, s[2].t + 0.1, 1.5));   /* graces on the click, the main stroke 100 ms late */
+  assert.equal(b.gr.length, 2);
+});
+
+test('graceMain takes a much quieter hit just after the stroke as its rebound, not the main stroke', () => {
+  const s = plan('dR R dL L').plan.slots;
+  const env = strikes(0, s[3].t + 0.5, [[s[0].t, -8], [s[0].t + 0.06, -24], [s[1].t, -8], [s[2].t, -8], [s[3].t, -8]]);
+  const m = c.graceMain(s, 0, env, -40);
+  assert.ok(near(m.t, s[0].t, 1.5));
+  assert.equal(m.gr.length, 0);
+  assert.equal(m.tl.length, 1);
+  assert.equal(c.graceMain(s, 0, strikes(0, 2, []), -40), null);   /* nothing heard */
+});
+
+test('matchStrokes charges no extras in the lead-in, and misses a stroke not played', () => {
+  const s = plan('R L R L').plan.slots;
+  const on = [{ t: s[0].t - 1, db: -6 }, { t: s[0].t, db: -6 }, { t: s[2].t + 0.01, db: -6 }, { t: s[3].t, db: -6 }];
+  const r = c.matchStrokes(s, on);
+  assert.equal(r[0].main, 1);
+  assert.equal(r[1], null);
+  assert.equal(r[2].main, 2);
+  assert.equal(r[3].main, 3);
+});
+
+test('a flam or drag is judged once the window of the stroke after it closes, and a hit in its run-up is held for it', () => {
+  const s = plan('q dR R dL L').plan.slots, env = {};
+  assert.equal(c.judgeAt(s, 0, env), s[1].t + s[1].w);
+  assert.equal(c.judgeAt(s, 0, null), s[0].t + s[0].w);   /* the keyboard has no loudness to read */
+  assert.equal(c.judgeAt(s, 1, env), s[1].t + s[1].w);
+  assert.equal(c.leadSlot(s, s[2].t - s[2].w - 0.1, 1), 2);
+  assert.equal(c.leadSlot(s, s[2].t - s[2].w - 0.3, 1), -1);
+  assert.equal(c.leadSlot(s, s[2].t - s[2].w - 0.1, 3), -1);
 });
 
 test('builder taps edit the text', () => {
