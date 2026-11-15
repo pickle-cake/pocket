@@ -187,7 +187,6 @@ body[data-run="1"] .notice{display:none}
 :root[data-layout=desktop] #pageHelp>.panel{grid-column:2}
 :root[data-layout=desktop] #helpNav{display:grid;grid-column:1;grid-row:1/span 20;position:sticky;top:0;gap:2px;align-content:start}
 #helpNav b{padding:0 var(--s-3) var(--s-2)}
-#helpNav button{border:0;background:none;color:var(--ink);font:600 var(--t-small) var(--font-body);text-align:left;padding:0 var(--s-3);min-height:var(--hit);border-radius:var(--r-md);cursor:pointer}
 #helpNav button:hover{background:var(--surface)}
 #helpNav button[aria-current],.menu button[aria-current]{background:var(--surface);box-shadow:inset 3px 0 0 var(--accent)}
 .menu button[aria-current]{background:var(--bg)}
@@ -779,7 +778,7 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s-4)}
 /* A menu: a card that pops, with items a full target tall. One at a time, placed by openMenu. */
 .menu{position:fixed;z-index:60;min-width:170px;padding:var(--s-1);box-shadow:var(--shadow-pop);display:grid}
-.menu button{border:0;background:none;color:var(--ink);font:600 var(--t-small) var(--font-body);text-align:left;padding:0 var(--s-3);min-height:var(--hit);border-radius:var(--r-md);cursor:pointer}
+.menu button,#helpNav button{border:0;background:none;color:var(--ink);font:600 var(--t-small) var(--font-body);text-align:left;padding:0 var(--s-3);min-height:var(--hit);border-radius:var(--r-md);cursor:pointer}
 .menu button:hover,.menu button:focus-visible{background:var(--bg)}
 .menu button:disabled{opacity:.4;cursor:not-allowed;background:none}
 .menu button.danger,.btn.danger{color:var(--danger)}
@@ -2962,7 +2961,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.137';                           /* shown beside the title */
+const VERSION='1.5.138';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5677,10 +5676,7 @@ function renderRoutineRows(routines,replay){
     row.append(m,ra);
     if(open){
       const mine=recs.runs.filter(r=>r.rk===x.rk&&r.lv===x.lv&&(r.dy||'')===(x.dy||'')).sort((a,b)=>b.t-a.t);
-      const shown=rtAll?mine:mine.slice(0,4);
-      const list=document.createElement('div');list.className='rtruns';
-      shown.forEach(r=>list.appendChild(runBtn(r,'Scores')));
-      if(mine.length>4)list.appendChild(moreRunsBtn(mine.length,rtAll,()=>{rtAll=!rtAll;renderProgress();}));
+      const list=runList(mine,'Scores',rtAll,()=>{rtAll=!rtAll;renderProgress();});
       if(x.runs>mine.length){const o=document.createElement('p');o.className='hint';o.textContent='Older runs are summarised and not listed.';list.appendChild(o);}
       row.appendChild(list);
     }
@@ -5786,7 +5782,13 @@ function emptyState(icon,title,text,label,fn){
 /* A row's trailing arrow: › opens a page, the chevron opens the row in place. Decoration only; the row's button carries the action. */
 function rowArrow(kind){const s=document.createElement('span');s.className='ar'+(kind==='up'?' up':'');s.innerHTML=ICON[kind==='up'?'down':kind];s.setAttribute('aria-hidden','true');return s;}
 /* Under a list of runs that shows four: show them all, or go back to four. */
-function moreRunsBtn(n,all,flip){return textBtn(all?'Show fewer':'Show all '+n+' runs',flip,'btn link rmore');}
+/* Runs, newest first, as ways into each run: the newest four, or all of them, with a button that flips between the two. */
+function runList(runs,from,all,flip){
+  const list=document.createElement('div');list.className='rtruns';
+  (all?runs:runs.slice(0,4)).forEach(r=>list.appendChild(runBtn(r,from)));
+  if(runs.length>4)list.appendChild(textBtn(all?'Show fewer':'Show all '+runs.length+' runs',flip,'btn link rmore'));
+  return list;
+}
 function iconBtn(kind,label,fn){
   const b=document.createElement('button');b.type='button';b.className='btn icon '+kind;b.innerHTML=ICON[kind];b.setAttribute('aria-label',label);b.title=label;
   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();fn(b);});return b;
@@ -5969,10 +5971,7 @@ function groupRow(panel,title,mono,sub,dy,pc,runs){   /* runs: newest first; Pla
   const key=runs.map(x=>x.id).join(),open=histOpen===key;
   panel.appendChild(listRow(title,mono,sub,dy,pc,()=>{histOpen=open?'':key;histAll=false;renderHistory();},{open:open},runs[0]));
   if(!open)return;
-  const list=document.createElement('div');list.className='rtruns';
-  (histAll?runs:runs.slice(0,4)).forEach(r=>list.appendChild(runBtn(r,'History')));
-  if(runs.length>4)list.appendChild(moreRunsBtn(runs.length,histAll,()=>{histAll=!histAll;renderHistory();}));
-  panel.appendChild(list);
+  panel.appendChild(runList(runs,'History',histAll,()=>{histAll=!histAll;renderHistory();}));
 }
 let runBack='History';   /* what the run page's Back says: the list it was opened from */
 function openHist(page){runBack='History';histStack.push(page);pgPush();renderHistory();}
@@ -6900,16 +6899,26 @@ function kebab(label,items){
   b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded','false');
   return b;
 }
-function libGroups(list,byName){
+/* Names in reading order: case is ignored, and "Exercise 2" comes before "Exercise 10". */
+const nameOrder=(a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'});
+function libGroups(list,sorted){
   const DEFAULT_GROUP='Other',groups=new Map();
   list.forEach(e=>{
     const m=/^\s*([^:]{1,40}?)\s*:\s*(\S.*)$/.exec(entryName(e)),g=m?m[1]:DEFAULT_GROUP;
     if(!groups.has(g))groups.set(g,[]);groups.get(g).push([e,m?m[2]:entryName(e)]);
   });
   const gnames=[...groups.keys()].filter(g=>g!==DEFAULT_GROUP);
-  if(byName)gnames.sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+  if(sorted)gnames.sort(nameOrder);
   if(groups.has(DEFAULT_GROUP))gnames.push(DEFAULT_GROUP);
   return gnames.map(g=>[g,groups.get(g)]);
+}
+/* A group from libGroups as a disclosure: its name and count, and a row for each entry made by mk(entry,label). */
+function groupEl(g,items,mk,open){
+  const det=document.createElement('details');det.className='glib';det.open=open;
+  const sm=document.createElement('summary');sm.textContent=g+' ('+items.length+')';
+  const body=document.createElement('div');body.className='gb';
+  items.forEach(([e,label])=>body.appendChild(mk(e,label)));
+  det.append(sm,body);return det;
 }
 /* Play > Change: pick a routine from the library without leaving the Play page. */
 const PICK_RECENT=4;
@@ -6917,7 +6926,7 @@ function openPick(){
   if(run&&!run.ended)return;
   const box=$('pickList');box.textContent='';
   const byName=S.libSort==='name';
-  const list=recs.lib.slice().sort(byName?(a,b)=>entryName(a).localeCompare(entryName(b),undefined,{numeric:true,sensitivity:'base'}):(a,b)=>b.t-a.t);
+  const list=recs.lib.slice().sort(byName?(a,b)=>nameOrder(entryName(a),entryName(b)):(a,b)=>b.t-a.t);
   if(!list.length){
     box.appendChild(emptyState('book','No saved routines yet','Routines you write or import show up here.','Open the Library',()=>{closePick();showTab('library');}));
   }
@@ -6947,14 +6956,7 @@ function openPick(){
       sec.append(h,body);box.appendChild(sec);
     }
   }
-  libGroups(list,byName).forEach(([g,items])=>{
-    const det=document.createElement('details');det.className='glib';
-    det.open=items.some(x=>x[0].id===S.libId);
-    const sm=document.createElement('summary');sm.textContent=g+' ('+items.length+')';
-    const body=document.createElement('div');body.className='gb';
-    items.forEach(([e,label])=>body.appendChild(pickRow(e,label)));
-    det.append(sm,body);box.appendChild(det);
-  });
+  libGroups(list,byName).forEach(([g,items])=>box.appendChild(groupEl(g,items,pickRow,items.some(x=>x[0].id===S.libId))));
   $('pickModal').hidden=false;$('pickClose').focus();
 }
 const closePick=()=>{$('pickModal').hidden=true;$('playChange').focus();};
@@ -6964,7 +6966,7 @@ function renderLibraryPage(){
   const byName=S.libSort==='name';
   $('lsRecent').classList.toggle('on',!byName);$('lsRecent').setAttribute('aria-pressed',String(!byName));
   $('lsName').classList.toggle('on',byName);$('lsName').setAttribute('aria-pressed',String(byName));
-  const list=recs.lib.slice().sort(byName?(a,b)=>entryName(a).localeCompare(entryName(b),undefined,{numeric:true,sensitivity:'base'}):(a,b)=>b.t-a.t),st=scratchState(),locked=!!(run&&!run.ended);
+  const list=recs.lib.slice().sort(byName?(a,b)=>nameOrder(entryName(a),entryName(b)):(a,b)=>b.t-a.t),st=scratchState(),locked=!!(run&&!run.ended);
   if(st==='scratch'){
     const row=document.createElement('div');row.className='hrow';
     const sm=document.createElement('div');sm.className='row';
@@ -7005,13 +7007,9 @@ function renderLibraryPage(){
     return det;
   };
   libGroups(list,byName).forEach(([g,items])=>{
-    const det=document.createElement('details');det.className='glib';
-    det.open=libGrpOpen.has(g)||items.some(x=>x[0].id===S.libId);
+    const det=groupEl(g,items,mkEntry,libGrpOpen.has(g)||items.some(x=>x[0].id===S.libId));
     det.addEventListener('toggle',()=>{if(det.open)libGrpOpen.add(g);else libGrpOpen.delete(g);});
-    const sm=document.createElement('summary');sm.textContent=g+' ('+items.length+')';
-    const body=document.createElement('div');body.className='gb';
-    items.forEach(x=>body.appendChild(mkEntry(x[0],x[1])));
-    det.append(sm,body);box.appendChild(det);
+    box.appendChild(det);
   });
   $('libEmpty').hidden=!!(list.length||st==='scratch');
   if(!$('libEmpty').firstChild)$('libEmpty').appendChild(emptyState('book','Nothing saved yet','Write a routine, or import one from a file or a link.','Write a routine',()=>$('clearRoutine').click()));
@@ -7155,7 +7153,7 @@ function exportLibrary(){
   const all=row('All routines',recs.lib.length+(recs.lib.length===1?' routine':' routines'),'');
   box.appendChild(all.l);
   const list=document.createElement('div');list.className='xlist';
-  const items=recs.lib.slice().sort((a,b)=>entryName(a).localeCompare(entryName(b),undefined,{sensitivity:'base'})).map(e=>{const n=exerciseCount(e.x),r=row(entryName(e),n+(n===1?' exercise':' exercises'),e.id);list.appendChild(r.l);return r;});
+  const items=recs.lib.slice().sort((a,b)=>nameOrder(entryName(a),entryName(b))).map(e=>{const n=exerciseCount(e.x),r=row(entryName(e),n+(n===1?' exercise':' exercises'),e.id);list.appendChild(r.l);return r;});
   box.appendChild(list);
   const sync=()=>{$('exGo').disabled=!items.some(r=>r.c.checked);all.c.checked=items.every(r=>r.c.checked);};
   all.c.addEventListener('change',()=>{items.forEach(r=>{r.c.checked=all.c.checked;});sync();});
@@ -7165,7 +7163,7 @@ function exportLibrary(){
 function doLibExport(){
   const ids=new Set([...$('exOpts').querySelectorAll('input[data-id]:checked')].map(c=>c.dataset.id));
   $('expModal').hidden=true;
-  const all=recs.lib.filter(e=>ids.has(e.id)).sort((a,b)=>entryName(a).localeCompare(entryName(b),undefined,{sensitivity:'base'}));
+  const all=recs.lib.filter(e=>ids.has(e.id)).sort((a,b)=>nameOrder(entryName(a),entryName(b)));
   if(!all.length)return;
   saveFile('pocket-library-'+stamp()+'.txt','text/plain',all.map(e=>entryText(e).trim()).join('\n---\n')+'\n').then(ok=>{
     $('libMsg').textContent=ok?'Exported '+all.length+(all.length===1?' routine':' routines')+'. Import it as a file, or host it as a library.':'Export cancelled.';
@@ -7648,6 +7646,12 @@ function bFromCaret(){
   const ta=$('routineText'),i=ta.value.slice(0,ta.selectionStart).split('\n').length-1;
   if(bValid(bLines(),i)&&i!==bLine){bLine=i;renderBuilder();}
 }
+/* A dialog that Escape closes, and a tap on its backdrop unless backdrop is false. With first, its Escape is handled
+   in the capture phase and goes no further, so it does not also close what is under the dialog. */
+function dismissable(m,close,o={}){
+  if(o.backdrop!==false)m.addEventListener('click',e=>{if(e.target===m)close();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!m.hidden){if(o.first)e.stopPropagation();close();}},!!o.first);
+}
 function wireBuilder(){
   const setEdit=m=>{S.editTab=m;save();renderBuilder();};
   $('bModeType').addEventListener('click',()=>setEdit('type'));
@@ -7655,8 +7659,7 @@ function wireBuilder(){
   $('bListen').addEventListener('click',openListen);
   $('lsPlay').addEventListener('click',()=>{if(listen)stopListen();else startListen();});
   $('lsClose').addEventListener('click',closeListen);
-  $('lsModal').addEventListener('click',e=>{if(e.target===$('lsModal'))closeListen();});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('lsModal').hidden)closeListen();});
+  dismissable($('lsModal'),closeListen);
   document.querySelectorAll('.bkey').forEach(k=>k.addEventListener('click',()=>bEdit(k.dataset.k)));
   [['bTop','top'],['bUp','up'],['bDown','down'],['bBottom','bottom']].forEach(x=>$(x[0]).addEventListener('click',()=>bMoveEx(x[1])));
   $('exMenu').addEventListener('click',e=>{if(e.target.closest('button'))closeRowMenu();});
@@ -7673,8 +7676,7 @@ function wireBuilder(){
   $('openBtn').addEventListener('click',openOpen);
   $('openClose').addEventListener('click',closeOpen);
   $('openHelp').addEventListener('click',()=>{om.hidden=true;});
-  om.addEventListener('click',e=>{if(e.target===om)closeOpen();});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!om.hidden)closeOpen();});
+  dismissable(om,closeOpen);
   /* + Add exercise: after the last one in a routine. On a single pattern it becomes the first exercise of a routine. */
   /* A new exercise starts with the first exercise's time signature and note code, so it plays the same way until you change it. */
   const seed=lines=>{
@@ -7854,8 +7856,7 @@ function wire(){
   $('tmRange').addEventListener('input',e=>setBpm(+e.target.value));
   $('tmDone').addEventListener('click',closeTempo);
   window.addEventListener('resize',placeTempo);
-  $('tempoModal').addEventListener('click',e=>{if(e.target===$('tempoModal'))closeTempo();});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('tempoModal').hidden)closeTempo();});
+  dismissable($('tempoModal'),closeTempo);
   $('score').addEventListener('change',e=>{scoreOn=e.target.value==='1';syncInfo();});
   $('clickSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.click=b.dataset.v;save();if(S.mode==='routine')buildExerciseList();syncInfo();});
   const dyChanged=()=>{save();pushDet();refreshPreview();};
@@ -7887,9 +7888,7 @@ function wire(){
   $('fbMail').addEventListener('click',mailFeedback);
   $('fbCopy').addEventListener('click',copyFeedback);
   $('fbClose').addEventListener('click',closeFeedback);
-  $('fbModal').addEventListener('click',e=>{if(e.target===$('fbModal'))closeFeedback();});
-  /* in the capture phase, so Escape closes the dialog and not the Help page under it */
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('fbModal').hidden){e.stopPropagation();closeFeedback();}},true);
+  dismissable($('fbModal'),closeFeedback,{first:true});   /* Escape closes the dialog and not the Help page under it */
   syncClock();
   $('setBox').addEventListener('toggle',syncInfo);
   $('libSel').addEventListener('change',()=>{const v=$('libSel').value;if(v==='+'){libMode='add';$('libErr').textContent='';lib={items:[],loaded:false,busy:false,cur:''};renderLibrary();$('libraryUrl').focus();}else pickList(v);});
@@ -7902,11 +7901,11 @@ function wire(){
   $('edBack').addEventListener('click',()=>{showTab(editFrom==='play'?'play':'library');if(editFrom==='import')openOpen();window.scrollTo(0,0);});
   $('playChange').addEventListener('click',openPick);
   $('pickClose').addEventListener('click',closePick);
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('pickModal').hidden)closePick();});
+  dismissable($('pickModal'),closePick,{backdrop:false});
   $('cfSave').addEventListener('click',()=>{if(saveToLibrary())closeConfirm(true);else $('cfText').textContent=$('saveMsg').textContent;});
   $('cfDiscard').addEventListener('click',()=>closeConfirm(true));
   $('cfCancel').addEventListener('click',()=>closeConfirm(false));
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('confirmModal').hidden)closeConfirm(false);});
+  dismissable($('confirmModal'),()=>closeConfirm(false),{backdrop:false});
   $('eachVal').addEventListener('change',e=>{
     const v=+e.target.value;
     S.eachVal=S.eachUnit==='pass'?clamp(Math.round(v)||8,1,200):clamp(v||1,0.25,60);
