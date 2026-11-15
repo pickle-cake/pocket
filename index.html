@@ -723,10 +723,10 @@ body[data-input="kb"] #micPill{display:none}
 .setbox{border:0;border-radius:0;background:none}
 body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing the drummer watches the staff, so it waits for the end of the run */
 .sbody{display:grid;gap:22px}
-#setBox>summary,#detBox>summary,#exBox>summary{font:600 var(--t-body) var(--font-body);text-transform:none;letter-spacing:0;padding:var(--s-2) 0;min-height:var(--hit);border-top:1px solid var(--line)}
-#setBox>summary,#detBox>summary,#exBox>summary{display:flex;align-items:center;justify-content:space-between;gap:10px}   /* the chevron stays beside the text, not under it */
-#setBox>summary::after,#detBox>summary::after,#exBox>summary::after{float:none;flex:none;margin:0 4px 4px 0}
-:root[data-layout=desktop] #setBox>summary,:root[data-layout=desktop] #detBox>summary,body:not([data-review="1"]) #detBox>summary,:root[data-layout=desktop] #exBox>summary{display:none}
+#setBox>summary,#exBox>summary{font:600 var(--t-body) var(--font-body);text-transform:none;letter-spacing:0;padding:var(--s-2) 0;min-height:var(--hit);border-top:1px solid var(--line)}
+#setBox>summary,#exBox>summary{display:flex;align-items:center;justify-content:space-between;gap:10px}   /* the chevron stays beside the text, not under it */
+#setBox>summary::after,#exBox>summary::after{float:none;flex:none;margin:0 4px 4px 0}
+:root[data-layout=desktop] #setBox>summary,:root[data-layout=desktop] #exBox>summary{display:none}
 #exBox>summary{border-top:0;padding:4px 0 0}
 #exBox[open]>summary{padding-bottom:10px}
 .rtname~#exBox{margin-top:-8px}   /* ~, not +: the single exercise's hidden line sits between them */
@@ -1541,8 +1541,7 @@ RLRR LRLL RLRR LRLL</pre>
       </div>
     </section>
 
-    <details id="detBox" class="setbox" open>
-      <summary>Details</summary>
+    <div id="detBox" class="setbox">
       <div class="sbody">
     <section class="panel" id="leadBox" aria-label="Early or late">
       <h3>Early or late, last 32 strokes</h3>
@@ -1620,7 +1619,7 @@ RLRR LRLL RLRR LRLL</pre>
       </section>
     </div>
       </div>
-    </details>
+    </div>
     </div>
   </div>
 </main>
@@ -3138,7 +3137,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.140';                           /* shown beside the title */
+const VERSION='1.5.141';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -7398,7 +7397,6 @@ function syncRunUI(){
 function setReview(on){
   document.body.dataset.review=on?'1':'0';
   $('advDone').hidden=!on;
-  $('detBox').open=!on||document.documentElement.dataset.layout==='desktop';   /* the details wait behind a tap after a run on a phone */
   if(on){window.scrollTo(0,0);const h=$('advHead');h.tabIndex=-1;h.focus({preventScroll:true});}
 }
 function setRunning(on){
@@ -7944,7 +7942,7 @@ function syncLayout(){
   if(document.documentElement.dataset.layout===want)return;
   const first=!document.documentElement.dataset.layout;
   document.documentElement.dataset.layout=want;
-  if(want==='desktop'){$('setBox').open=true;$('detBox').open=true;$('exBox').open=true;}   /* nothing is tucked away where there is room */
+  if(want==='desktop'){$('setBox').open=true;$('exBox').open=true;}   /* nothing is tucked away where there is room */
   placeAdv();
   if(!first)window.dispatchEvent(new Event('resize'));
 }
