@@ -593,6 +593,39 @@ test('a stray exercise is deleted from a run, and an unheard one is not scored',
 });
 
 /* One keyboard run with perfect hits. Returns how many runs were saved and the result text. */
+audioTest('a finding after a run marks its strokes on the review staff, with an outline, and a second tap clears them', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: '16 RLRL RLRL', eachUnit: 'pass', eachVal: 10, seeded: true });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  await p.evaluate(() => {
+    const T = window.__T, r = T.run(), pl = r.plan;
+    pl.slots.forEach((s, i) => {
+      const hand = pl.segs[s.seg].notes[s.pos].slice(-1), late = s.pos === 2 ? 0.03 : 0;   /* the third stroke always 30 ms late */
+      T.hit({ t: r.t0 + s.t + late + ((i * 7) % 5 - 2) / 1000, kb: true, f: null, det: { hand, conf: 1 } });
+    });
+  });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  /* the hands differ too, since only the right hand is late, so the finding may come second */
+  const note = await p.evaluate(() => document.querySelector('#advice [data-mk]').parentElement.innerText);
+  assert.match(note, /^Stroke 3 \(R\) lands \d+ ms later than the rest of the exercise\. Show on staff$/, note);
+  const btn = p.locator('#advice [data-mk]').first();
+  assert.equal(await btn.getAttribute('aria-pressed'), 'false');
+  await btn.click();
+  const on = await p.evaluate(() => {
+    const mk = [...document.querySelectorAll('#rows g.cd.mk')];
+    return { n: mk.length, texts: [...new Set(mk.map(c => c.querySelector('.lt').textContent))], edge: mk.length ? getComputedStyle(mk[0].querySelector('.bg')).stroke : '', pressed: document.querySelector('#advice [data-mk]').getAttribute('aria-pressed') };
+  });
+  assert.equal(on.n, 10, 'one stroke in each of the ten passes');
+  assert.deepEqual(on.texts, ['R']);
+  assert.notEqual(on.edge, 'transparent');
+  assert.equal(on.pressed, 'true');
+  await btn.click();
+  assert.equal(await p.evaluate(() => document.querySelectorAll('#rows g.cd.mk').length), 0);
+  assert.equal(await btn.getAttribute('aria-pressed'), 'false');
+  assert.deepEqual(p.errors, []);
+});
+
 async function runOnce(settings, practice, init) {
   const p = await open(Object.assign({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true }, settings), null, init);
   if (practice) await p.evaluate(() => { const s = document.getElementById('score'); s.value = '0'; s.dispatchEvent(new Event('change')); });

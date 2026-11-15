@@ -162,6 +162,8 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .notice{margin:var(--s-2) 0 0;padding:var(--s-3);border-left:3px solid var(--accent);font:var(--t-small) var(--font-body)}   /* flat, with an accent rail */
 .notice ul{margin:var(--s-2) 0;padding-left:var(--s-5)}.notice li{margin:var(--s-1) 0}.notice p{margin:0}
 .btn.link{background:none;border-color:transparent;color:var(--accent);padding-inline:var(--s-1);min-width:var(--hit)}   /* tertiary: brass text, no box */
+.btn.link.inl{margin-block:calc(-1*var(--s-3));padding-block:0;vertical-align:baseline}   /* in a line of text: still a 44px target, without opening up the line */
+.btn.link[aria-pressed=true]{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}   /* a toggle that is on: underlined, a cue beside the state read out */
 a.btn{display:inline-flex;align-items:center;text-decoration:none}   /* a link styled as a button keeps the button's 44px height */
 p.hint .btn.link{font-size:inherit;min-height:0;min-width:0;padding:0;vertical-align:baseline}   /* a link inside a sentence sits on the line */
 body[data-run="1"] .notice{display:none}
@@ -270,6 +272,7 @@ body[data-run="1"] .notice{display:none}
 .cd.early .lt{font-style:italic}      /* a second cue beside colour: early leans, late is underlined */
 .cd.late .lt{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .cd.miss .lt{fill:var(--muted);opacity:.4}
+.cd.mk .bg{stroke:var(--ink);stroke-width:2}   /* a finding's strokes, boxed: shape, not colour, so it reads beside the timing colours */
 @media (prefers-reduced-motion:no-preference){.cd .lt{transition:fill var(--dur-1) var(--ease)}}   /* heard to judged: the colour fades in */
 .staff .acc{stroke:var(--ink);stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;fill:none}
 .staff .gh{stroke:var(--muted);stroke-width:1.5;stroke-linecap:round;fill:none}
@@ -2382,8 +2385,9 @@ const slotWin=(sl,tol)=>Math.min(tol,Math.round(sl.w*800));
 /* A finding is only reported when it is large, repeated and clearly beyond the player's own scatter: at least minN strokes from
    minPasses passes, a shift of at least ms, and at least se standard errors. An exercise tests about 30 groups, so se is 3.5, not 2:
    at 2 a run of pure scatter reports something more often than not, at 3 one run in 20, at 3.5 about one in 100. A miss finding needs miss more of the group missed
-   than of the rest, and settling needs settle more of the first pass off time than of the later passes. */
-const FIND={minN:6,minPasses:3,se:3.5,ms:6,miss:0.15,settle:0.2};
+   than of the rest, and settling needs settle more of the first pass off time than of the later passes. A run with fewer than more
+   strokes heard gets only its first finding: the others are too often chance. */
+const FIND={minN:6,minPasses:3,se:3.5,ms:6,miss:0.15,settle:0.2,more:64};
 /* The hand or rest at each position, as the finding copy writes a group: RLRR. */
 const stickOf=notes=>notes.map(n=>n==='_'?'_':hnd(n)).join('');
 /* Each position's roles in the sticking, worked out from the notes due. wrap marks a role that reads the pass before, so it does
@@ -3145,7 +3149,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.143';                           /* shown beside the title */
+const VERSION='1.5.144';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4030,6 +4034,7 @@ function showRunResult(){
   /* The review is rebuilt from the saved run, the same way a run's page does it. */
   rvModel=lastRun&&lastRun.run?reviewModel(lastRun.run):null;
   if(rvModel)showReview();else{rowMap.forEach(lvsRow);roleRows();winKey='';paintRows(view,null);}
+  if(rvModel&&view&&view.errs){coachNote($('advHead'),coachItems(view)[0]);coachList(view);}   /* the findings can now be shown on the review staff */
   if(lastRun)setReview(true);
   showResult();
 }
@@ -4698,13 +4703,15 @@ function paintCard(el,res,ended,tol,bz){
 }
 function paintRows(r,cursor,heard){
   if(rvModel&&document.body.dataset.state==='done')r=rvModel;
-  const ended=!!(r&&r.ended),tol=(r&&r.tol)||S.tol;
+  const ended=!!(r&&r.ended),tol=(r&&r.tol)||S.tol,marks=markOn()?markSet:null;
   rowMap.forEach((o,g)=>{
     o.cards.forEach((el,i)=>{
       if(el._slot<0)return;
       paintCard(el,r?r.res.get(el._slot):null,ended,tol,r&&r.bzn?r.bzn.get(el._slot):undefined);
       const on=!!cursor&&g===cursor.g&&i===cursor.i;
       if(on!==el._now){el._now=on;el.classList.toggle('now',on);}
+      const mk=marks&&marks.has(el._slot);
+      if(mk!==!!el._mk){el._mk=mk;el.classList.toggle('mk',mk);}
     });
   });
   movePlayhead(r,cursor,heard);placeLvMeter(r,cursor);
@@ -5157,28 +5164,68 @@ function updateGauge(r){
   $('gBand').style.left=(50+lo/80*100)+'%';$('gBand').style.width=((hi-lo)/80*100)+'%';
 }
 /* What to work on, most important first. */
-function insightParts(r){
+/* The coaching notes after a run, most useful first. A note from findings() carries it as f, so it can be shown on the staff. */
+function coachItems(r){
   if(!r||!r.errs.length)return [];
-  if(r.errs.length<8)return ['Keep going. Notes on your timing appear after a few passes.'];
+  if(r.errs.length<8)return [{t:'Keep going. Notes on your timing appear after a few passes.'}];
   const parts=[];
-  if(r.slots&&r.miss/r.slots>0.1)parts.push(r.miss+' strokes were not heard. Check the trigger line in Settings, under Device.');
-  if(r.checked>=8&&r.bad/r.checked>0.15)parts.push('The other hand played '+r.bad+' of '+r.checked+' strokes.');   /* keys name the hand */
+  if(r.slots&&r.miss/r.slots>0.1)parts.push({t:r.miss+' strokes were not heard. Check the trigger line in Settings, under Device.'});
+  if(r.checked>=8&&r.bad/r.checked>0.15)parts.push({t:'The other hand played '+r.bad+' of '+r.checked+' strokes.'});   /* keys name the hand */
   if(r.hand.L.length>=4&&r.hand.R.length>=4){
     const d=mean(r.hand.R)-mean(r.hand.L);
-    if(Math.abs(d)>=4)parts.push('Your '+(d>0?'right':'left')+' hand lands '+Math.abs(d).toFixed(0)+' ms later than your '+(d>0?'left':'right')+'.');
+    if(Math.abs(d)>=4)parts.push({t:'Your '+(d>0?'right':'left')+' hand lands '+Math.abs(d).toFixed(0)+' ms later than your '+(d>0?'left':'right')+'.'});
   }
-  /* the costliest place in the music where the strokes go wrong, in any exercise of the run */
-  if(r.seg){const f=findings(r.plan,r.seg,S.tol)[0];if(f)parts.push(findingText(f,r.plan));}
-  if(!r.kb&&r.plan.slots.some(x=>x.bz)){const st=buzzStats(r.plan.slots,r.res,r.bnc||[]),bn=buzzNote(st,buzzSingles(r.plan.slots,st,r.res).size);if(bn)parts.push(bn);}
+  /* the costliest places in the music where the strokes go wrong, in any exercise of the run: up to four, or only the first
+     in a short run, where the rest are mostly chance */
+  if(r.seg)findings(r.plan,r.seg,S.tol).slice(0,r.errs.length>=FIND.more?4:1).forEach(f=>parts.push({t:findingText(f,r.plan),f:f}));
+  if(!r.kb&&r.plan.slots.some(x=>x.bz)){const st=buzzStats(r.plan.slots,r.res,r.bnc||[]),bn=buzzNote(st,buzzSingles(r.plan.slots,st,r.res).size);if(bn)parts.push({t:bn});}
   const lvs=levelStats(r.lv);
-  if(lvs&&lvs.diff!==null&&Math.abs(lvs.diff)>=3)parts.push('Your '+(lvs.diff<0?'left':'right')+' hand is '+Math.abs(lvs.diff).toFixed(0)+' dB quieter than your '+(lvs.diff<0?'right':'left')+'.');
-  if(!parts.length)parts.push('Timing is even across both hands and all strokes.');
+  if(lvs&&lvs.diff!==null&&Math.abs(lvs.diff)>=3)parts.push({t:'Your '+(lvs.diff<0?'left':'right')+' hand is '+Math.abs(lvs.diff).toFixed(0)+' dB quieter than your '+(lvs.diff<0?'right':'left')+'.'});
+  if(!parts.length)parts.push({t:'Timing is even across both hands and all strokes.'});
   return parts;
+}
+/* A note's text, with a button that marks its strokes on the review staff when it is a finding and the run is over. */
+function coachNote(el,it){
+  el.textContent=it?it.t:'';
+  if(!it||!it.f||!view||!view.ended||!markSlotsFor(it.f))return;
+  const b=document.createElement('button');b.type='button';b.className='btn link inl';b.textContent='Show on staff';
+  b.dataset.mk=findKey(it.f);b.setAttribute('aria-pressed',String(markOn()&&markKey===b.dataset.mk));
+  b.addEventListener('click',()=>toggleMark(it.f));
+  el.append(' ',b);
 }
 /* Coaching after a run: the first note is the headline (#advHead), the rest are listed under it. */
 function coachList(r){
   const ul=$('insight');ul.textContent='';
-  for(const t of insightParts(r).slice(1)){const li=document.createElement('li');li.textContent=t;ul.appendChild(li);}
+  for(const it of coachItems(r).slice(1)){const li=document.createElement('li');coachNote(li,it);ul.appendChild(li);}
+}
+/* A finding shown on the review staff: its strokes get an outline, and the staff scrolls to the first of them. The marks belong
+   to one review (markRm), so a new run or Done clears them. */
+let markKey='',markSet=null,markRm=null;
+const findKey=f=>[f.what,f.kind,f.seg,f.slots.length,f.slots[0]].join('|');
+const markOn=()=>!!markSet&&markRm===rvModel&&!!rvModel&&document.body.dataset.state==='done';
+/* the review staff's slots for a finding's strokes, which are slots of the live run */
+function markSlotsFor(f){
+  const m=view&&rvModel?lvsSlots(view):null;if(!m)return null;
+  const want=new Set(f.slots),out=new Set();
+  m.forEach((live,i)=>{if(want.has(live))out.add(i);});
+  return out.size?out:null;
+}
+function toggleMark(f){
+  const k=findKey(f);
+  if(markOn()&&markKey===k){markKey='';markSet=null;markRm=null;}
+  else{markSet=markSlotsFor(f);markKey=markSet?k:'';markRm=markSet?rvModel:null;}
+  document.querySelectorAll('#advice [data-mk]').forEach(b=>b.setAttribute('aria-pressed',String(markOn()&&b.dataset.mk===markKey)));
+  paintRows(view,null);
+  if(markOn())scrollToMark();
+}
+function scrollToMark(){
+  const keys=[...rowMap.keys()].sort((a,b)=>a-b);
+  let card=null;
+  for(const g of keys){card=rowMap.get(g).cards.find(el=>el._mk);if(card)break;}
+  if(!card)return;
+  const box=$('rows'),sv=card.ownerSVGElement;
+  box.scrollIntoView({block:'nearest'});
+  if(box.classList.contains('rv'))box.scrollTop+=sv.getBoundingClientRect().top-box.getBoundingClientRect().top;
 }
 function updateStats(r){
   const sp=r?sd(r.errs.slice(-32)):NaN;
@@ -5499,7 +5546,7 @@ function renderAdvice(){
     }
   }
   /* One sentence on what to work on. */
-  const fix=(view&&view.errs?insightParts(view)[0]:'')||'';
+  const fix=view&&view.errs?coachItems(view)[0]:null;
   if(!n)body='Stopped before one full pass, so nothing was scored.';
   else if(adv.cleared)body='';
   else if(one)body='Stay at '+S.bpm+' BPM until this settles.';
@@ -5514,7 +5561,7 @@ function renderAdvice(){
   if(L.skipped)body+=' '+L.skipped+(L.skipped===1?' exercise was':' exercises were')+' stopped before one full pass and not scored.';
   if(!L.saved)body+=' Your browser would not save the records.';
   if(L.practice)body='Practice run, not saved. Your time still counts today. '+body;
-  $('advHead').textContent=fix;$('advBody').textContent=body;
+  coachNote($('advHead'),fix);$('advBody').textContent=body;
 }
 /* Discard takes the run out of your records and goes back to the start, as Done does: a discarded run has nothing
    left to review. Undo in the status line puts the run, and a routine saved with it, back and shows the result again. */
