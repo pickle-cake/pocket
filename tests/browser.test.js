@@ -1018,7 +1018,7 @@ audioTest('a stroke shows nothing when it is heard, and its timing only once its
   assert.ok(c && c.pend, 'heard: ' + JSON.stringify(c));
   assert.equal(c.ft, '');
   assert.ok(!['ok', 'early', 'late', 'heard'].some(k => c.cls.includes(k)), 'no mark before the window closes');
-  for (let k = 0; k < 80 && c && c.pend; k++) { await p.waitForTimeout(50); c = await card(); }
+  for (let k = 0; k < 80 && c && !['ok', 'early', 'late', 'miss'].some(k => c.cls.includes(k)); k++) { await p.waitForTimeout(50); c = await card(); }
   assert.ok(c && c.cls.includes('ok'), 'judged on time: ' + JSON.stringify(c));
   assert.equal(c.pend, false);
   assert.ok(!c.cls.includes('heard'));

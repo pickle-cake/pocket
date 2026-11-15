@@ -1163,7 +1163,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <ul>
         <li><b>Each row is one pass</b> of an exercise. The top row is playing and the next passes sit beneath it. Rows slide up as each pass ends.</li>
         <li><b>The moving line</b> reaches each note exactly when it is due. Strike as it arrives.</li>
-        <li><b>A note's timing</b> shows a moment after you play it, once the note's on-time window has closed and a later hit can no longer be the better match: then the letter takes the colour of early, on time or late. A flam or drag waits for the stroke after it too.</li>
+        <li><b>A note's timing</b> shows a moment after you play it, once the note's on-time window has closed and a later hit can no longer be the better match: then the letter takes the colour of early, on time or late.</li>
         <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket lights up for a moment and a flash shows where the note was: above the line is early, below is late. Under its lane it says heard. A moment later, once the note's window has closed, the stroke is judged: it takes the colour of its timing and the verdict replaces heard.</li>
         <li><b>Letter colours:</b> green is on time, blue and slanted is early, pink and underlined is late, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as green.</li>
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
@@ -1365,7 +1365,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Latency:</b> sound reaches the page late, and the click reaches your ears late. Press <b>Auto calibrate</b> once on each device. It plays clicks through the speakers and times when the mic hears them, so you do not play. <b>Calibrate by playing</b> is the second choice: hit on each click, 80 hits or more, until the number settles. It assumes you were on the click on average. You can also type a number.</li>
         <li><b>Accent and Other strokes</b> (Play page) lay accents and ghost notes over the loaded exercise. Accent picks the loud strokes: the first of each group, each beat, each bar, every 2nd to 7th stroke (counted across passes, so it drifts if the count does not divide the pass), or the right or left hand. Rests are never accented. Other strokes can be Normal or Ghost. The staff shows accents with &gt; and ghost notes in brackets.</li>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
-        <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. With the microphone, Pocket reads every strike in the loudness and works out which are grace notes and which is the main stroke, so a main stroke played just after its graces is still timed from the main stroke. A flam's grace comes up to 95 ms before it, and a drag's two graces up to 270 ms before it, or starting on the click when the main stroke is late. The main stroke should be the louder: a grace as loud as it can be read as the main stroke, so play graces softer. Grace notes are not counted as extras, and nor is a much quieter rebound just after a stroke. A flam or drag is judged once the window of the stroke after it has closed, so its colour comes a stroke later. Keyboard play has no graces, so use one key per main stroke.</li>
+        <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. With the microphone, Pocket reads every strike in the loudness and works out which are grace notes and which is the main stroke, so a main stroke played just after its graces is still timed from the main stroke. A flam's grace comes up to 95 ms before it, and a drag's two graces up to 270 ms before it, or starting on the click when the main stroke is late. The main stroke should be the louder: a grace as loud as it can be read as the main stroke, so play graces softer. Grace notes are not counted as extras, and nor is a much quieter rebound just after a stroke. Keyboard play has no graces, so use one key per main stroke.</li>
         <li><b>Buzz strokes:</b> only the start of each buzz is scored, as early or late against the click. The bounces after it are not extras. A soft buzz that starts while the stroke before still rings is still heard as a stroke when it lands near its click. With the microphone, Pocket also counts the bounces it hears: the small number beside each buzz stroke on the staff, during the run and in History. After the run it says how many each buzz had on average, how far it rang towards the next stroke, and how many sounded like single strokes (a group of four buzzes in a row with 1 bounce or fewer each on average, or up to 1.5 and almost as loud as your plain strokes, since a buzz pressed into the pad is quieter). This is experimental: a pad and microphone hear bounces differently, so treat it as a guide. Keyboard play scores the start only.</li>
         <li><b>Records and storage:</b> records are saved in this browser only. Export keeps a copy or moves it to another device, and Import brings it back. The app reminds you if you have never exported, or the last copy is two weeks old. On iPhone and iPad, Safari can clear a site's data after about a week without use, so add the page to your Home Screen. <b>Settings &rsaquo; Data &rsaquo; Storage</b> shows what takes space. Stroke detail (what rebuilds a run's staff) may use about 40% of what the browser allows. Past that, the oldest runs lose their detail first and keep their totals.</li>
       </ul>
@@ -2291,23 +2291,17 @@ function matchStrokes(slots,on){
   return res;
 }
 /* The main stroke of flam or drag slot i, read from the loudness: {t, db, gr, tl} (run times of its graces and rebounds), or null when
-   none was heard. The strokes either side of it in the same exercise are read too, so their hits are not taken for its own, which is
-   why a flam or drag is judged once the window of the stroke after it has closed (see judgeAt). */
+   none was heard. It is read once its own window has closed, from what was heard by then, so it is judged as soon as a plain stroke.
+   The strokes either side of it in the same exercise are read too, so an early hit for the next stroke is not taken for its own. */
 function graceMain(slots,i,env,thr){
   const s=slots[i],p=slots[i-1],n=slots[i+1],sub=[s],at=p&&p.seg===s.seg?1:0;
   if(at)sub.unshift(p);
   if(n&&n.seg===s.seg)sub.push(n);
-  const z=sub[sub.length-1],on=envOnsets(env,sub[0].t-sub[0].w-graceLead(sub[0].gr),z.t+z.w+0.001,thr);
+  const on=envOnsets(env,sub[0].t-sub[0].w-graceLead(sub[0].gr),s.t+s.w+0.001,thr);
   if(!on.length)return null;
   const r=matchStrokes(sub,on)[at];
   if(!r)return null;
   return {t:on[r.main].t,db:on[r.main].db,gr:r.gr.map(k=>on[k].t),tl:r.tl.map(k=>on[k].t)};
-}
-/* The run time after which slot i can be judged: the end of its window, or for a flam or drag read from the loudness, the end of the
-   next stroke's window in the same exercise. */
-function judgeAt(slots,i,env){
-  const s=slots[i],n=slots[i+1];
-  return env&&s.gr&&n&&n.seg===s.seg?n.t+n.w:s.t+s.w;
 }
 /* How each buzz stroke sounded. bnc is the times of the bounces heard (run time, s), res the timing of each judged stroke.
    For each buzz stroke that was heard: n, the bounces after it, and fill, how much of the way to the next stroke it rang
@@ -2975,7 +2969,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.131';                           /* shown beside the title */
+const VERSION='1.5.133';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3603,7 +3597,7 @@ function tick(){
   }
   const L=r.kb?0:latencySec();
   while(r.nextFin<plan.slots.length){
-    if(r.t0+judgeAt(plan.slots,r.nextFin,!r.kb&&r.env)>now-L-0.07)break;
+    {const s=plan.slots[r.nextFin];if(r.t0+s.t+s.w>now-L-0.07)break;}
     finalizeSlot(r.nextFin);r.nextFin++;
   }
   if(r.mode==='lat'&&r.missRun>=(r.errs.length?LAT.quiet:LAT.noHit)){endRun();return;}
@@ -5160,7 +5154,10 @@ function lvsLine(svg,r,map){
   const pair=(v,key)=>{if(one)return null;let j=0;while(j<kn.length-2&&v>kn[j+1][key])j++;return [kn[j],kn[j+1]];};
   const tAt=x=>{const p=pair(x,'x');return p?p[0].t+(x-p[0].x)*(p[1].t-p[0].t)/(p[1].x-p[0].x):k0.t+(x-k0.x)*sp;};
   const xAt=t=>{const p=pair(t,'t');return p?p[0].x+(t-p[0].t)*(p[1].x-p[0].x)/(p[1].t-p[0].t):k0.x+(t-k0.t)/sp;};
-  const x0=c0._cx-c0._w/2,x1=cz._cx+cz._w/2,yb=LVS_Y+LVS_H,y=db=>yb-(clamp(db,-60,0)+60)/60*LVS_H;
+  /* The trace starts where a hit could still be the first note's: halfway back to the stroke before it, or as far back as a flam or
+     drag's graces may come. Before that is the stroke before, from the line above. */
+  const s0=sl[k0.i],p0=sl[k0.i-1],back=p0?Math.max((s0.t-p0.t)/2,Math.min(s0.w+graceLead(s0.gr),(s0.t-p0.t)*0.8)):s0.w;
+  const x0=Math.max(c0._cx-c0._w/2,xAt(s0.t-back)),x1=cz._cx+cz._w/2,yb=LVS_Y+LVS_H,y=db=>yb-(clamp(db,-60,0)+60)/60*LVS_H;
   const NS=svg.namespaceURI,mk=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
   const g=mk('g',{class:'lvs'});
   g.appendChild(mk('line',{class:'lvax',x1:x0,x2:x1,y1:yb,y2:yb}));

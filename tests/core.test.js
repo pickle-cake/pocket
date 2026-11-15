@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['parseStrokes', 'nameMarkers', 'fmtPattern', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'leadSlot', 'envOnsets', 'matchStrokes', 'graceMain', 'judgeAt', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
+  'graceSlot', 'leadSlot', 'envOnsets', 'matchStrokes', 'graceMain', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
 
 const runPoints = (codes, lv) => c.scoreParts([[codes, 1]], lv);
 const plan = (text, opt) => {
@@ -204,11 +204,14 @@ test('matchStrokes charges no extras in the lead-in, and misses a stroke not pla
   assert.equal(r[3].main, 3);
 });
 
-test('a flam or drag is judged once the window of the stroke after it closes, and a hit in its run-up is held for it', () => {
-  const s = plan('q dR R dL L').plan.slots, env = {};
-  assert.equal(c.judgeAt(s, 0, env), s[1].t + s[1].w);
-  assert.equal(c.judgeAt(s, 0, null), s[0].t + s[0].w);   /* the keyboard has no loudness to read */
-  assert.equal(c.judgeAt(s, 1, env), s[1].t + s[1].w);
+test('graceMain reads only what was heard by the end of its own window, and a hit in its run-up is held for it', () => {
+  const s = plan('q dR R dL L').plan.slots, t = s[0].t;
+  const hits = [[t - 0.1, -24], [t - 0.05, -24], [t, -8]];
+  const env = strikes(0, s[3].t + 0.5, hits.concat([[s[0].t + s[0].w + 0.02, 0], [s[1].t, -8]]));
+  const m = c.graceMain(s, 0, env, -40);
+  assert.ok(near(m.t, t, 1.5));
+  assert.equal(m.gr.length, 2);
+  assert.ok(!m.tl.some(x => x > s[0].t + s[0].w));   /* a strike after its window is not read */
   assert.equal(c.leadSlot(s, s[2].t - s[2].w - 0.1, 1), 2);
   assert.equal(c.leadSlot(s, s[2].t - s[2].w - 0.3, 1), -1);
   assert.equal(c.leadSlot(s, s[2].t - s[2].w - 0.1, 3), -1);
