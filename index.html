@@ -204,10 +204,6 @@ body[data-run="1"] .notice{display:none}
 .lhead .seg{margin:0}
 :root[data-layout=desktop] #libPage .gb{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;align-items:start}
 
-.hand{width:26px;height:26px;display:grid;place-items:center;border-radius:50%;font:800 20px/1 var(--font-display)}
-.hand.L{border:2px solid var(--ink);color:var(--ink)}
-.hand.R{background:var(--ink);color:var(--bg)}
-.hand.rest{border:2px dashed var(--line);color:var(--muted);font-size:20px}
 .rowswrap{position:relative}
 /* While playing with a microphone: a slim level meter beside the line being played, with a tick at the last stroke's level. */
 .lvmtr{position:absolute;left:calc(-1*var(--s-3));width:4px;border-radius:var(--r-full);background:linear-gradient(to top,var(--meter-lo),var(--meter-mid),var(--meter-hi));z-index:4;pointer-events:none}
@@ -240,7 +236,6 @@ body[data-run="1"] .notice{display:none}
 .prow.change{box-shadow:inset 0 3px 0 var(--fill)}
 .prow.change .rl{color:var(--accent)}
 .prow .rl{font:600 var(--t-eyebrow) var(--font-body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);min-height:28px;padding:5px 9px;border-radius:8px;display:flex;align-items:center;transition:color var(--dur-2) var(--ease)}
-.prow .rl.alert{background:var(--fill);color:var(--accent-ink);font-size:14px}
 .prow .rl.newex{color:var(--accent)}
 .staff{display:block;width:100%;height:auto;overflow:visible}
 .staff .lvax,.staff .lvck{stroke:var(--line);stroke-width:1}
@@ -454,7 +449,7 @@ details.how[open]>summary::after{margin:4px 4px 0 0}
 .hrow>.row{border:0}
 .row.tog{cursor:pointer}   /* the whole row opens it, as well as its chevron */
 .btn.icon{min-width:var(--hit);padding:0;border-color:transparent;background:transparent;color:var(--muted);display:grid;place-items:center}   /* a 20px SVG, an aria-label and a title */
-.btn.icon.replay,.btn.icon.play{color:var(--accent)}
+.btn.icon.play{color:var(--accent)}
 .hrow .hb{margin:0 0 var(--s-3);padding:var(--s-2) var(--s-3);background:var(--surface);border-left:3px solid var(--accent);display:grid;gap:var(--s-2)}   /* open: the children on a band with a rail */
 .slist{display:grid}
 .sum{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -471,7 +466,6 @@ details.how[open]>summary::after{margin:4px 4px 0 0}
 .dayp{overflow:hidden}
 .rp{display:grid;gap:4px}
 
-.rp .back{justify-self:start;padding-left:0}
 .pgov{--pgx:max(16px,calc((100% - 760px)/2));position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
 .pgov[hidden]{display:none}
 .pghd{flex:none;display:flex;align-items:center;gap:12px;min-height:52px;padding:env(safe-area-inset-top) var(--pgx) 0;position:relative}
@@ -515,8 +509,6 @@ html.pgopen{overflow:hidden}
 .row .sn small{color:var(--muted);font:11px var(--font-body);letter-spacing:.06em;margin-left:3px}
 .row .sn .muted{color:var(--muted)} .row .sn .ok{color:var(--ok)} .row .sn .late{color:var(--late)} .row .sn .early{color:var(--early)}
 
-.btn.icon.cv span{width:8px;height:8px;border:solid var(--muted);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-2px,-2px);transition:transform var(--dur-1) var(--ease)}
-.btn.icon.cv.open span{transform:rotate(-135deg) translate(-2px,-2px)}
 .hrow ul{margin:0;padding:0;list-style:none;font-size:13px;display:grid;gap:2px}
 .hrow li{display:flex;gap:8px;justify-content:space-between}
 .cgrid{border-collapse:collapse;margin:8px 0 4px;font-size:13px;width:100%;max-width:360px}
@@ -644,8 +636,6 @@ body[data-edit=type] .buildonly{display:none}
 .bkeys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .bkey{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:var(--r-md);min-height:56px;cursor:pointer;font:600 14px var(--font-data)}
 .bkey.R,.bkey.L{grid-column:span 2;min-height:64px;font:800 var(--t-display) var(--font-display)}
-.bkey.wide{grid-column:span 4;min-height:44px}
-.bkey.wide2{grid-column:span 2}
 .bkey[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}
 .bkey:disabled{opacity:.35;cursor:not-allowed}
 .estate{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
@@ -801,7 +791,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
 <main class="app">
   <header>
       <div class="brand"><h1>Pocket</h1><small class="ver" id="ver"></small></div>
-      <span class="headbtns"><button class="btn" id="helpBtn" type="button" data-help="help-how">Help</button><button class="btn icon" id="themeBtn" type="button" aria-label="Switch theme"></button><span class="pill on" id="micPill" role="status" hidden><i id="micDot"></i><span id="micTxt">Mic on</span></span></span>
+      <span class="headbtns"><button class="btn" id="helpBtn" type="button" data-help="help-how">Help</button><button class="btn icon" id="themeBtn" type="button" aria-label="Switch theme"></button><span class="pill on" id="micPill" role="status" hidden><i id="micDot"></i><span>Mic on</span></span></span>
     <p class="sub">Go from trailing to nailing the beat</p>
     <nav class="tabs" role="tablist" aria-label="Pages">
       <button type="button" role="tab" id="tabPlay" aria-controls="pagePlay" aria-selected="true">Play</button>
@@ -924,7 +914,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <div class="stoleg" id="stoLeg"></div>
       <p class="hint" id="stoNote"></p>
     </section>
-    <section class="panel" aria-label="Library links" id="lnkBox">
+    <section class="panel" aria-label="Library links">
       <h3>Library links</h3>
       <p class="hint">Libraries loaded from a web address. The pencil edits a link; the ⋮ menu deletes it.</p>
       <div id="lnkList"></div>
@@ -953,9 +943,9 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <button class="btn icon dots" id="saveMore" type="button" aria-label="More ways to save" title="More ways to save" aria-haspopup="menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button>
       </div>
       <div class="card menu" id="saveMenu" role="menu" hidden><button id="saveNew" type="button" role="menuitem">Save as new</button><button id="saveFile" type="button" role="menuitem">Download file</button></div>
-      <div class="bmain" id="bMain">
+      <div class="bmain">
         <section class="panel" aria-label="Editor mode">
-          <div class="seg wide" id="bMode" role="group" aria-label="How to enter the strokes">
+          <div class="seg wide" role="group" aria-label="How to enter the strokes">
             <button type="button" id="bModeBuild" aria-pressed="true">Builder</button>
             <button type="button" id="bModeType" aria-pressed="false">Text</button>
           </div>
@@ -1082,7 +1072,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <div class="strip" id="strip" role="img" aria-label="Last four weeks of practice"></div>
       <p class="hint" id="stripHint"></p>
     </section>
-    <details class="how" id="achHow"><summary>How this is counted</summary><dl id="achHowList"></dl></details>
+    <details class="how"><summary>How this is counted</summary><dl id="achHowList"></dl></details>
     </div>
     <div class="badges pmain" id="badges"></div>
     </div>
@@ -1679,7 +1669,7 @@ RLRR LRLL RLRR LRLL</pre>
       <input type="file" id="routineFile" accept=".txt,.json,.csv,text/plain,application/json" hidden>
     </div>
     <p class="err" id="openErr" role="alert"></p>
-    <div class="osec" id="libBox"><div class="olbl">Routine or library link</div>
+    <div class="osec"><div class="olbl">Routine or library link</div>
       <div class="urlrow">
         <select id="libSel" aria-label="Library"></select>
         <button class="btn" id="libGo" type="button">Load</button>
@@ -2970,7 +2960,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.135';                           /* shown beside the title */
+const VERSION='1.5.136';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5211,7 +5201,7 @@ function exerciseGuide(sg){
   if(!e)return 'new';
   return e.cleared?'cleared at '+e.cleared:'not cleared yet';
 }
-function replaySnap(r){
+function replaySnap(){
   const x=setHeader(S.routineText,'title','');     /* the name is kept once, by routine, not in each run */
   if(typeof x!=='string'||!x||x.length>MAX_SNAP)return undefined;
   return {x:x,st:S.startExercise,ev:S.eachVal,eu:S.eachUnit,gp:S.gap};
@@ -5248,7 +5238,7 @@ function recordRun(r){
     else if(!recs.names[rk])recs.names[rk]='Untitled '+(recs.nu++);
   }
   const run={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:Date.now(),mode:S.mode,
-    rk:all?routineKeyOf(all):null,ne:all?all.length:1,bpm:S.bpm,tol:S.tol,lv:S.click,dy:r.dyc||'',rp:replaySnap(r),sec:Math.max(0,Math.min(14400,Math.round((Date.now()-(r.w0||Date.now()))/1000))),
+    rk:all?routineKeyOf(all):null,ne:all?all.length:1,bpm:S.bpm,tol:S.tol,lv:S.click,dy:r.dyc||'',rp:replaySnap(),sec:Math.max(0,Math.min(14400,Math.round((Date.now()-(r.w0||Date.now()))/1000))),
     exercises:rows.map(x=>({k:x.key,bpm:x.bpm,due:x.due,within:Math.round(x.pct*x.due),heard:x.heard,
       avg:isNaN(x.avg)?null:x.avg,sd:isNaN(x.spread)?null:x.spread,miss:x.miss,i:x.idx,
       ls:x.lvl&&x.lvl.sd!==null?Math.round(x.lvl.sd*10)/10:null,ld:x.lvl&&x.lvl.diff!==null?Math.round(x.lvl.diff*10)/10:null,
@@ -5777,7 +5767,7 @@ const partialRun=r=>!!(r.sk&&r.sk.length);   /* some exercises of the routine we
 const bestPct=l=>{const v=l.filter(r=>r.lv!=='off'&&!partialRun(r)).map(runPct);return v.length?Math.max.apply(null,v):null;};
 const runPct=r=>{let w=0,d=0;r.exercises.forEach(b=>{w+=b.within;d+=b.due;});return d?w/d:0;};
 const runKey=r=>r.mode==='routine'?'r:'+(r.rk||r.id):'p:'+r.exercises[0].k;
-const ICON={replay:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/></svg>',
+const ICON={
   sun:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
   moon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
   clock:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
@@ -5787,8 +5777,7 @@ const ICON={replay:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" 
   down:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
   more:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>',
   play:'<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>',
-  edit:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
-  del:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>'};
+  edit:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>'};
 /* An empty view: a muted icon, one line, one sentence and one button that leads to the next step. */
 function emptyState(icon,title,text,label,fn){
   const e=document.createElement('div');e.className='empty';
