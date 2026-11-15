@@ -2301,7 +2301,41 @@ function graceMain(slots,i,env,thr){
   if(!on.length)return null;
   const r=matchStrokes(sub,on)[at];
   if(!r)return null;
-  return {t:on[r.main].t,db:on[r.main].db,gr:r.gr.map(k=>on[k].t),tl:r.tl.map(k=>on[k].t)};
+  return {t:on[r.main].t,db:on[r.main].db,gr:r.gr.map(k=>on[k].t),gdb:r.gr.map(k=>on[k].db),tl:r.tl.map(k=>on[k].t)};
+}
+/* How the flams and drags of a run sounded, from res (the judged strokes, with gl the time from the first grace note to the main
+   stroke in ms and gd the graces' level against the main stroke in dB). For flams (1) and drags (2) with at least FIND.minN heard
+   with their graces: n, lead (the average gl), sd and gd. A flam under flat ms apart is close to one stroke, and over open ms it is
+   heard as two; a grace within loud dB of its main stroke is too loud. */
+const GRACE={flat:12,open:50,loud:3};
+function graceStats(slots,res){
+  const by={1:[],2:[]};
+  slots.forEach((s,i)=>{const v=res.get(i);if(s.gr&&by[s.gr]&&v&&!v.miss&&typeof v.gl==='number')by[s.gr].push(v);});
+  const out={};
+  [1,2].forEach(g=>{
+    const a=by[g];if(a.length<FIND.minN)return;
+    const gl=a.map(v=>v.gl),gd=a.filter(v=>typeof v.gd==='number').map(v=>v.gd);
+    out[g]={n:a.length,lead:Math.round(mean(gl)),sd:Math.round(sd(gl)),gd:gd.length?Math.round(mean(gd)):null};
+  });
+  return out;
+}
+/* The flams and drags of a run as sentences, one each. */
+function graceNotes(st){
+  const out=[];
+  const lv=x=>x.gd===null?'':', '+Math.abs(x.gd)+' dB '+(x.gd<=0?'under':'over')+' the main stroke';
+  if(st[1]){
+    const x=st[1];let t='Your flams have the grace note '+x.lead+' ms ahead on average (spread '+x.sd+' ms)'+lv(x)+'.';
+    if(x.lead<GRACE.flat)t+=' That is close to flat: start the grace note a little earlier.';
+    else if(x.lead>GRACE.open)t+=' That is open, so it is heard as two strokes: bring the grace note closer.';
+    if(x.gd!==null&&x.gd>-GRACE.loud)t+=' Play the grace note from lower, so it is softer than the main stroke.';
+    out.push(t);
+  }
+  if(st[2]){
+    const x=st[2];let t='Your drags start '+x.lead+' ms before the main stroke on average (spread '+x.sd+' ms)'+lv(x)+'.';
+    if(x.gd!==null&&x.gd>-GRACE.loud)t+=' Keep the grace notes low, so they are softer than the main stroke.';
+    out.push(t);
+  }
+  return out;
 }
 /* How each buzz stroke sounded. bnc is the times of the bounces heard (run time, s), res the timing of each judged stroke.
    For each buzz stroke that was heard: n, the bounces after it, and fill, how much of the way to the next stroke it rang
@@ -2387,7 +2421,20 @@ const slotWin=(sl,tol)=>Math.min(tol,Math.round(sl.w*800));
    at 2 a run of pure scatter reports something more often than not, at 3 one run in 20, at 3.5 about one in 100. A miss finding needs miss more of the group missed
    than of the rest, and settling needs settle more of the first pass off time than of the later passes. A run with fewer than more
    strokes heard gets only its first finding: the others are too often chance. */
-const FIND={minN:6,minPasses:3,se:3.5,ms:6,miss:0.15,settle:0.2,more:64};
+const FIND={minN:6,minPasses:3,se:3.5,ms:6,miss:0.15,settle:0.2,more:64,db:3,span:20};
+/* Levels: a group's loudness against strokes of the same kind (accents, ghost notes or the rest), at least db apart. Drift: the
+   slope of timing or loudness against time across an exercise of at least span seconds, judged by the change from its start to its
+   end. A keyboard run has no levels, and a stroke in a tight slot or one that clipped has none either, so they stay out. */
+/* A straight line through points x, y: its slope b and the standard error of b. */
+function slope(x,y){
+  const n=x.length;if(n<3)return null;
+  const mx=mean(x),my=mean(y);let sxx=0,sxy=0;
+  for(let i=0;i<n;i++){sxx+=(x[i]-mx)*(x[i]-mx);sxy+=(x[i]-mx)*(y[i]-my);}
+  if(!(sxx>0))return null;
+  const b=sxy/sxx;let rss=0;
+  for(let i=0;i<n;i++){const e=y[i]-my-b*(x[i]-mx);rss+=e*e;}
+  return {b:b,se:Math.sqrt(rss/(n-2)/sxx)};
+}
 /* The hand or rest at each position, as the finding copy writes a group: RLRR. */
 const stickOf=notes=>notes.map(n=>n==='_'?'_':hnd(n)).join('');
 /* Each position's roles in the sticking, worked out from the notes due. wrap marks a role that reads the pass before, so it does
@@ -2464,7 +2511,9 @@ function findings(plan,seg,tol){
     if(all.some(k=>dy(k)==='A')){
       groups.push({kind:'ctx',role:'afterAcc',ks:all.filter(k=>k>0&&dy(k)!=='A'&&dy(k-1)==='A')});
       groups.push({kind:'ctx',role:'beforeAcc',ks:all.filter(k=>k+1<len&&dy(k)!=='A'&&dy(k+1)==='A')});
+      groups.push({kind:'ctx',role:'acc',ks:all.filter(k=>dy(k)==='A')});   /* accents pulled early, or pushed late */
     }
+    if(all.some(k=>dy(k)==='g'))groups.push({kind:'ctx',role:'ghost',ks:all.filter(k=>dy(k)==='g')});
     const places=beatPlaces(sg),byPlace=new Map();
     places.forEach((p,i)=>{if(p&&sg.notes[i]!=='_'){const g=byPlace.get(p)||{kind:'beat',place:p,pos:[],ks:[]};g.pos.push(i);byPlace.set(p,g);}});
     byPlace.forEach(g=>{g.ks=all.filter(k=>g.pos.indexOf(posOf(k))>=0);groups.push(g);});
@@ -2494,7 +2543,7 @@ function findings(plan,seg,tol){
       if(!g.ks.length)return;
       const inG=new Set(g.ks),rest=all.filter(k=>!inG.has(k));
       const heard=g.ks.filter(k=>Q.sm[k]!==null),heardR=rest.filter(k=>Q.sm[k]!==null);
-      const info=Object.assign({},base,{kind:g.kind,role:g.role,place:g.place,seam:g.kind==='seam'?g.seam:(g.kind==='pos'?seamAt(g.pos[0]):null),pos:g.pos||[...new Set(g.ks.map(posOf))].sort((a,b)=>a-b),ks:g.ks,slots:g.ks.map(k=>sg.first+k)});
+      const info=g.info=Object.assign({},base,{kind:g.kind,role:g.role,place:g.place,seam:g.kind==='seam'?g.seam:(g.kind==='pos'?seamAt(g.pos[0]):null),pos:g.pos||[...new Set(g.ks.map(posOf))].sort((a,b)=>a-b),ks:g.ks,slots:g.ks.map(k=>sg.first+k)});
       /* timing: the group's average against the rest of the exercise */
       if(heard.length>=FIND.minN&&heardR.length>=FIND.minN&&new Set(heard.map(pass)).size>=FIND.minPasses){
         const v=shift(heard,heardR),d=v.d;
@@ -2524,6 +2573,76 @@ function findings(plan,seg,tol){
       if(inner)found.splice(found.indexOf(f),1);
     });
     found.forEach(f=>{delete f.heard;out.push(f);});
+    /* rushing or dragging: the timing against time, each stroke taken from its own position's average, so a stroke that is always
+       early does not tilt the line */
+    const tOf=k=>sl(k).t;
+    if(heardAll.length>=FIND.minN*2&&last>=FIND.minPasses-1){
+      const t0=tOf(heardAll[0]),t1=tOf(heardAll[heardAll.length-1]),T=t1-t0;
+      const v=T>=FIND.span?slope(heardAll.map(tOf),heardAll.map(k=>Q.sm[k]-mean(pm.get(posOf(k))))):null;
+      if(v&&Math.abs(v.b*T)>=FIND.ms&&Math.abs(v.b)>=FIND.se*v.se){
+        const m=mean(heardAll.map(k=>Q.sm[k])),tb=mean(heardAll.map(tOf));
+        let score=0;
+        heardAll.forEach(k=>{const w=slotWin(sl(k),tol),was=Math.abs(Q.sm[k])<=w,could=Math.abs(Q.sm[k]-v.b*(tOf(k)-tb))<=w;score+=(could?1:0)-(was?1:0);});
+        out.push(Object.assign({what:'drift',kind:'run',from:Math.round(m+v.b*(t0-tb)),to:Math.round(m+v.b*(t1-tb)),d:Math.round(v.b*T),secs:T,n:heardAll.length,score:Math.max(0,score),pos:[],ks:[],slots:[]},base));
+      }
+    }
+    /* dynamics, from the loudness of each heard stroke */
+    const lev=k=>Q.sb&&Q.sb[k]!==null&&Q.sb[k]!==undefined&&!sl(k).tight?Q.sb[k]:null;
+    const cls=k=>dy(k)==='A'?'A':(dy(k)==='g'?'g':'n');
+    const loud=all.filter(k=>lev(k)!==null);
+    if(loud.length>=FIND.minN*2){
+      const lm=new Map();
+      loud.forEach(k=>{const p=posOf(k),o=lm.get(p)||[];o.push(lev(k));lm.set(p,o);});
+      const lsp=loud.length>2?sd(loud.map(k=>lev(k)-mean(lm.get(posOf(k))))):0;
+      const lshift=(a,b)=>{
+        const x=a.map(lev),y=b.map(lev),sx=Math.max(lsp,x.length>1?sd(x):0),sy=Math.max(lsp,y.length>1?sd(y):0);
+        return {d:mean(x)-mean(y),se:Math.sqrt(sx*sx/x.length+sy*sy/y.length)};
+      };
+      const lsure=v=>Math.abs(v.d)>=FIND.db&&Math.abs(v.d)>=FIND.se*v.se;
+      const enough=a=>a.length>=FIND.minN&&new Set(a.map(pass)).size>=FIND.minPasses;
+      const lscore=(n,d)=>Math.round(n*Math.min(1,Math.abs(d)/(2*FIND.db))/2);
+      const lfound=[],lseen=new Map();
+      const ladd=f=>{
+        const key=f.ks.join(','),o=lseen.get(key);
+        if(o&&o.kind==='ctx')return;
+        if(o)lfound.splice(lfound.indexOf(o),1);
+        lseen.set(key,f);lfound.push(f);
+      };
+      /* a stroke of the pattern louder or softer than the others of its kind */
+      groups.filter(g=>g.kind==='pos'&&g.info).forEach(g=>{
+        const a=g.ks.filter(k=>lev(k)!==null),c=a.length?cls(a[0]):'';
+        if(!a.length||a.some(k=>cls(k)!==c))return;
+        const inG=new Set(g.ks),b=loud.filter(k=>!inG.has(k)&&cls(k)===c);
+        if(!enough(a)||!enough(b))return;
+        const v=lshift(a,b);
+        if(lsure(v))ladd(Object.assign({},g.info,{what:'db',cls:c,ks:a,slots:a.map(k=>sg.first+k),d:Math.round(v.d),n:a.length,score:lscore(a.length,v.d)}));
+      });
+      /* the tap after an accent (a downstroke that did not stop low) and the tap before one (an upstroke lifted too early), each
+         against the other taps */
+      const near=new Set();
+      groups.filter(x=>x.kind==='ctx'&&(x.role==='afterAcc'||x.role==='beforeAcc')).forEach(x=>x.ks.forEach(k=>near.add(k)));
+      ['afterAcc','beforeAcc'].forEach(role=>{
+        const g=groups.find(x=>x.kind==='ctx'&&x.role===role);if(!g||!g.info)return;
+        const a=g.ks.filter(k=>lev(k)!==null&&cls(k)==='n'),b=loud.filter(k=>!near.has(k)&&cls(k)==='n');
+        if(!enough(a)||!enough(b))return;
+        const v=lshift(a,b);
+        if(v.d>0&&lsure(v))ladd(Object.assign({},g.info,{what:'db',cls:'n',ks:a,slots:a.map(k=>sg.first+k),d:Math.round(v.d),n:a.length,score:lscore(a.length,v.d)}));
+      });
+      /* A stroke that is only louder because it follows or leads an accent is told by that finding. An accent is only a problem
+         when soft and a ghost note when loud; with two accents a bar, a loud one is the other one being soft. */
+      lfound.filter(f=>f.kind==='pos').forEach(f=>{
+        const wide=lfound.some(g=>g.kind==='ctx'&&Math.sign(g.d)===Math.sign(f.d)&&f.ks.every(k=>g.ks.indexOf(k)>=0));
+        if(wide||(f.cls==='A'&&f.d>0)||(f.cls==='g'&&f.d<0))lfound.splice(lfound.indexOf(f),1);
+      });
+      lfound.forEach(f=>out.push(f));
+      /* getting louder or softer across the exercise, each stroke taken from its own position's average */
+      if(last>=FIND.minPasses-1){
+        const t0=tOf(loud[0]),t1=tOf(loud[loud.length-1]),T=t1-t0;
+        const v=T>=FIND.span?slope(loud.map(tOf),loud.map(k=>lev(k)-mean(lm.get(posOf(k))))):null;
+        if(v&&Math.abs(v.b*T)>=FIND.db&&Math.abs(v.b)>=FIND.se*v.se)
+          out.push(Object.assign({what:'dbdrift',kind:'run',d:Math.round(v.b*T),secs:T,n:loud.length,score:lscore(loud.length,v.b*T),pos:[],ks:[],slots:[]},base));
+      }
+    }
     /* settling: the first pass against the later ones, counting a miss or a stroke off time as a slip */
     if(last>=FIND.minPasses-1){
       const slip=k=>Q.sm[k]===null||Math.abs(Q.sm[k])>slotWin(sl(k),tol);
@@ -2542,17 +2661,30 @@ function findingText(f,plan){
   const sg=plan.segs[f.seg],multi=plan.segs.length>1;
   const num=i=>sg.notes.slice(0,i+1).filter(x=>x!=='_').length;
   const change=s=>s.pass?'going back to the start ('+s.from+' to '+s.to+')':'at the change from '+s.from+' to '+s.to;
-  const ROLE={double2:'the second note of each double',double1:'the first note of each double',afterDouble:'the stroke after each double',rest:'the first stroke after a rest',afterAcc:'the stroke after each accent',beforeAcc:'the stroke before each accent'};
+  const ROLE={double2:'the second note of each double',double1:'the first note of each double',afterDouble:'the stroke after each double',rest:'the first stroke after a rest',afterAcc:'the stroke after each accent',beforeAcc:'the stroke before each accent',acc:'the accents',ghost:'the ghost notes'};
   const PLACE={e:'the “e” of each beat',and:'the “&” of each beat',a:'the “a” of each beat',trip2:'the second note of each triplet',trip3:'the third note of each triplet'};
-  const plural=f.kind==='seam';
+  const plural=f.kind==='seam'||f.role==='acc'||f.role==='ghost';
+  const pre=multi?'In exercise '+f.ex+', ':'',cap=x=>x.charAt(0).toUpperCase()+x.slice(1);
+  const over=t=>t<90?Math.round(t)+' s':Math.round(t/60)+' min';
   let who;
+  if(f.what==='drift'){
+    const at=v=>v===0?'on the click':Math.abs(v)+' ms '+(v>0?'late':'early');
+    return cap(pre+'you drifted from '+at(f.from)+' to '+at(f.to)+' over '+over(f.secs)+(f.d<0?': you were rushing.':': you were dragging.'));
+  }
+  if(f.what==='dbdrift')return cap(pre+'you got '+Math.abs(f.d)+' dB '+(f.d>0?'louder':'softer')+' over '+over(f.secs)+'. Keep the same stick heights to the end.');
   if(f.what==='settle')return (multi?'In exercise '+f.ex+', the':'The')+' first pass was '+Math.round(f.first*100)+'% off time and later passes '+Math.round(f.later*100)+'%. It takes a pass to settle.';
   if(f.kind==='pos'){who='stroke '+num(f.pos[0])+' ('+hnd(sg.notes[f.pos[0]])+')'+(f.seam?', '+change(f.seam)+',':'');}
   else if(f.kind==='seam')who='the strokes '+change(f.seam);
   else if(f.kind==='beat')who=PLACE[f.place];
   else who=ROLE[f.role];
   let s;
-  if(f.what==='miss')s=who+' '+(plural?'were':'was')+' not heard '+f.miss+' of '+f.n+' times, more often than the rest of the exercise.';
+  if(f.what==='db'){
+    const others={A:'the other accents',g:'the other ghost notes',n:f.kind==='ctx'||plan.slots.some(x=>x.seg===f.seg&&x.dy==='A')?'the other taps':'the other strokes'}[f.cls];
+    s=who+' '+(plural?'are':'is')+' '+Math.abs(f.d)+' dB '+(f.d>0?'louder':'softer')+' than '+others+'.';
+    if(f.role==='afterAcc')s+=' Stop the stick low after each accent.';
+    else if(f.role==='beforeAcc')s+=' Keep it low, and lift the stick only for the accent.';
+  }
+  else if(f.what==='miss')s=who+' '+(plural?'were':'was')+' not heard '+f.miss+' of '+f.n+' times, more often than the rest of the exercise.';
   else s=who+' '+(plural?'land':'lands')+' '+Math.abs(f.d)+' ms '+(f.d>0?'later':'earlier')+' than the rest of the exercise.';
   s=(multi?'In exercise '+f.ex+', ':'')+s;
   return s.charAt(0).toUpperCase()+s.slice(1);
@@ -2566,7 +2698,7 @@ function drillPos(f,plan,seg){
   const Q=seg[f.seg],sg=plan.segs[f.seg],by=new Map();
   if(!Q||!Q.sm)return -1;
   f.ks.forEach(k=>{
-    const p=plan.slots[sg.first+k].pos,v=Q.sm[k];
+    const p=plan.slots[sg.first+k].pos,v=f.what==='db'?(Q.sb?Q.sb[k]:null):Q.sm[k];
     by.set(p,(by.get(p)||0)+(f.what==='miss'?(v===null?1:0):(v===null?0:v*Math.sign(f.d))));
   });
   let best=-1,bs=-Infinity;
@@ -3192,7 +3324,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.145';                           /* shown beside the title */
+const VERSION='1.5.146';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3929,7 +4061,9 @@ function finalizeSlot(i){
     if(on){r.within++;Q.within++;r.streak++;if(r.streak>r.best)r.best=r.streak;}else r.streak=0;
     r.trace.push({ms:ms,hand:hand,wrong:wrong});if(r.trace.length>STRIP_MAX)r.trace.shift();
   }
-  r.res.set(i,{ms:ms,wrong:wrong?det.hand:null,db:h.kb?null:strokeDb(h.pk,h.raw)});
+  const rv={ms:ms,wrong:wrong?det.hand:null,db:h.kb?null:strokeDb(h.pk,h.raw)};
+  if(gm&&gm.gr.length){rv.gl=Math.round((gm.t-Math.min.apply(null,gm.gr))*1000);rv.gd=Math.round(mean(gm.gdb)-gm.db);}   /* for the flam and drag summary */
+  r.res.set(i,rv);
 }
 /* Calibration shows its running answer while you play. The reading is the latency you would get if the run ended now. */
 function latLive(r){
@@ -5221,6 +5355,7 @@ function coachItems(r){
   /* the costliest places in the music where the strokes go wrong, in any exercise of the run: up to four, or only the first
      in a short run, where the rest are mostly chance */
   if(r.seg)findings(r.plan,r.seg,S.tol).slice(0,r.errs.length>=FIND.more?4:1).forEach(f=>parts.push({t:findingText(f,r.plan),f:f}));
+  if(!r.kb&&r.res&&r.plan.slots.some(x=>x.gr))graceNotes(graceStats(r.plan.slots,r.res)).forEach(t=>parts.push({t:t}));
   if(!r.kb&&r.plan.slots.some(x=>x.bz)){const st=buzzStats(r.plan.slots,r.res,r.bnc||[]),bn=buzzNote(st,buzzSingles(r.plan.slots,st,r.res).size);if(bn)parts.push({t:bn});}
   const lvs=levelStats(r.lv);
   if(lvs&&lvs.diff!==null&&Math.abs(lvs.diff)>=3)parts.push({t:'Your '+(lvs.diff<0?'left':'right')+' hand is '+Math.abs(lvs.diff).toFixed(0)+' dB quieter than your '+(lvs.diff<0?'right':'left')+'.'});

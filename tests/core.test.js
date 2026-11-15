@@ -698,3 +698,120 @@ test('drills: triplets keep their grouping and the tempo never goes below 40 BPM
   pl.segs[0].bpm = 45;
   assert.equal(c.drillOf(pl, sr, f[0]).bpm, 40);
 });
+
+/* ---------- findings: tempo over time and dynamics ---------- */
+/* a run with levels: off gives each offset in ms (null for a miss), lv each level in dB (null for none, as on a keyboard) */
+const fakeLvRun = (pl, off, lv) => pl.segs.map(sg => {
+  const sm = [], sb = [];
+  for (let k = 0; k < sg.passes * sg.strokes; k++) {
+    const sl = pl.slots[sg.first + k], p = Math.floor(sl.k / sg.N), v = off(sg, sl, p);
+    sm.push(v === null ? null : Math.round(v));
+    const d = v === null ? null : lv(sg, sl, p);
+    sb.push(d === null ? null : Math.round(d));
+  }
+  return { sm, sb };
+});
+const aplan = (text, passes) => {
+  const p = c.parseRoutine(text);
+  const ex = c.resolveExercises(p.exercises, { unit: 'pass', v: passes || 16 }, { bpm: 60, subdiv: 4 });
+  return c.buildPlan(ex, { gapBeats: 0, clickMode: 'strokes', dyn: { acc: 'g', oth: 'n' } });
+};
+
+test('findings: rushing across a run is found as a drift from late to early', () => {
+  const pl = fplan('RLRL RLRL', 16), g = gauss(rng(11)), T = pl.slots[pl.slots.length - 1].t;
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 + 4 - 16 * sl.t / T), 20).filter(x => x.what === 'drift');
+  assert.equal(f.length, 1);
+  assert.ok(f[0].d <= -10 && f[0].d >= -22, String(f[0].d));
+  assert.ok(f[0].from > 0 && f[0].to < 0, f[0].from + ' to ' + f[0].to);
+  assert.match(c.findingText(f[0], pl), /^You drifted from \d+ ms late to \d+ ms early over \d+ s: you were rushing\.$/);
+  assert.equal(c.drillOf(pl, fakeRun(pl, () => 0), f[0]), null);
+});
+
+test('findings: dragging reads as dragging', () => {
+  const pl = fplan('RLRL RLRL', 16), g = gauss(rng(12)), T = pl.slots[pl.slots.length - 1].t;
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 + 16 * sl.t / T), 20).filter(x => x.what === 'drift');
+  assert.match(c.findingText(f[0], pl), /you were dragging\.$/);
+});
+
+test('findings: scatter and level noise rarely give a drift or a level finding', () => {
+  let hits = 0;
+  for (let s = 0; s < 200; s++) {
+    const pl = aplan('RLRR LRLL', 8), g = gauss(rng(300 + s));
+    const f = c.findings(pl, fakeLvRun(pl, () => g() * 8, (sg, sl) => -20 + (sl.dy === 'A' ? 8 : 0) + g() * 2.5), 20);
+    if (f.some(x => x.what === 'drift' || x.what === 'db' || x.what === 'dbdrift')) hits++;
+  }
+  assert.ok(hits <= 10, hits + ' of 200 runs of scatter gave a finding');
+});
+
+test('findings: a loud tap after each accent asks for a downstroke', () => {
+  const pl = aplan('RLRR LRLL'), g = gauss(rng(13));
+  const sr = fakeLvRun(pl, () => g() * 5, (sg, sl) => {
+    const prev = pl.slots[pl.slots.indexOf(sl) - 1];
+    return -20 + (sl.dy === 'A' ? 8 : 0) + (sl.dy !== 'A' && prev && prev.dy === 'A' ? 5 : 0) + g() * 1.5;
+  });
+  const f = c.findings(pl, sr, 20).filter(x => x.what === 'db');
+  assert.equal(f.length, 1, JSON.stringify(f.map(x => [x.kind, x.role, x.d])));
+  assert.equal(f[0].role, 'afterAcc');
+  assert.equal(c.findingText(f[0], pl), 'The stroke after each accent is ' + f[0].d + ' dB louder than the other taps. Stop the stick low after each accent.');
+  assert.ok(f[0].d >= 3 && f[0].d <= 7, String(f[0].d));
+  assert.ok(f[0].slots.length >= 24);
+});
+
+test('findings: a loud tap before each accent is an upstroke lifted early', () => {
+  const pl = aplan('RLRR LRLL'), g = gauss(rng(14));
+  const sr = fakeLvRun(pl, () => g() * 5, (sg, sl) => {
+    const next = pl.slots[pl.slots.indexOf(sl) + 1];
+    return -20 + (sl.dy === 'A' ? 8 : 0) + (sl.dy !== 'A' && next && next.dy === 'A' ? 5 : 0) + g() * 1.5;
+  });
+  const f = c.findings(pl, sr, 20).filter(x => x.what === 'db');
+  assert.equal(f[0].role, 'beforeAcc');
+  assert.match(c.findingText(f[0], pl), /^The stroke before each accent is \d+ dB louder than the other taps\. Keep it low, and lift the stick only for the accent\.$/);
+});
+
+test('findings: one soft accent is found against the other accents', () => {
+  const pl = aplan('RLRR LRLL'), g = gauss(rng(15));
+  const f = c.findings(pl, fakeLvRun(pl, () => g() * 5, (sg, sl) => -20 + (sl.dy === 'A' ? (sl.pos === 4 ? 3 : 8) : 0) + g() * 1.5), 20).filter(x => x.what === 'db');
+  assert.equal(f.length, 1);
+  assert.deepEqual(plain(f[0].pos), [4]);
+  assert.match(c.findingText(f[0], pl), /^Stroke 5 \(L\), at the change from RLRR to LRLL, is \d+ dB softer than the other accents\.$/);
+});
+
+test('findings: accents pulled early are named as the accents', () => {
+  const pl = aplan('RLRR LRLL'), g = gauss(rng(16));
+  const f = c.findings(pl, fakeLvRun(pl, (sg, sl) => g() * 5 - (sl.dy === 'A' ? 12 : 0), (sg, sl) => -20 + (sl.dy === 'A' ? 8 : 0) + g() * 1.5), 20).filter(x => x.what === 'ms');
+  assert.equal(f[0].role, 'acc');
+  assert.match(c.findingText(f[0], pl), /^The accents land \d+ ms earlier than the rest of the exercise\.$/);
+});
+
+test('findings: getting softer across a run', () => {
+  const pl = aplan('RLRL RLRL'), g = gauss(rng(17)), T = pl.slots[pl.slots.length - 1].t;
+  const f = c.findings(pl, fakeLvRun(pl, () => g() * 5, (sg, sl) => -20 + (sl.dy === 'A' ? 8 : 0) - 6 * sl.t / T + g() * 1.5), 20).filter(x => x.what === 'dbdrift');
+  assert.equal(f.length, 1);
+  assert.match(c.findingText(f[0], pl), /^You got \d dB softer over \d+ s\. Keep the same stick heights to the end\.$/);
+});
+
+test('findings: a keyboard run has no levels, so no dynamics findings', () => {
+  const pl = aplan('RLRR LRLL'), g = gauss(rng(13));
+  const f = c.findings(pl, fakeLvRun(pl, () => g() * 5, () => null), 20);
+  assert.ok(!f.some(x => x.what === 'db' || x.what === 'dbdrift'));
+});
+
+test('flams and drags: the grace lead and level are summarised, with a word when flat, open or loud', () => {
+  const slots = [], res = new Map(), g = gauss(rng(18));
+  for (let i = 0; i < 24; i++) {
+    slots.push({ gr: i % 3 === 2 ? 2 : (i % 3 ? 1 : 0) });
+    if (slots[i].gr === 1) res.set(i, { ms: 0, gl: Math.round(9 + g()), gd: -1 });
+    else if (slots[i].gr === 2) res.set(i, { ms: 0, gl: Math.round(80 + g() * 5), gd: -8 });
+    else res.set(i, { ms: 0 });
+  }
+  const st = c.graceStats(slots, res);
+  assert.equal(st[1].n, 8);
+  assert.ok(st[1].lead >= 8 && st[1].lead <= 10);
+  assert.equal(st[2].gd, -8);
+  const t = c.graceNotes(st);
+  assert.equal(t.length, 2);
+  assert.match(t[1], /^Your drags start \d+ ms before the main stroke on average \(spread \d+ ms\), 8 dB under the main stroke\.$/);
+  assert.match(t[0], /^Your flams have the grace note \d+ ms ahead on average \(spread \d+ ms\), 1 dB under the main stroke\. That is close to flat: start the grace note a little earlier\. Play the grace note from lower, so it is softer than the main stroke\.$/);
+  assert.equal(c.graceStats(slots.slice(0, 12), res)[1], undefined);   /* 4 flams are too few */
+  assert.deepEqual(plain(c.graceStats(slots, new Map())), {});
+});
