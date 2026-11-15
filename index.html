@@ -218,9 +218,9 @@ body[data-run="1"] .notice{display:none}
 .bigcount{position:absolute;inset:0;z-index:5;display:grid;place-items:center;font:800 var(--t-hero) var(--font-display);font-variant-numeric:tabular-nums;color:var(--accent);background:color-mix(in srgb,var(--bg) 80%,transparent);border-radius:var(--r-lg);pointer-events:none}   /* the count-in: the hero while it runs */
 .rows{border-radius:var(--r-lg);--rowh:124px;--nrows:3}
 .staffs{display:grid;gap:2px}
-.rows.sliding{overflow:hidden;transition:height var(--dur-2) var(--ease)}
+.rows.sliding{overflow:hidden}
 .rows.win{height:var(--winh);overflow:hidden}
-.rows.win .rows-track{min-height:0;transition:transform var(--dur-2) var(--ease)}
+.rows.win .rows-track{min-height:0}
 .rows.win .prow{min-height:0}
 .rows.win.rv{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
 .stobar{position:relative;display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--line)}
@@ -233,7 +233,8 @@ body[data-run="1"] .notice{display:none}
 .rvhost{overflow-y:auto;overflow-x:hidden;border-radius:var(--r-lg);overscroll-behavior:auto}
 .rvtrack{display:grid;gap:4px;align-content:start}
 .stbody{padding:0 8px 12px;display:grid;gap:8px}
-.rows-track{position:relative;display:grid;gap:4px;align-content:start;min-height:calc(var(--nrows,3)*var(--rowh) + (var(--nrows,3) - 1)*4px);transition:transform var(--dur-2) var(--ease)}
+.rows-track{position:relative;display:grid;gap:4px;align-content:start;min-height:calc(var(--nrows,3)*var(--rowh) + (var(--nrows,3) - 1)*4px)}
+@media (prefers-reduced-motion:no-preference){.rows.sliding{transition:height var(--dur-2) var(--ease)}.rows-track{transition:transform var(--dur-2) var(--ease)}}   /* the staff lines slide up; with reduced motion they move at once */
 #rowEnd{margin-top:8px}
 .prow{display:grid;gap:4px;align-content:start;min-height:var(--rowh);box-shadow:inset 0 0 0 transparent;transition:opacity var(--dur-2) var(--ease),background-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease)}
 .prow.change{box-shadow:inset 0 3px 0 var(--fill)}
@@ -2969,7 +2970,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.134';                           /* shown beside the title */
+const VERSION='1.5.135';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
