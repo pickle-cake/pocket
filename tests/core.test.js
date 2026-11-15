@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['parseStrokes', 'nameMarkers', 'fmtPattern', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzStats', 'buzzCounts', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
+  'graceSlot', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzStats', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
 
 const runPoints = (codes, lv) => c.scoreParts([[codes, 1]], lv);
 const plan = (text, opt) => {
@@ -124,9 +124,11 @@ test('buzz stats count the bounces after each stroke and how far it rang', () =>
   const st = c.buzzStats(s, res, bnc);
   assert.deepEqual(plain(st.map(x => x.n)), [10, 10, 10, 1]);
   assert.ok(st[0].fill > 0.8 && st[0].fill <= 1, 'fill ' + st[0].fill);
-  const note = c.buzzNote(st);
+  assert.equal(c.buzzSingles(s, st).size, 0);   /* one bounce among buzzes is not a single */
+  assert.doesNotMatch(c.buzzNote(st, 0), /single/);
+  const note = c.buzzNote(st, 1);
   assert.match(note, /bounced 7\.8 times/);
-  assert.match(note, /1 of 4 had fewer than two bounces/);
+  assert.match(note, /1 of 4 sounded like single strokes/);
   assert.equal(c.buzzNote(st.slice(0, 3)), '');
 });
 
@@ -238,6 +240,22 @@ test('buzz stats can take one exercise', () => {
   const res = new Map(s.map((x, i) => [i, { ms: 0 }])), bnc = [0.02, 0.04, 1.02];
   assert.deepEqual(plain(c.buzzStats(s, res, bnc, 1).map(x => x.n)), [1]);
   assert.equal(c.buzzStats(s, res, bnc).length, 2);
+});
+
+test('buzz singles: no bounce, or a group of buzz strokes under one bounce each', () => {
+  /* RLRL zRzLzRzL zRzLzRzL zR: groups of four from the start of a run of buzz strokes, misses left out of the average */
+  const s = [], st = [];
+  for (let k = 0; k < 13; k++) s.push({ t: k * 0.4, seg: 0, bz: k >= 4 });
+  [1, 0, 1, 1, 2, 3, 1, 2].forEach((n, j) => st.push({ i: 4 + j, n: n }));   /* slot 12 is not in st: missed */
+  const ones = c.buzzSingles(s, st);
+  assert.deepEqual([...ones].sort((a, b) => a - b), [4, 5, 6, 7]);   /* 1 0 1 1 averages 0.75 */
+  /* 2 3 1 2 is a buzz group; the last group is slot 12 alone (missed), so slot 8..11 decide; the 0 at 12 is flagged on its own */
+  assert.ok(!ones.has(10));
+  const st2 = st.concat([{ i: 12, n: 0 }]);
+  assert.ok(c.buzzSingles(s, st2).has(12));
+  /* a buzz in another exercise does not join the run */
+  const s3 = [{ t: 0, seg: 0, bz: true }, { t: 0.4, seg: 1, bz: true }];
+  assert.equal(c.buzzSingles(s3, [{ i: 0, n: 1 }, { i: 1, n: 0 }]).size, 1);
 });
 
 test('buzz counts give the bounces of each buzz stroke, - for a miss', () => {

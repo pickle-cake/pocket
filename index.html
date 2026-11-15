@@ -262,6 +262,7 @@ body[data-run="1"] .notice{display:none}
 .staff .ts{font:800 17px var(--font-display);fill:var(--ink);text-anchor:middle}
 .staff .lt{font:800 22px var(--font-display);fill:var(--ink);text-anchor:middle}
 .staff .ft{font:600 10px var(--font-data);fill:var(--muted);text-anchor:middle}
+.staff .bzn{font:600 12px var(--font-data);fill:var(--muted);text-anchor:start}
 .staff .tg{display:none;font:600 12px var(--font-data);fill:var(--late);text-anchor:start}
 .cd.wrong .tg{display:block}
 .cd.ok .lt,.cd.ok .ft{fill:var(--ok)}
@@ -1358,7 +1359,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Accent and Other strokes</b> (Play page) lay accents and ghost notes over the loaded exercise. Accent picks the loud strokes: the first of each group, each beat, each bar, every 2nd to 7th stroke (counted across passes, so it drifts if the count does not divide the pass), or the right or left hand. Rests are never accented. Other strokes can be Normal or Ghost. The staff shows accents with &gt; and ghost notes in brackets.</li>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
         <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. Hits just before it (up to 80 ms for a flam, 120 ms for a drag) are its grace notes and are not counted as extras. While an exercise has them, the microphone also accepts a clearly louder strike soon after a hit, so a soft grace does not hide the main stroke. A grace as loud as the main stroke can, so play it softer. Keyboard play has no graces, so use one key per main stroke.</li>
-        <li><b>Buzz strokes:</b> only the start of each buzz is scored, as early or late against the click. The bounces after it are not extras. A soft buzz that starts while the stroke before still rings is still heard as a stroke when it lands near its click. With the microphone, Pocket also counts the bounces it hears, and after the run says how many each buzz had and how far it rang towards the next stroke. This is experimental: a pad and microphone hear bounces differently, so treat it as a guide. Keyboard play scores the start only.</li>
+        <li><b>Buzz strokes:</b> only the start of each buzz is scored, as early or late against the click. The bounces after it are not extras. A soft buzz that starts while the stroke before still rings is still heard as a stroke when it lands near its click. With the microphone, Pocket also counts the bounces it hears: the small number beside each buzz stroke on the staff, during the run and in History. After the run it says how many each buzz had on average, how far it rang towards the next stroke, and how many sounded like single strokes (no bounces, or a group of buzzes with under one bounce each). This is experimental: a pad and microphone hear bounces differently, so treat it as a guide. Keyboard play scores the start only.</li>
         <li><b>Records and storage:</b> records are saved in this browser only. Export keeps a copy or moves it to another device, and Import brings it back. The app reminds you if you have never exported, or the last copy is two weeks old. On iPhone and iPad, Safari can clear a site's data after about a week without use, so add the page to your Home Screen. <b>Settings &rsaquo; Data &rsaquo; Storage</b> shows what takes space. Stroke detail (what rebuilds a run's staff) may use about 40% of what the browser allows. Past that, the oldest runs lose their detail first and keep their totals.</li>
       </ul>
     </section>
@@ -2184,17 +2185,44 @@ function strokeOf(hits){
 /* How each buzz stroke sounded. bnc is the times of the bounces heard (run time, s), res the timing of each judged stroke.
    For each buzz stroke that was heard: n, the bounces after it, and fill, how much of the way to the next stroke it rang
    (null when the next stroke is far off or in another exercise, so there is no roll to fill). seg, when given, takes one exercise only. */
+function buzzRing(slots,i,v,bnc){   /* the bounces heard after buzz stroke i, struck v.ms from its click, and the time of the last */
+  const th=slots[i].t+v.ms/1000,end=buzzEnd(slots,i);
+  let n=0,last=th;
+  for(const t of bnc)if(t>th+0.004&&t<=end){n++;if(t>last)last=t;}
+  return {n:n,th:th,last:last};
+}
 function buzzStats(slots,res,bnc,seg){
-  const ts=bnc.slice().sort((a,b)=>a-b),out=[];
+  const out=[];
   slots.forEach((s,i)=>{
     if(!s.bz||(seg!==undefined&&s.seg!==seg))return;
     const v=res.get(i);if(!v||v.miss)return;
-    const th=s.t+v.ms/1000,end=buzzEnd(slots,i),nx=slots[i+1];
-    let n=0,last=th;
-    for(const t of ts){if(t>th+0.004&&t<=end){n++;last=t;}}
+    const b=buzzRing(slots,i,v,bnc),nx=slots[i+1];
     const gap=nx&&nx.seg===s.seg?nx.t-s.t:9;
-    out.push({i:i,n:n,fill:gap<=BUZZ_MAX?Math.min(1,(last-th+0.015)/gap):null});
+    out.push({i:i,n:b.n,fill:gap<=BUZZ_MAX?Math.min(1,(b.last-b.th+0.015)/gap):null});
   });
+  return out;
+}
+/* The buzz strokes that sounded like single strokes, as slot indexes. A pad rings a little after a single stroke too, so one
+   bounce alone proves nothing: a stroke counts as a single when no bounce was heard, or when it is in a group of buzz strokes
+   in a row (up to four, from the start of the run) that averaged under one bounce each. Played on a pad, singles came to
+   0 or 1 each and at most 3 in a group of four; buzzes to at least 5 a group. */
+function buzzSingles(slots,st){
+  const n=new Map(st.map(x=>[x.i,x.n])),out=new Set();
+  let run=[];
+  const flush=()=>{
+    for(let a=0;a<run.length;a+=4){
+      const ch=run.slice(a,a+4).filter(i=>n.has(i));if(!ch.length)continue;
+      const m=mean(ch.map(i=>n.get(i)));
+      ch.forEach(i=>{if(n.get(i)===0||(ch.length>=2&&m<1))out.add(i);});
+    }
+    run=[];
+  };
+  slots.forEach((s,i)=>{
+    const p=slots[i-1];
+    if(!s.bz||!run.length||!p||!p.bz||p.seg!==s.seg)flush();
+    if(s.bz)run.push(i);
+  });
+  flush();
   return out;
 }
 /* The bounces of each buzz stroke in order, one character each: 0-9 (9 is nine or more), or - for a buzz stroke missed.
@@ -2204,11 +2232,11 @@ function buzzCounts(slots,res,bnc,seg){
   return slots.map((s,i)=>!s.bz||(seg!==undefined&&s.seg!==seg)?'':n.has(i)?String(Math.min(9,n.get(i))):'-').join('');
 }
 /* The note on buzz strokes after a run, or '' when there were too few to judge. */
-function buzzNote(st){
+function buzzNote(st,ns){
   if(st.length<4)return '';
-  const avg=mean(st.map(x=>x.n)),few=st.filter(x=>x.n<2).length,fl=st.filter(x=>x.fill!==null).map(x=>x.fill);
+  const avg=mean(st.map(x=>x.n)),few=ns||0,fl=st.filter(x=>x.fill!==null).map(x=>x.fill);
   let s='Your buzz strokes bounced '+avg.toFixed(1)+' times on average'+(fl.length>=4?' and rang '+Math.round(mean(fl)*100)+'% of the way to the next stroke':'')+'.';
-  if(few>0)s+=' '+few+' of '+st.length+' had fewer than two bounces, so they sounded as single or double strokes. Press the stick into the pad a little more.';
+  if(few>0)s+=' '+few+' of '+st.length+' sounded like single strokes. Press the stick into the pad a little more, so it buzzes.';
   else if(fl.length>=4&&mean(fl)<0.7)s+=' There are gaps between them: let each buzz ring until the next stroke.';
   return s;
 }
@@ -2791,7 +2819,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.120';                           /* shown beside the title */
+const VERSION='1.5.121';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -2892,7 +2920,7 @@ function cleanRun(x){
       an:+b.an>0?Math.floor(+b.an):undefined,ac:+b.ac>0?Math.floor(+b.ac):undefined,as:typeof b.as==='number'&&isFinite(b.as)?b.as:undefined,
       gn:+b.gn>0?Math.floor(+b.gn):undefined,gc:+b.gc>0?Math.floor(+b.gc):undefined,gs:typeof b.gs==='number'&&isFinite(b.gs)?b.gs:undefined,
       bc:+b.bc>0?Math.floor(+b.bc):undefined,bn:typeof b.bn==='number'&&b.bn>=0&&b.bn<100?b.bn:undefined,bf:typeof b.bf==='number'&&b.bf>=0&&b.bf<=100?b.bf:undefined,
-      bb:typeof b.bb==='string'&&b.bb.length<=SPMAX&&/^[0-9-]+$/.test(b.bb)?b.bb:undefined});
+      bs:+b.bs>0?Math.floor(+b.bs):undefined,bb:typeof b.bb==='string'&&b.bb.length<=SPMAX&&/^[0-9-]+$/.test(b.bb)?b.bb:undefined});
   });
   if(!exercises.length)return null;
   const o={id:x.id.slice(0,40),t:+x.t,mode:x.mode==='routine'?'routine':'single',rk:typeof x.rk==='string'?x.rk.slice(0,40):null,
@@ -3258,11 +3286,18 @@ function onNodeMsg(e){
 function bounceHeard(r,m){
   const plan=r.plan,tc=m.t-latencySec()-r.t0;
   const i=r.ci&&tc<r.ci.ps-0.2?-1:bounceSlot(plan.slots,tc,r.nextFin,m.pk,r.lastPk),sl=plan.slots[i];
-  if(i<0||(m.pk<Math.pow(10,S.sens/20)&&sl.dy!=='g')){r.bnc.push(tc);return;}
+  if(i<0||(m.pk<Math.pow(10,S.sens/20)&&sl.dy!=='g')){r.bnc.push(tc);bzLive(r,buzzAt(plan.slots,tc));return;}
   const arr=r.pending.get(i)||[];
   arr.push({e:tc-sl.t,det:null,kb:false,pk:m.pk,raw:m.pk,bn:true});
   r.pending.set(i,arr);
   const b=strokeOf(arr);r.res.set(i,{ms:b.e*1000,wrong:r.res.has(i)?r.res.get(i).wrong:null});
+  bzLive(r,i);
+}
+/* The bounces of a buzz stroke so far, for the number beside it on the staff. */
+function bzLive(r,i){
+  const sl=r.plan.slots[i];if(!sl||!sl.bz||r.kb)return;
+  const v=r.res.get(i);if(!v||v.miss)return;
+  r.bzn.set(i,buzzRing(r.plan.slots,i,v,r.bnc).n);
 }
 function setMeter(v){
   const db=20*Math.log10(v+1e-6);
@@ -3345,7 +3380,7 @@ function beginRun(mode){
     mode:mode,plan:plan,w0:Date.now(),t0:ctx.currentTime+0.25,kb:S.input==='kb',
     nextClick:0,pulseIdx:-1,nextFin:0,pending:new Map(),cur:-1,showSeg:0,gridSeg:-1,
     errs:[],lv:[],seq:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,streak:0,best:0,checked:0,bad:0,trace:[],res:new Map(),showG:0,missRun:0,trail:[],live:'',pts:0,sk:0,hud:scoreOn&&mode==='play'&&!!LV_PTS[S.click],tm:[],
-    fin:new Set(),paused:false,ci:null,bnc:[],lastPk:0,dyc:lat?'':dynCode(),dyl:[],
+    fin:new Set(),paused:false,ci:null,bnc:[],bzn:new Map(),lastPk:0,dyc:lat?'':dynCode(),dyl:[],
     seg:plan.segs.map(sg=>({errs:[],lv:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,checked:0,bad:0,sc:[],sm:[],sb:[],sy:[],sw:[],ev:[],da:0,dg:0,
       posSum:new Array(sg.N).fill(0),posCnt:new Array(sg.N).fill(0)})),
     dirty:true,ended:false,totalExercises:routineParsed.exercises.length,
@@ -3663,7 +3698,7 @@ function handleHit(h){
   if(!viaGrace&&(Math.abs(e)>sl.w||i<r.nextFin)){
     /* a hit while a buzz stroke rings is one of its bounces */
     const bj=buzzAt(plan.slots,tc);
-    if(bj>=0&&!h.kb){r.bnc.push(tc);return;}
+    if(bj>=0&&!h.kb){r.bnc.push(tc);bzLive(r,bj);return;}
     const outside=tc<plan.slots[0].t-sl.w||tc>plan.slots[plan.slots.length-1].t+sl.w;
     if(outside||inLead(plan,tc))return;
     r.extras++;r.seg[sl.seg].extras++;r.dirty=true;
@@ -3677,6 +3712,7 @@ function handleHit(h){
   /* Show the result straight away. finalizeSlot replaces it once the window has closed. */
   const b=strokeOf(arr),exp=hnd(plan.segs[sl.seg].notes[sl.pos]),det=b.det;
   r.res.set(i,{ms:b.e*1000,wrong:(det&&det.hand!==exp)?det.hand:null});
+  bzLive(r,i);
 }
 let heardTimer=0;
 function flashHeard(h){
@@ -3980,6 +4016,7 @@ function staffLine(sg,opt){
     const soft=!rest&&sg.dy&&sg.dy[i]==='g';
     const lt=mk('text',{class:soft?'lt soft':'lt',x:cx,y:84});lt.textContent=rest?'':(graceOf(h)?graceHand(h).toLowerCase().repeat(graceOf(h))+hnd(h):hnd(h));g.appendChild(lt);
     const tg=mk('text',{class:'tg',x:cx+8,y:74});g.appendChild(tg);
+    if(!rest&&buzzOf(h)){const bz=mk('text',{class:'bzn',x:cx+8,y:72});g.appendChild(bz);g._bz=bz;}   /* the bounces heard, as a superscript */
     const ft=mk('text',{class:'ft',x:cx,y:97});g.appendChild(ft);
     g._sig='\u0000';g._now=false;g._ft=ft;g._tg=tg;g._cx=cx;g._w=xw(i);
     svg.appendChild(g);cards.push(g);
@@ -4281,8 +4318,8 @@ function movePlayhead(r,cursor,heard){
   ph.setAttribute('visibility','visible');
 }
 /* One stroke's colour and reading, from its result. The same for the live run, the review after it and a saved run. */
-function paintCard(el,res,ended,tol){
-  const sig=(res?(res.miss?'m':res.ms+'|'+(res.wrong||'')):'')+'#'+tol+(ended?'e':'');
+function paintCard(el,res,ended,tol,bz){
+  const sig=(res?(res.miss?'m':res.ms+'|'+(res.wrong||'')):'')+'#'+tol+(ended?'e':'')+'b'+(bz===undefined?'':bz);
   if(sig===el._sig)return;
   el._sig=sig;
   el.classList.remove('ok','early','late','miss','wrong');
@@ -4296,6 +4333,7 @@ function paintCard(el,res,ended,tol){
     }
   }
   el._ft.textContent=ft;el._tg.textContent=tg;
+  if(el._bz)el._bz.textContent=res&&!res.miss&&bz!==undefined?String(bz):'';
 }
 function paintRows(r,cursor,heard){
   if(rvModel&&document.body.dataset.state==='done')r=rvModel;
@@ -4303,7 +4341,7 @@ function paintRows(r,cursor,heard){
   rowMap.forEach((o,g)=>{
     o.cards.forEach((el,i)=>{
       if(el._slot<0)return;
-      paintCard(el,r?r.res.get(el._slot):null,ended,tol);
+      paintCard(el,r?r.res.get(el._slot):null,ended,tol,r&&r.bzn?r.bzn.get(el._slot):undefined);
       const on=!!cursor&&g===cursor.g&&i===cursor.i;
       if(on!==el._now){el._now=on;el.classList.toggle('now',on);}
     });
@@ -4594,13 +4632,13 @@ function reviewModel(rec){
   const q=rec&&rec.rp;if(!q||!rec.exercises.some(b=>b.sp))return null;
   try{
     const p=parseRoutine(q.x),all=resolveExercises(p.exercises,p.each||{unit:'pass',v:1},{bpm:rec.bpm,subdiv:S.subdiv});
-    const ex=[],data=[];
+    const ex=[],data=[],bbs=[];
     rec.exercises.forEach(b=>{
       if(!b.sp)return;
       const e=all.find(a=>a.idx===b.i)||(all.length===1?all[0]:null);
       if(!e)return;
       const u=unpackStrokes(b.sp),per=e.notes.filter(x=>x!=='_').length||1;
-      ex.push(Object.assign({},e,{passes:Math.max(1,Math.ceil(u.length/per))}));data.push(u);
+      ex.push(Object.assign({},e,{passes:Math.max(1,Math.ceil(u.length/per))}));data.push(u);bbs.push(b.bb||'');
     });
     if(!ex.length)return null;
     const soft=/s$/.test(rec.dy||''),a=soft?rec.dy.slice(0,-1):(rec.dy||'');
@@ -4613,7 +4651,10 @@ function reviewModel(rec){
       const exp=hnd(plan.segs[si].notes[plan.slots[i].pos]);
       res.set(i,{ms:d.ms,wrong:d.w?(exp==='R'?'L':'R'):null});
     }));
-    return {plan:plan,res:res,ended:true,tol:rec.tol||S.tol,mode:'play'};
+    /* the bounces of each buzz stroke, saved in order from 1.5.120 */
+    const bzn=new Map();
+    bbs.forEach((bb,si)=>{let k=0;bySeg[si].forEach(i=>{if(!plan.slots[i].bz)return;const c=bb[k++];if(c&&c!=='-')bzn.set(i,+c);});});
+    return {plan:plan,res:res,bzn:bzn,ended:true,tol:rec.tol||S.tol,mode:'play'};
   }catch(e){return null;}
 }
 function showReview(){
@@ -4640,7 +4681,7 @@ function staffSection(page,r){
     for(let g=0;g<tp;g++){
       const o=buildRow(rm.plan,g,W);
       o.lab.textContent=(rm.plan.segs.length>1?'Exercise '+o.sg.idx+' \u00b7 ':'')+'pass '+(o.p+1)+' of '+o.sg.passes;
-      o.cards.forEach(el=>{if(el._slot>=0)paintCard(el,rm.res.get(el._slot),true,rm.tol);});
+      o.cards.forEach(el=>{if(el._slot>=0)paintCard(el,rm.res.get(el._slot),true,rm.tol,rm.bzn.get(el._slot));});
       tr.appendChild(o.el);
     }
     /* four lines of staff high, the same as the Play page */
@@ -4772,7 +4813,7 @@ function insightParts(r){
     }
     if(wi>=0&&Math.abs(wv)>=6)parts.push((r.plan.segs.length>1?'In exercise '+sg.idx+', stroke ':'Stroke ')+sg.notes.slice(0,wi+1).filter(n=>n!=='_').length+' ('+hnd(sg.notes[wi])+') drifts most, '+Math.abs(wv).toFixed(0)+' ms '+(wv>0?'late':'early')+'.');
   }
-  if(!r.kb&&r.plan.slots.some(x=>x.bz)){const bn=buzzNote(buzzStats(r.plan.slots,r.res,r.bnc||[]));if(bn)parts.push(bn);}
+  if(!r.kb&&r.plan.slots.some(x=>x.bz)){const st=buzzStats(r.plan.slots,r.res,r.bnc||[]),bn=buzzNote(st,buzzSingles(r.plan.slots,st).size);if(bn)parts.push(bn);}
   const lvs=levelStats(r.lv);
   if(lvs&&lvs.diff!==null&&Math.abs(lvs.diff)>=3)parts.push('Your '+(lvs.diff<0?'left':'right')+' hand is '+Math.abs(lvs.diff).toFixed(0)+' dB quieter than your '+(lvs.diff<0?'right':'left')+'.');
   if(!parts.length)parts.push('Timing is even across both hands and all strokes.');
@@ -4926,7 +4967,7 @@ function buzzSaved(r,si){
   const st=buzzStats(r.plan.slots,r.res,r.bnc||[],si);
   if(!st.length)return {};
   const fl=st.filter(x=>x.fill!==null).map(x=>x.fill);
-  return {bc:st.length,bn:Math.round(mean(st.map(x=>x.n))*10)/10,bf:fl.length?Math.round(mean(fl)*100):undefined,bb:buzzCounts(r.plan.slots,r.res,r.bnc||[],si)};
+  return {bc:st.length,bn:Math.round(mean(st.map(x=>x.n))*10)/10,bf:fl.length?Math.round(mean(fl)*100):undefined,bb:buzzCounts(r.plan.slots,r.res,r.bnc||[],si),bs:buzzSingles(r.plan.slots,st).size||undefined};
 }
 function dynSaved(r,si){   /* accents and ghost notes judged in this exercise: how many, how many were clear, and how even they were */
   const o={};
