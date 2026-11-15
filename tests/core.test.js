@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['parseStrokes', 'nameMarkers', 'fmtPattern', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzStats', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
+  'graceSlot', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
 
 const runPoints = (codes, lv) => c.scoreParts([[codes, 1]], lv);
 const plan = (text, opt) => {
@@ -175,6 +175,32 @@ test('detector: a soft grace does not hide the loud main stroke when flams are o
 test('detector: a single hit is heard once', () => {
   const h = detect(0.07, 0.03, 0, 0.6);
   assert.equal(h.length, 1);
+});
+
+test('loudness strip: the peak level of the run between two times, in dB', () => {
+  const v = new Float32Array(100).fill(0.001); v[40] = 0.1; v[41] = 1;
+  const env = { t: 2, dt: 0.001, v, n: 50 };
+  assert.ok(Math.abs(c.envDb(env, 2.030, 2.045) - 0) < 0.01);
+  assert.ok(Math.abs(c.envDb(env, 2.040, 2.041) + 20) < 0.01);
+  assert.ok(Math.abs(c.envDb(env, 2.0402, 2.0404) + 20) < 0.01);   /* inside one millisecond: that millisecond */
+  assert.ok(Math.abs(c.envDb(env, 2.000, 2.010) + 60) < 0.01);
+  assert.equal(c.envDb(env, 2.060, 2.070), null);   /* not heard yet */
+  assert.equal(c.envDb(env, 1.0, 1.5), null);
+});
+
+test('detector: with trace on, it sends the peak of each millisecond', () => {
+  const sr = 48000, env = [];
+  const d = new c.OnsetDetector(sr, e => { if (e.type === 'env') env.push(e); });
+  const buf = new Float32Array(sr * 0.2);
+  buf[Math.round(0.1 * sr)] = 0.5;
+  for (let i = 0; i < buf.length; i += 128) d.process(buf.subarray(i, i + 128), i);
+  assert.equal(env.length, 0);   /* off by default */
+  d.set({ trace: true });
+  for (let i = 0; i < buf.length; i += 128) d.process(buf.subarray(i, i + 128), buf.length + i);
+  assert.equal(env.length, 3);
+  assert.ok(Math.abs(env[0].t - 0.2) < 1e-9 && env[0].dt === 0.001);
+  const all = env.flatMap(e => Array.from(e.v)), k = all.findIndex(v => v > 0.3);
+  assert.equal(k, 100);
 });
 
 /* A buzz: a strike and a run of fading bounces every 20 ms, for each stroke of a roll. */

@@ -242,6 +242,10 @@ body[data-run="1"] .notice{display:none}
 .prow .rl.alert{background:var(--fill);color:var(--accent-ink);font-size:14px}
 .prow .rl.newex{color:var(--accent)}
 .staff{display:block;width:100%;height:auto;overflow:visible}
+.staff .lvax,.staff .lvck{stroke:var(--line);stroke-width:1}
+.staff .lvth{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3}
+.staff .lvtr{fill:none;stroke:var(--ink);stroke-width:1.2;stroke-linejoin:round}
+.staff .lvbn{stroke:var(--ink);stroke-width:1.5}
 .staff .sl{stroke:var(--muted);stroke-width:1.5}
 .staff .bar{stroke:var(--ink);stroke-width:2}
 .staff .bt{stroke:var(--line);stroke-width:1.2;stroke-dasharray:2 3}
@@ -1163,6 +1167,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
         <li><b>The gauge</b> shows how early or late you played on average over the last 32 strokes. Left is early, right is late.</li>
         <li><b>The level bars</b> appear when a run ends. Each bar is one stroke's loudness against your own typical stroke: the middle is typical, higher is louder, and blue bars are left hand. Scroll sideways for the whole run. The number is the spread in dB, so smaller is more even. With an accent or ghost rule only the normal strokes count, since accents and ghosts are checked separately. A line below says if one hand is quieter. Clipped hits are left out, and keyboard input has no levels.</li>
+        <li><b>The loudness strip</b> appears under each line of the staff when a run with buzz strokes ends, lined up with the notes above it. It draws how loud the pad was, with a faint line where each note was due, the trigger line dashed, and a tick at the top for each bounce counted. It shows why a bounce was or was not counted: too quiet for the trigger line, or too close to the one before. Only the run you just played has it, and it is kept in memory, not saved. Keyboard input has none.</li>
         <li><b>Narrow screens:</b> a busy pass wraps onto two lines at a barline.</li>
         <li><b>Keys:</b> <b>Space</b> starts, pauses and resumes, <b>Enter</b> plays Again after a run, and <b>Escape</b> stops.</li>
         <li><b>Pause</b> stops the click, and Resume counts you in from the start of that pass. <b>Restart</b> goes back to your start exercise.</li>
@@ -2191,6 +2196,16 @@ function buzzRing(slots,i,v,bnc){   /* the bounces heard after buzz stroke i, st
   for(const t of bnc)if(t>th+0.004&&t<=end){n++;if(t>last)last=t;}
   return {n:n,th:th,last:last};
 }
+/* The loudness of the run just played from run time a to b, in dB: the peak of env (v, the peak of each dt seconds from run time
+   t, n of them filled), or null outside it. It is kept in memory for reviewing that run and never saved. */
+function envDb(env,a,b){
+  let k0=Math.floor((a-env.t)/env.dt),k1=Math.ceil((b-env.t)/env.dt);
+  if(k1<=k0)k1=k0+1;
+  k0=Math.max(0,k0);k1=Math.min(env.n,k1);
+  if(k1<=k0)return null;
+  let m=0;for(let k=k0;k<k1;k++)if(env.v[k]>m)m=env.v[k];
+  return 20*Math.log10(m+1e-6);
+}
 function buzzStats(slots,res,bnc,seg){
   const out=[];
   slots.forEach((s,i)=>{
@@ -2574,7 +2589,8 @@ function bestBefore(runs,k,bpm,lv,dy){
   return best;
 }
 /* Runs inside an AudioWorklet (and in tests). Finds stick attacks and reports each one's peak over the 1024 samples after it.
-   With buzz strokes in play (buzz is set), it also reports the bounces that follow a stroke as 'bnc', and a bounce does not count as a hit. */
+   With buzz strokes in play (buzz is set), it also reports the bounces that follow a stroke as 'bnc', and a bounce does not count as a hit.
+   With trace set, it also sends the loudness as 'env': the peak of each millisecond (dt s apart), 64 at a time, starting at t. */
 class OnsetDetector{
   constructor(sr,emit){
     this.sr=sr;this.emit=emit;
@@ -2584,6 +2600,7 @@ class OnsetDetector{
     this.cap=false;this.capN=0;this.capT=0;this.capLen=1024;this.capPk=0;this.capRaw=0;
     this.pk=0;this.blocks=0;
     this.buzz=0;this.ring=0;this.att=Math.round(0.003*sr);this.bGap=Math.round(0.005*sr);this.eh=new Float32Array(Math.round(0.001*sr));this.ei=0;this.sPk=0;this.sub=-1;this.subT=0;this.subPk=0;this.subAt=0;this.sinceSub=1e9;
+    this.tr=false;this.tn=Math.max(1,Math.round(sr/1000));this.tc=0;this.tm=0;this.tb=new Float32Array(64);this.tk=0;this.tt=0;
     this.aF=Math.exp(-1/(0.006*sr));
     this.aS=Math.exp(-1/(0.12*sr));
     this.hpA=Math.exp(-2*Math.PI*180/sr);
@@ -2593,6 +2610,7 @@ class OnsetDetector{
     if(o.thr!==undefined)this.thr=o.thr;
     if(o.refrac!==undefined)this.refrac=Math.round(o.refrac*this.sr);
     if(o.flam!==undefined)this.flam=Math.round(o.flam*this.sr);
+    if(o.trace!==undefined&&!!o.trace!==this.tr){this.tr=!!o.trace;this.tc=0;this.tm=0;this.tk=0;}
     if(o.buzz!==undefined){this.buzz=Math.round(o.buzz*this.sr);this.ring=Math.min(Math.round(this.buzz/0.6),Math.round(0.35*this.sr));}
   }
   process(ch,base){
@@ -2606,6 +2624,14 @@ class OnsetDetector{
       this.es=this.es*this.aS+a*(1-this.aS);
       if(this.es<0.0005)this.es=0.0005;
       if(a>this.pk)this.pk=a;
+      if(this.tr){
+        if(this.tc===0&&this.tk===0)this.tt=(base+i)/this.sr;
+        if(a>this.tm)this.tm=a;
+        if(++this.tc>=this.tn){
+          this.tb[this.tk++]=this.tm;this.tm=0;this.tc=0;
+          if(this.tk===this.tb.length){this.emit({type:'env',t:this.tt,dt:this.tn/this.sr,v:this.tb.slice()});this.tk=0;}
+        }
+      }
       this.since++;this.sinceSub++;
       if(this.since<=this.att&&a>this.sPk)this.sPk=a;
       if(this.buzz>0&&this.bounce(a,e0,base+i))continue;
@@ -2827,7 +2853,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.122';                           /* shown beside the title */
+const VERSION='1.5.123';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3276,7 +3302,8 @@ function pushDet(){
   const on=rn&&!rn.ended&&rn.mode==='play';
   settleSec();   /* works out the run's shortest gap between strokes */
   sendDet({thr:thr,refrac:settleSec(),flam:on&&rn.plan.slots.some(x=>x.gr)?0.07:0,   /* flams and drags are in play: a louder strike soon after a hit counts as the main stroke */
-    buzz:on&&rn.plan.slots.some(x=>x.bz)?Math.max(0.03,rn.minGap*0.6):0});   /* buzz strokes are in play: the bounces after a stroke are reported apart from the hits */
+    buzz:on&&rn.plan.slots.some(x=>x.bz)?Math.max(0.03,rn.minGap*0.6):0,   /* buzz strokes are in play: the bounces after a stroke are reported apart from the hits */
+    trace:on&&!rn.kb&&rn.plan.slots.some(x=>x.bz)});   /* and the loudness comes too, for the loudness strip after the run */
 }
 function onNodeMsg(e){
   const m=e.data;
@@ -3288,6 +3315,21 @@ function onNodeMsg(e){
     const r=run;
     if(r&&!r.ended&&!r.paused&&!r.kb)bounceHeard(r,m);
   }
+  else if(m.type==='env'){
+    const r=run;
+    if(r&&!r.ended&&!r.paused&&!r.kb&&r.mode==='play')envHeard(r,m);
+  }
+}
+/* The loudness of the run, kept with it in memory for the loudness strip and never saved: one peak a millisecond, by run time,
+   so a pause leaves a gap rather than shifting what follows. At most 20 minutes (under 5 MB). */
+const ENV_MAX=1200000;
+function envHeard(r,m){
+  const tc=m.t-latencySec()-r.t0;
+  if(!r.env)r.env={t:tc,dt:m.dt,v:new Float32Array(65536),n:0,thr:S.others==='g'?ghostFloor():S.sens};
+  const e=r.env,k=Math.round((tc-e.t)/e.dt),need=k+m.v.length;
+  if(k<0||need>ENV_MAX)return;
+  if(need>e.v.length){const b=new Float32Array(Math.min(ENV_MAX,Math.max(need,e.v.length*2)));b.set(e.v.subarray(0,e.n));e.v=b;}
+  e.v.set(m.v,k);if(need>e.n)e.n=need;
 }
 /* A bounce from the detector. When it lands in the window of a stroke still to be judged, it may be that stroke played softly, so it
    joins the stroke's hits as a stand-in that any real hit beats. finalizeSlot counts it as a bounce if it is not used. */
@@ -3679,7 +3721,7 @@ function showRunResult(){
   if(S.mode==='routine')renderResults(view);
   /* The review is rebuilt from the saved run, the same way a run's page does it. */
   rvModel=lastRun&&lastRun.run?reviewModel(lastRun.run):null;
-  if(rvModel)showReview();else{roleRows();paintRows(view,null);}
+  if(rvModel)showReview();else{rowMap.forEach(lvsRow);roleRows();winKey='';paintRows(view,null);}
   if(lastRun)setReview(true);
   showResult();
 }
@@ -4166,6 +4208,7 @@ function makeRow(plan,g){
   if(!o)o=buildRow(plan,g);
   $('rowsTrack').appendChild(o.el);
   rowMap.set(g,o);
+  lvsRow(o);   /* after a run, the loudness under the staff */
   return o;
 }
 let ROWS=3;                                   /* how many passes are on screen */
@@ -4939,6 +4982,65 @@ function initTaps(){
   });
 }
 function drawTrace(){if(lvStrip)lvStrip.draw();if(trStrip)trStrip.draw();}
+/* The loudness strip: after a run with buzz strokes, a thin trace of the loudness under each line of the staff, against the notes
+   above it, with the trigger line dashed and a tick for each bounce counted. It comes from the run's loudness in memory and goes
+   with the next run; nothing of it is saved. The review staff is rebuilt from the saved run, so its slots are found again in the
+   run just played: the same stroke of the same exercise. */
+const LVS_Y=104,LVS_H=24;
+let lvsMemo=null;
+function lvsSlots(r){
+  if(!rvModel)return null;
+  if(lvsMemo&&lvsMemo.r===r&&lvsMemo.rm===rvModel)return lvsMemo.m;
+  const m=new Map(),live=new Map(),seen=new Map();
+  r.plan.slots.forEach((x,i)=>{if(!live.has(x.seg))live.set(x.seg,[]);live.get(x.seg).push(i);});
+  rvModel.plan.slots.forEach((x,i)=>{
+    const a=live.get(r.recSi?r.recSi[x.seg]:-1);if(!a)return;
+    const k=seen.get(x.seg)||0;seen.set(x.seg,k+1);if(k<a.length)m.set(i,a[k]);
+  });
+  lvsMemo={r:r,rm:rvModel,m:m};return m;
+}
+function lvsLine(svg,r,map){
+  if(svg.querySelector('.lvs'))return;
+  const all=[...svg.querySelectorAll('g.cd')],sl=r.plan.slots,kn=[];
+  for(const c of all){
+    if(!(c._slot>=0))continue;
+    const i=map?map.get(c._slot):c._slot;
+    if(i!==undefined&&sl[i])kn.push({x:c._cx,t:sl[i].t,i:i});
+  }
+  if(!kn.length)return;
+  const one=kn.length<2,k0=kn[0],c0=all[0],cz=all[all.length-1];
+  const sp=one?((sl[k0.i+1]?sl[k0.i+1].t-k0.t:0.25)/Math.max(1,c0._w)):0;   /* one note on the line: its cell is the time to the next */
+  const pair=(v,key)=>{if(one)return null;let j=0;while(j<kn.length-2&&v>kn[j+1][key])j++;return [kn[j],kn[j+1]];};
+  const tAt=x=>{const p=pair(x,'x');return p?p[0].t+(x-p[0].x)*(p[1].t-p[0].t)/(p[1].x-p[0].x):k0.t+(x-k0.x)*sp;};
+  const xAt=t=>{const p=pair(t,'t');return p?p[0].x+(t-p[0].t)*(p[1].x-p[0].x)/(p[1].t-p[0].t):k0.x+(t-k0.t)/sp;};
+  const x0=c0._cx-c0._w/2,x1=cz._cx+cz._w/2,yb=LVS_Y+LVS_H,y=db=>yb-(clamp(db,-60,0)+60)/60*LVS_H;
+  const NS=svg.namespaceURI,mk=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+  const g=mk('g',{class:'lvs'});
+  g.appendChild(mk('line',{class:'lvax',x1:x0,x2:x1,y1:yb,y2:yb}));
+  for(const k of kn)g.appendChild(mk('line',{class:'lvck',x1:k.x,x2:k.x,y1:LVS_Y,y2:yb}));   /* where each note was due */
+  g.appendChild(mk('line',{class:'lvth',x1:x0,x2:x1,y1:y(r.env.thr),y2:y(r.env.thr)}));
+  let d='',pen=false;
+  for(let x=x0;x<x1;x+=1.5){
+    const v=envDb(r.env,tAt(x),tAt(Math.min(x1,x+1.5)));
+    if(v===null){pen=false;continue;}
+    d+=(pen?'L':'M')+x.toFixed(1)+','+y(v).toFixed(1);pen=true;
+  }
+  if(d)g.appendChild(mk('path',{class:'lvtr',d:d}));
+  const bnc=r.bnc||[];
+  for(const k of kn){
+    const v=r.res.get(k.i);if(!sl[k.i].bz||!v||v.miss)continue;
+    const b=buzzRing(sl,k.i,v,bnc),end=buzzEnd(sl,k.i);
+    for(const t of bnc)if(t>b.th+0.004&&t<=end){const x=xAt(t);g.appendChild(mk('line',{class:'lvbn',x1:x,x2:x,y1:LVS_Y-3,y2:LVS_Y+3}));}
+  }
+  const vb=svg.viewBox.baseVal;
+  svg.setAttribute('viewBox',vb.x+' '+vb.y+' '+vb.width+' '+(vb.height+LVS_H+8));
+  svg.appendChild(g);
+}
+function lvsRow(o){
+  const r=view;if(!r||!r.ended||!r.env||r.kb||document.body.dataset.state!=='done')return;
+  const map=lvsSlots(r);
+  o.el.querySelectorAll('svg.staff').forEach(sv=>lvsLine(sv,r,map));
+}
 function renderAll(){
   const r=view;
   updateGauge(r);updateStats(r);drawTrace();paintRows(r,null);
@@ -4991,6 +5093,7 @@ function recordRun(r){
   lastRun=null;
   restEvents(r);
   const rows=exerciseRows(r).filter(x=>x.passes>=1&&x.heard>0);   /* nothing heard counts as not played */
+  r.recSi=rows.filter(x=>x.sc.length).map(x=>x.si);   /* the exercises the review staff is rebuilt from, in order */
   const skipped=exerciseRows(r).length-rows.length;
   if(!rows.length)return;
   const all=S.mode==='routine'?allExercises().map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig)):null;
