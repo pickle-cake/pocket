@@ -550,6 +550,11 @@ html.pgopen{overflow:hidden}
 #advBadge .bnx i b{display:block;height:100%;background:var(--fill)}
 @media (prefers-reduced-motion:no-preference){#advBadge.pop{animation:winpop var(--dur-3) var(--ease) both}}   /* once, never looping */
 #advBody:empty{display:none}
+.coach{margin:0;padding-left:var(--s-4);display:grid;gap:var(--s-1);font:var(--t-small) var(--font-body)}   /* the other coaching notes, under the headline */
+.coach:empty{display:none}
+/* The result reads in three parts: badges, coaching, then stats. */
+.rsh{margin:var(--s-5) 0 0;padding-top:var(--s-3);border-top:1px solid var(--line);font:700 var(--t-nav) var(--font-display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.rsh:first-child,#advBadge[hidden]+.rsh{margin-top:0;padding-top:0;border-top:0}
 @keyframes winpop{0%{transform:scale(.88);opacity:0;box-shadow:0 0 0 0 var(--fill)}50%{opacity:1;box-shadow:0 0 0 10px transparent}100%{transform:none;box-shadow:0 0 0 0 transparent}}
 .strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:320px;margin:8px 0}
 .strip .sd{font-size:11px;color:var(--muted);text-align:center}
@@ -1512,16 +1517,13 @@ RLRR LRLL RLRR LRLL</pre>
 
     <div id="stPlay"></div>
 
-    <section id="advice" hidden aria-label="Score and tempo">
+    <section id="advice" hidden aria-label="Result">
       <div id="advBadge" hidden></div>
-      <div class="card res" id="advRes">
-        <span class="slab">Score</span>
-        <div class="shd"><b id="advScore"></b><span id="advMax"></span><em id="advHs" hidden>New high score</em></div>
-        <div class="sbar" id="advScoreBar"><i></i><u></u></div>
-        <div class="scap"><span id="advOfMax"></span><span id="advPrev"></span></div>
-        <p class="swin" id="advBonus" hidden></p>
-        <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span> &middot; <span id="advSub"></span></small></span></div>
-      </div>
+      <h2 class="rsh">Coaching</h2>
+      <p class="insight" id="advHead"></p>
+      <ul class="coach" id="insight"></ul>
+      <p class="hint" id="advBody"></p>
+      <h2 class="rsh">Stats</h2>
       <div class="notice" id="advFirst" hidden>
         <p><b>Reading your result</b></p>
         <ul>
@@ -1531,8 +1533,14 @@ RLRR LRLL RLRR LRLL</pre>
         </ul>
         <button class="btn link" type="button" data-help="help-play">More in Help</button>
       </div>
-      <p class="insight" id="advHead"></p>
-      <p class="hint" id="advBody"></p>
+      <div class="card res" id="advRes">
+        <span class="slab">Score</span>
+        <div class="shd"><b id="advScore"></b><span id="advMax"></span><em id="advHs" hidden>New high score</em></div>
+        <div class="sbar" id="advScoreBar"><i></i><u></u></div>
+        <div class="scap"><span id="advOfMax"></span><span id="advPrev"></span></div>
+        <p class="swin" id="advBonus" hidden></p>
+        <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span> &middot; <span id="advSub"></span></small></span></div>
+      </div>
       <div class="btns advmain" id="advBtns1">
         <button class="btn danger" id="advDiscard" type="button" hidden>Discard</button>
         <button class="btn" id="advExport" type="button" aria-label="Export this run with its loudness" hidden>Export</button>
@@ -1608,7 +1616,6 @@ RLRR LRLL RLRR LRLL</pre>
           <div class="stat mic-only"><div class="v" id="sLR">—</div><div class="k">Left vs right (dB)</div></div>
         </div>
         <p class="cap">Extra hits are strokes played where none was due, such as on a rest.</p>
-        <p class="insight" id="insight"></p>
       </section>
 
       <section class="panel" id="results" hidden aria-label="Results by exercise">
@@ -3137,7 +3144,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.141';                           /* shown beside the title */
+const VERSION='1.5.142';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5167,7 +5174,11 @@ function insightParts(r){
   if(!parts.length)parts.push('Timing is even across both hands and all strokes.');
   return parts;
 }
-const insightText=r=>insightParts(r).join(' ');
+/* Coaching after a run: the first note is the headline (#advHead), the rest are listed under it. */
+function coachList(r){
+  const ul=$('insight');ul.textContent='';
+  for(const t of insightParts(r).slice(1)){const li=document.createElement('li');li.textContent=t;ul.appendChild(li);}
+}
 function updateStats(r){
   const sp=r?sd(r.errs.slice(-32)):NaN;
   $('sWithin').textContent=r&&r.slots?Math.round(r.within/r.slots*100)+'%':'—';
@@ -5180,7 +5191,7 @@ function updateStats(r){
   const ls=r?levelStats(r.lv):null;
   $('sLevel').textContent=ls&&ls.sd!==null?ls.sd.toFixed(1):'—';
   $('sLR').textContent=ls&&ls.diff!==null?fmtDb(ls.diff):'—';
-  $('insight').textContent=insightText(r);
+  coachList(r);
 }
 /* A strip that scrolls sideways: the run is as wide as it needs to be, and only the part in view is painted. While you play it
    follows the newest stroke, and scrolling back stops that until you press Newest. */
@@ -7950,7 +7961,7 @@ function syncLayout(){
 function placeAdv(){
   const a=$('advBtns1');if(!a)return;
   if(document.documentElement.dataset.layout==='desktop')$('advBar').append(a);
-  else $('advBody').after(a);
+  else $('advRes').after(a);
 }
 /* A tempo button that repeats while held: after 0.4 s it steps by 1, getting quicker, then by 5 to the next multiple of 5.
    The click that ends a hold is not counted again. */
