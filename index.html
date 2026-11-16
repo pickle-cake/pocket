@@ -220,6 +220,11 @@ body[data-run="1"] .notice{display:none}
 .rows.win .rows-track{min-height:0}
 .rows.win .prow{min-height:0}
 .rows.win.rv{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+/* After a run the staff scrolls inside its box. The edge with more strokes past it fades, and #rowsMore says so in words. */
+.rows.rv.more-dn{-webkit-mask-image:linear-gradient(to bottom,var(--ink) calc(100% - var(--s-6)),transparent);mask-image:linear-gradient(to bottom,var(--ink) calc(100% - var(--s-6)),transparent)}
+.rows.rv.more-up{-webkit-mask-image:linear-gradient(to top,var(--ink) calc(100% - var(--s-6)),transparent);mask-image:linear-gradient(to top,var(--ink) calc(100% - var(--s-6)),transparent)}
+.rows.rv.more-up.more-dn{-webkit-mask-image:linear-gradient(to bottom,transparent,var(--ink) var(--s-6),var(--ink) calc(100% - var(--s-6)),transparent);mask-image:linear-gradient(to bottom,transparent,var(--ink) var(--s-6),var(--ink) calc(100% - var(--s-6)),transparent)}
+#rowsMore{margin-top:8px}
 .stobar{position:relative;display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--line)}
 .stobar i{display:block;height:100%}
 .stobar i.stomk{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);opacity:.6}
@@ -756,8 +761,8 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .res .slab{margin-bottom:-6px}
 .res .shd{display:flex;align-items:baseline;gap:8px}
 .res .shd b{font:800 var(--t-hero) var(--font-display);font-variant-numeric:tabular-nums}   /* the score: the result's hero */
-.res .shd span{font:500 16px var(--font-body);color:var(--muted)}
-.res .shd em{margin-left:auto;align-self:center;font:700 11px var(--font-body);letter-spacing:.06em;text-transform:uppercase;background:var(--fill);color:var(--accent-ink);padding:4px 9px;border-radius:999px;font-style:normal}
+.res .shd span{font:500 16px var(--font-body);color:var(--muted);white-space:nowrap}
+.res .shd em{margin-left:auto;align-self:center;font:700 11px var(--font-body);letter-spacing:.06em;text-transform:uppercase;background:var(--fill);color:var(--accent-ink);padding:4px 9px;border-radius:999px;font-style:normal;text-align:center}   /* centred when a narrow phone wraps it to two lines */
 .res .sbar{position:relative;height:10px;border-radius:999px;background:var(--line)}
 .res .sbar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--fill);min-width:10px}
 .res .sbar u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.7}
@@ -1546,6 +1551,7 @@ RLRR LRLL RLRR LRLL</pre>
       <canvas class="hwy" id="hwy" aria-hidden="true"></canvas>
       <div class="rows" id="rows" tabindex="0"><div class="rows-track" id="rowsTrack"></div></div>
       <p class="hint" id="rowEnd" hidden></p>
+      <p class="hint" id="rowsMore" hidden></p>
       </div>
       <p class="cap key"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other stick<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
       <div class="pads kb-only">
@@ -3360,7 +3366,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.152';                           /* shown beside the title */
+const VERSION='1.5.153';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4780,11 +4786,19 @@ let winKey='',lastCur=null;
 const playing=()=>!!run&&!run.ended&&run.mode==='play';
 /* The window applies before Start, while playing and after Stop. After Stop it scrolls by hand, so every stroke can still be checked. */
 const winWanted=()=>labelMode!=='lat'&&((+$('rows').dataset.lines||1)>=2||(document.body.dataset.state==='done'&&rowMap.size>winLines()));
+/* Whether the staff after a run has strokes above or below its box: a fade on that edge, and a line of text under it. */
+function rowsCue(){
+  const box=$('rows'),rv=box.classList.contains('rv'),over=rv&&box.scrollHeight>box.clientHeight+2;
+  box.classList.toggle('more-up',over&&box.scrollTop>2);
+  box.classList.toggle('more-dn',over&&box.scrollTop+box.clientHeight<box.scrollHeight-2);
+  const m=$('rowsMore');m.hidden=!over;
+  if(over)m.textContent='Scroll the staff to see all '+rowMap.size+' passes.';
+}
 function syncWindow(cursor){
   const box=$('rows'),tr=$('rowsTrack');
   if(!winWanted()){
     if(box.classList.contains('win')){box.classList.remove('win','rv');box.style.removeProperty('--winh');tr.style.transform='';winKey='';}
-    return;
+    rowsCue();return;
   }
   const lines=[];
   [...rowMap.keys()].sort((x,y)=>x-y).forEach(k=>{const o=rowMap.get(k);o.el.querySelectorAll('svg.staff').forEach((sv,i)=>lines.push({sv:sv,o:o,i:i}));});
@@ -4805,6 +4819,7 @@ function syncWindow(cursor){
   box.classList.add('win');box.classList.toggle('rv',review);if(!review)box.scrollTop=0;
   const n=winLines();box.style.setProperty('--winh',Math.ceil(n*lh+(n-1)*2+labH*2)+'px');
   tr.style.transform=review?'':'translateY(-'+top+'px)';
+  rowsCue();
 }
 /* Shows pass g on top with the next passes underneath. When g is the pass that was second, the rows slide
    up one place and a fresh row comes in from below. */
@@ -7361,6 +7376,7 @@ document.addEventListener('pointerdown',ev=>{if(rowMenu&&!rowMenu.contains(ev.ta
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&rowMenu)closeRowMenu();});
 /* a scroll closes it, except a small nudge of the page itself, such as a phone settling as the menu opens */
 window.addEventListener('scroll',ev=>{if(rowMenu&&!(ev.target===document&&Math.abs(scrollY-menuY)<=30))closeRowMenu();},true);window.addEventListener('resize',closeRowMenu);
+$('rows').addEventListener('scroll',rowsCue,{passive:true});   /* the fade moves to whichever edge still has strokes past it */
 /* A row of a run's exercise list: its number and sticking, and an empty actions cell for the caller to fill. */
 function exRow(i,k){
   const row=document.createElement('div');row.className='row num';
