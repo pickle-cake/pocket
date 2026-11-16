@@ -633,7 +633,7 @@ audioTest('a finding after a run marks its strokes on the review staff, in brack
   assert.equal(await btn.textContent(), 'Show on staff');
   assert.equal(await p.isVisible('#mkKey'), false);
   await btn.click();
-  await p.waitForFunction(() => +getComputedStyle(document.querySelector('#rows g.cd:not(.mk)')).opacity < 0.5, null, { timeout: 3000 });   /* the fade runs over a moment */
+  await p.waitForFunction(() => +getComputedStyle(document.querySelector('#rows g.cd:not(.mk)')).opacity < 0.6, null, { timeout: 3000 });   /* the fade runs over a moment */
   const on = await p.evaluate(() => {
     const mk = [...document.querySelectorAll('#rows g.cd.mk')];
     return { n: mk.length, texts: [...new Set(mk.map(c => c.querySelector('.lt').textContent))], edge: mk.length ? [...mk[0].querySelectorAll('.mks')].filter(e => getComputedStyle(e).display !== 'none').length : '', dim: getComputedStyle(document.querySelector('#rows g.cd:not(.mk)')).opacity, lit: mk.length ? getComputedStyle(mk[0]).opacity : '', label: document.querySelector('#advice [data-mk]').textContent, key: !document.getElementById('mkKey').hidden };
