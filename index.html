@@ -162,6 +162,8 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .notice{margin:var(--s-2) 0 0;padding:var(--s-3);border-left:3px solid var(--accent);font:var(--t-small) var(--font-body)}   /* flat, with an accent rail */
 .notice ul{margin:var(--s-2) 0;padding-left:var(--s-5)}.notice li{margin:var(--s-1) 0}.notice p{margin:0}
 .btn.link{background:none;border-color:transparent;color:var(--accent);padding-inline:var(--s-1);min-width:var(--hit)}   /* tertiary: brass text, no box */
+.btn.link.inl{margin-block:calc(-1*var(--s-3));padding-block:0;vertical-align:baseline}   /* in a line of text: still a 44px target, without opening up the line */
+.btn.link[aria-pressed=true]{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}   /* a toggle that is on: underlined, a cue beside the state read out */
 a.btn{display:inline-flex;align-items:center;text-decoration:none}   /* a link styled as a button keeps the button's 44px height */
 p.hint .btn.link{font-size:inherit;min-height:0;min-width:0;padding:0;vertical-align:baseline}   /* a link inside a sentence sits on the line */
 body[data-run="1"] .notice{display:none}
@@ -218,6 +220,11 @@ body[data-run="1"] .notice{display:none}
 .rows.win .rows-track{min-height:0}
 .rows.win .prow{min-height:0}
 .rows.win.rv{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+/* After a run the staff scrolls inside its box. The edge with more strokes past it fades, and #rowsMore says so in words. */
+.rows.rv.more-dn{-webkit-mask-image:linear-gradient(to bottom,var(--ink) calc(100% - var(--s-6)),transparent);mask-image:linear-gradient(to bottom,var(--ink) calc(100% - var(--s-6)),transparent)}
+.rows.rv.more-up{-webkit-mask-image:linear-gradient(to top,var(--ink) calc(100% - var(--s-6)),transparent);mask-image:linear-gradient(to top,var(--ink) calc(100% - var(--s-6)),transparent)}
+.rows.rv.more-up.more-dn{-webkit-mask-image:linear-gradient(to bottom,transparent,var(--ink) var(--s-6),var(--ink) calc(100% - var(--s-6)),transparent);mask-image:linear-gradient(to bottom,transparent,var(--ink) var(--s-6),var(--ink) calc(100% - var(--s-6)),transparent)}
+#rowsMore{margin-top:8px}
 .stobar{position:relative;display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--line)}
 .stobar i{display:block;height:100%}
 .stobar i.stomk{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);opacity:.6}
@@ -270,7 +277,10 @@ body[data-run="1"] .notice{display:none}
 .cd.early .lt{font-style:italic}      /* a second cue beside colour: early leans, late is underlined */
 .cd.late .lt{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .cd.miss .lt{fill:var(--muted);opacity:.4}
-@media (prefers-reduced-motion:no-preference){.cd .lt{transition:fill var(--dur-1) var(--ease)}}   /* heard to judged: the colour fades in */
+.staff .mks{fill:var(--ink);display:none}
+.cd.mk .mks.h,.cd.mk.mkL .mks.l,.cd.mk.mkR .mks.r{display:block}   /* a finding's strokes: a bracket under the timing, round one stroke or a run of them. Shape, not colour, so it reads beside the timing colours. */
+.rows.mking .cd:not(.mk){opacity:.5}   /* and the strokes it does not mean step back */
+@media (prefers-reduced-motion:no-preference){.cd .lt{transition:fill var(--dur-1) var(--ease)}.cd{transition:opacity var(--dur-1) var(--ease)}}   /* heard to judged: the colour fades in */
 .staff .acc{stroke:var(--ink);stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;fill:none}
 .staff .gh{stroke:var(--muted);stroke-width:1.5;stroke-linecap:round;fill:none}
 .staff .lt.soft{font-size:17px;fill:var(--muted)}
@@ -384,7 +394,7 @@ body[data-run="1"][data-rm="play"] header,body[data-run="1"][data-rm="play"] .ta
 .pcol{display:contents}   /* the Play page groups its controls and its view; on a phone the groups add nothing */
 .page{display:grid;gap:22px}
 .page>*{min-width:0}
-body:not([data-state="done"]) #after,body:not([data-state="done"]) #advice{display:none}
+body:not([data-state="done"]) #after,body:not([data-state="done"]) #advice,body:not([data-state="done"]) #advTop{display:none}
 /* After a run the page stays in focus mode: the result card first, with Again and Done. */
 body[data-tab=pattern] header,body[data-tab=pattern] .tabs{display:none}   /* the editor is a full-screen view */
 .etop{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:8px 0;background:var(--bg)}
@@ -537,7 +547,8 @@ html.pgopen{overflow:hidden}
 .tbar i{display:block;height:100%}
 .tleg{font:var(--t-caption) var(--font-body);color:var(--muted);margin:0 0 8px}
 /* The one celebration: a card with a medal (or none, for a new best tempo), what was earned and the next goal. */
-#advBadge{display:grid;grid-template-columns:auto 1fr;gap:var(--s-1) var(--s-3);align-items:center;padding:var(--s-4);margin:0 0 var(--s-3);border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+#advBadge{display:grid;grid-template-columns:auto 1fr;gap:var(--s-1) var(--s-3);align-items:center;padding:var(--s-4);margin:var(--s-3) 0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+#advTop>#scoreBox{border-top:0;padding-top:var(--s-2)}   /* straight under the score card, which has its own edge */
 #advBadge.plain{grid-template-columns:1fr}
 #advBadge .medal{width:72px;height:72px}
 #advBadge .bwt{display:grid;gap:2px;min-width:0}
@@ -550,6 +561,11 @@ html.pgopen{overflow:hidden}
 #advBadge .bnx i b{display:block;height:100%;background:var(--fill)}
 @media (prefers-reduced-motion:no-preference){#advBadge.pop{animation:winpop var(--dur-3) var(--ease) both}}   /* once, never looping */
 #advBody:empty{display:none}
+.coach{margin:0;padding-left:var(--s-4);display:grid;gap:var(--s-1);font:var(--t-small) var(--font-body)}   /* the other coaching notes, under the headline */
+.coach:empty{display:none}
+/* The result reads in three parts: badges, coaching, then stats. */
+.rsh{margin:var(--s-5) 0 0;padding-top:var(--s-3);border-top:1px solid var(--line);font:700 var(--t-nav) var(--font-display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.rsh:first-child{margin-top:0;padding-top:0;border-top:0}
 @keyframes winpop{0%{transform:scale(.88);opacity:0;box-shadow:0 0 0 0 var(--fill)}50%{opacity:1;box-shadow:0 0 0 10px transparent}100%{transform:none;box-shadow:0 0 0 0 transparent}}
 .strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:320px;margin:8px 0}
 .strip .sd{font-size:11px;color:var(--muted);text-align:center}
@@ -723,10 +739,10 @@ body[data-input="kb"] #micPill{display:none}
 .setbox{border:0;border-radius:0;background:none}
 body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing the drummer watches the staff, so it waits for the end of the run */
 .sbody{display:grid;gap:22px}
-#setBox>summary,#detBox>summary,#exBox>summary{font:600 var(--t-body) var(--font-body);text-transform:none;letter-spacing:0;padding:var(--s-2) 0;min-height:var(--hit);border-top:1px solid var(--line)}
-#setBox>summary,#detBox>summary,#exBox>summary{display:flex;align-items:center;justify-content:space-between;gap:10px}   /* the chevron stays beside the text, not under it */
-#setBox>summary::after,#detBox>summary::after,#exBox>summary::after{float:none;flex:none;margin:0 4px 4px 0}
-:root[data-layout=desktop] #setBox>summary,:root[data-layout=desktop] #detBox>summary,body:not([data-review="1"]) #detBox>summary,:root[data-layout=desktop] #exBox>summary{display:none}
+#setBox>summary,#exBox>summary{font:600 var(--t-body) var(--font-body);text-transform:none;letter-spacing:0;padding:var(--s-2) 0;min-height:var(--hit);border-top:1px solid var(--line)}
+#setBox>summary,#exBox>summary{display:flex;align-items:center;justify-content:space-between;gap:10px}   /* the chevron stays beside the text, not under it */
+#setBox>summary::after,#exBox>summary::after{float:none;flex:none;margin:0 4px 4px 0}
+:root[data-layout=desktop] #setBox>summary,:root[data-layout=desktop] #exBox>summary{display:none}
 #exBox>summary{border-top:0;padding:4px 0 0}
 #exBox[open]>summary{padding-bottom:10px}
 .rtname~#exBox{margin-top:-8px}   /* ~, not +: the single exercise's hidden line sits between them */
@@ -747,8 +763,9 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .res .slab{margin-bottom:-6px}
 .res .shd{display:flex;align-items:baseline;gap:8px}
 .res .shd b{font:800 var(--t-hero) var(--font-display);font-variant-numeric:tabular-nums}   /* the score: the result's hero */
-.res .shd span{font:500 16px var(--font-body);color:var(--muted)}
-.res .shd em{margin-left:auto;align-self:center;font:700 11px var(--font-body);letter-spacing:.06em;text-transform:uppercase;background:var(--fill);color:var(--accent-ink);padding:4px 9px;border-radius:999px;font-style:normal}
+.res .shd span{font:500 16px var(--font-body);color:var(--muted);white-space:nowrap}
+#advRes{overflow:hidden}
+.res .hsbar{margin:calc(-1*var(--s-4)) calc(-1*var(--s-4)) 0;padding:var(--s-2) var(--s-4);font:700 11px var(--font-body);letter-spacing:.06em;text-transform:uppercase;background:var(--fill);color:var(--accent-ink);text-align:center}   /* a new high score: a band across the top of the card */   /* centred when a narrow phone wraps it to two lines */
 .res .sbar{position:relative;height:10px;border-radius:999px;background:var(--line)}
 .res .sbar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--fill);min-width:10px}
 .res .sbar u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.7}
@@ -761,11 +778,12 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .res.solo .slab,.res.solo .shd,.res.solo .sbar,.res.solo .scap,.res.solo .swin{display:none}
 .res.solo .sacc{border-top:0;padding-top:0}
 .res.solo .sacc b{font:800 var(--t-hero) var(--font-display)}   /* the hero of the result card */
-#advice{gap:10px}
+#advice,#advTop{gap:10px}
 .key .k{font:600 15px var(--font-data)}
 .key .k.ok{color:var(--ok)}.key .k.early{color:var(--early);font-style:italic}
 .key .k.late{color:var(--late);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .key .k.miss{color:var(--muted);opacity:.4}
+.key .k.box{padding:2px var(--s-1);background:linear-gradient(var(--ink),var(--ink)) bottom/100% 2px,linear-gradient(var(--ink),var(--ink)) bottom left/2px 5px,linear-gradient(var(--ink),var(--ink)) bottom right/2px 5px;background-repeat:no-repeat}   /* like a marked stroke on the staff: a bracket under it */
 @media (max-width:359px){.tabs button{font-size:13px;letter-spacing:0}}   /* four tab names fit the narrowest phones */
 .dur{display:grid;grid-template-columns:minmax(70px,1fr) minmax(110px,1.4fr);gap:8px}
 .maxline{margin:-10px 0 0;font-size:13px;color:var(--muted);text-align:right}
@@ -1157,7 +1175,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket lights up for a moment and a flash shows where the note was: above the line is early, below is late. Under its lane it says heard. A moment later, once the note's window has closed, the stroke is judged: it takes the colour of its timing and the verdict replaces heard.</li>
         <li><b>Letter colours:</b> green is on time, blue and slanted is early, pink and underlined is late, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as green.</li>
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
-        <li><b>The gauge</b> shows how early or late you played on average over the last 32 strokes. Left is early, right is late.</li>
+        <li><b>The gauge</b> shows how early or late you played on average over the whole run, once it ends. Left is early, right is late.</li>
         <li><b>The level bars</b> appear when a run ends. Each bar is one stroke's loudness against your own typical stroke: the middle is typical, higher is louder, and blue bars are left hand. Scroll sideways for the whole run. The number is the spread in dB, so smaller is more even. With an accent or ghost rule only the normal strokes count, since accents and ghosts are checked separately. A line below says if one hand is quieter. Clipped hits are left out, and keyboard input has no levels.</li>
         <li><b>The loudness strip</b> appears under each line of the staff when a run ends, lined up with the notes above it. It draws how loud the pad was, with a faint line where each note was due and the trigger line dashed. Grace notes show as the smaller peaks just before their main stroke, so you can see whether a flam or drag was heard and how close it was. On buzz strokes, a tick at the top marks each bounce counted, and the strip shows why a bounce was or was not counted: too quiet for the trigger line, or too close to the one before. Only the run you just played has it, and it is kept in memory, not saved. To keep it, choose <b>Export</b> under the result: it saves that run with its loudness and every sound heard to a file. Keyboard input has none.</li>
         <li><b>Narrow screens:</b> a busy pass wraps onto two lines at a barline.</li>
@@ -1338,6 +1356,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run the app names the weak exercises and suggests staying at that tempo until they settle. Any tempo is always allowed.</li>
+        <li><b>Coaching</b> after a run names the strokes that go wrong most often, such as one that is always late. It needs at least 3 passes of an exercise to tell a habit from chance, so set Each exercise to 3 passes or more.</li>
         <li><b>Discard</b>, under a result, removes the run from your records, for example after a bad microphone read. Undo puts it back.</li>
         <li><b>Progress page:</b> every exercise, sorted by accuracy, with accuracy at your last tempo, trend and early/late bias, grouped by click level. Play loads that exercise. A routine is cleared at a tempo when one run covered every exercise and all reached 90%.</li>
         <li><b>Tempo guidance:</b> each exercise in the start list shows the tempo it has cleared, or "new". The summary shows where the whole routine has been cleared.</li>
@@ -1495,33 +1514,7 @@ RLRR LRLL RLRR LRLL</pre>
       <div class="lvm" id="lvMeter"></div>
     </div>
 
-    <section aria-label="Strokes">
-      <div class="rowswrap">
-      <div class="lvmtr" id="lvMtr" hidden aria-hidden="true"><i></i></div>
-      <div class="bigcount" id="bigCount" hidden aria-hidden="true"></div>
-      <canvas class="hwy" id="hwy" aria-hidden="true"></canvas>
-      <div class="rows" id="rows" tabindex="0"><div class="rows-track" id="rowsTrack"></div></div>
-      <p class="hint" id="rowEnd" hidden></p>
-      </div>
-      <p class="cap key"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other stick</p>
-      <div class="pads kb-only">
-        <button class="pad" type="button" data-hand="L" aria-label="Left stick pad">L</button>
-        <button class="pad" type="button" data-hand="R" aria-label="Right stick pad">R</button>
-      </div>
-    </section>
-
-    <div id="stPlay"></div>
-
-    <section id="advice" hidden aria-label="Score and tempo">
-      <div id="advBadge" hidden></div>
-      <div class="card res" id="advRes">
-        <span class="slab">Score</span>
-        <div class="shd"><b id="advScore"></b><span id="advMax"></span><em id="advHs" hidden>New high score</em></div>
-        <div class="sbar" id="advScoreBar"><i></i><u></u></div>
-        <div class="scap"><span id="advOfMax"></span><span id="advPrev"></span></div>
-        <p class="swin" id="advBonus" hidden></p>
-        <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span> &middot; <span id="advSub"></span></small></span></div>
-      </div>
+    <section id="advTop" hidden aria-label="Score">   <!-- after a run: the result first, then the staff, then the coaching that points into it -->
       <div class="notice" id="advFirst" hidden>
         <p><b>Reading your result</b></p>
         <ul>
@@ -1531,8 +1524,54 @@ RLRR LRLL RLRR LRLL</pre>
         </ul>
         <button class="btn link" type="button" data-help="help-play">More in Help</button>
       </div>
+      <div class="card res" id="advRes">
+        <p class="hsbar" id="advHs" hidden>New high score</p>
+        <span class="slab">Score</span>
+        <div class="shd"><b id="advScore"></b><span id="advMax"></span></div>
+        <div class="sbar" id="advScoreBar"><i></i><u></u></div>
+        <div class="scap"><span id="advOfMax"></span><span id="advPrev"></span></div>
+        <p class="swin" id="advBonus" hidden></p>
+        <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span> &middot; <span id="advSub"></span></small></span></div>
+      </div>
+      <section class="panel" id="scoreBox" hidden aria-label="Score breakdown">
+        <h3>Score breakdown</h3>
+        <div class="stats">
+          <div class="stat"><div class="v" id="bDue">—</div><div class="k">Strokes due</div></div>
+          <div class="stat"><div class="v" id="bOn">—</div><div class="k">On time</div></div>
+          <div class="stat"><div class="v" id="bOff">—</div><div class="k">Off time</div></div>
+          <div class="stat"><div class="v" id="bMiss">—</div><div class="k">Missed</div></div>
+          <div class="stat"><div class="v" id="bBest">—</div><div class="k">Longest streak</div></div>
+          <div class="stat" id="bRestBox"><div class="v" id="bRest">—</div><div class="k">Hit on a rest</div></div>
+        </div>
+        <p class="cap" id="scoreNote"></p>
+      </section>
+      <div id="advBadge" hidden></div>
+    </section>
+
+    <section aria-label="Strokes">
+      <div class="rowswrap">
+      <div class="lvmtr" id="lvMtr" hidden aria-hidden="true"><i></i></div>
+      <div class="bigcount" id="bigCount" hidden aria-hidden="true"></div>
+      <canvas class="hwy" id="hwy" aria-hidden="true"></canvas>
+      <div class="rows" id="rows" tabindex="0"><div class="rows-track" id="rowsTrack"></div></div>
+      <p class="hint" id="rowEnd" hidden></p>
+      <p class="hint" id="rowsMore" hidden></p>
+      </div>
+      <p class="cap key"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other stick<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
+      <div class="pads kb-only">
+        <button class="pad" type="button" data-hand="L" aria-label="Left stick pad">L</button>
+        <button class="pad" type="button" data-hand="R" aria-label="Right stick pad">R</button>
+      </div>
+    </section>
+
+    <div id="stPlay"></div>
+
+    <section id="advice" hidden aria-label="Coaching">
+      <h2 class="rsh">Coaching</h2>
       <p class="insight" id="advHead"></p>
+      <ul class="coach" id="insight"></ul>
       <p class="hint" id="advBody"></p>
+      <h2 class="rsh">Stats</h2>
       <div class="btns advmain" id="advBtns1">
         <button class="btn danger" id="advDiscard" type="button" hidden>Discard</button>
         <button class="btn" id="advExport" type="button" aria-label="Export this run with its loudness" hidden>Export</button>
@@ -1541,11 +1580,10 @@ RLRR LRLL RLRR LRLL</pre>
       </div>
     </section>
 
-    <details id="detBox" class="setbox" open>
-      <summary>Details</summary>
+    <div id="detBox" class="setbox">
       <div class="sbody">
     <section class="panel" id="leadBox" aria-label="Early or late">
-      <h3>Early or late, last 32 strokes</h3>
+      <h3>Early or late, whole run</h3>
       <div class="readout">
         <div class="big"><span id="gVal">—</span><small>ms</small></div>
         <div class="word" id="gWord">Waiting for strokes</div>
@@ -1582,18 +1620,6 @@ RLRR LRLL RLRR LRLL</pre>
         <p class="cap">Up is late, down is early. Ring is the left stick, solid dot the right.</p>
       </section>
 
-      <section class="panel" id="scoreBox" hidden aria-label="Score breakdown">
-        <h3>Score breakdown</h3>
-        <div class="stats">
-          <div class="stat"><div class="v" id="bDue">—</div><div class="k">Strokes due</div></div>
-          <div class="stat"><div class="v" id="bOn">—</div><div class="k">On time</div></div>
-          <div class="stat"><div class="v" id="bOff">—</div><div class="k">Off time</div></div>
-          <div class="stat"><div class="v" id="bMiss">—</div><div class="k">Missed</div></div>
-          <div class="stat"><div class="v" id="bBest">—</div><div class="k">Longest streak</div></div>
-          <div class="stat" id="bRestBox"><div class="v" id="bRest">—</div><div class="k">Hit on a rest</div></div>
-        </div>
-        <p class="cap" id="scoreNote"></p>
-      </section>
 
       <section class="panel" aria-label="Run numbers">
         <h3>Run numbers</h3>
@@ -1609,7 +1635,6 @@ RLRR LRLL RLRR LRLL</pre>
           <div class="stat mic-only"><div class="v" id="sLR">—</div><div class="k">Left vs right (dB)</div></div>
         </div>
         <p class="cap">Extra hits are strokes played where none was due, such as on a rest.</p>
-        <p class="insight" id="insight"></p>
       </section>
 
       <section class="panel" id="results" hidden aria-label="Results by exercise">
@@ -1620,7 +1645,7 @@ RLRR LRLL RLRR LRLL</pre>
       </section>
     </div>
       </div>
-    </details>
+    </div>
     </div>
   </div>
 </main>
@@ -2291,7 +2316,72 @@ function graceMain(slots,i,env,thr){
   if(!on.length)return null;
   const r=matchStrokes(sub,on)[at];
   if(!r)return null;
-  return {t:on[r.main].t,db:on[r.main].db,gr:r.gr.map(k=>on[k].t),tl:r.tl.map(k=>on[k].t)};
+  return {t:on[r.main].t,db:on[r.main].db,gr:r.gr.map(k=>on[k].t),gdb:r.gr.map(k=>on[k].db),tl:r.tl.map(k=>on[k].t)};
+}
+/* How the flams and drags of a run sounded, from res (the judged strokes, with gl the time from the first grace note to the main
+   stroke in ms and gd the graces' level against the main stroke in dB). For flams (1) and drags (2) with at least FIND.minN heard
+   with their graces: n, lead (the average gl), sd and gd. A flam under flat ms apart is close to one stroke, and over open ms it is
+   heard as two; a grace within loud dB of its main stroke is too loud. */
+const GRACE={flat:12,open:50,loud:3};
+function graceStats(slots,res){
+  const by={1:[],2:[]};
+  slots.forEach((s,i)=>{const v=res.get(i);if(s.gr&&by[s.gr]&&v&&!v.miss&&typeof v.gl==='number')by[s.gr].push(v);});
+  const out={};
+  [1,2].forEach(g=>{
+    const a=by[g];if(a.length<FIND.minN)return;
+    const gl=a.map(v=>v.gl),gd=a.filter(v=>typeof v.gd==='number').map(v=>v.gd);
+    out[g]={n:a.length,lead:Math.round(mean(gl)),sd:Math.round(sd(gl)),gd:gd.length?Math.round(mean(gd)):null};
+  });
+  return out;
+}
+/* Wandering off the click: across the whole run, in time order, the strokes move early and late together over a few beats,
+   then come back. Each heard stroke's offset is averaged with the strokes within half beats either side (at least four of
+   them); the spread of those averages around the run's own average is the wander, and what is left is the stroke-to-stroke
+   scatter. It needs a run of at least FIND.span seconds and a wander of at least ms, and at least noise times what the scatter
+   alone would give to averages of that many strokes. A steady offset does not wander. */
+const WANDER={half:1,ms:10,noise:2.5};
+function wander(slots,res,tol){
+  const pts=[];
+  slots.forEach((s,i)=>{const v=res.get(i);if(v&&!v.miss&&typeof v.ms==='number')pts.push({i:i,t:s.t,ms:v.ms});});
+  if(pts.length<FIND.minN*4)return null;
+  pts.sort((a,b)=>a.t-b.t);
+  const T=pts[pts.length-1].t-pts[0].t;if(T<FIND.span)return null;
+  const sm=[],rest=[];let lo=0,cnt=0;
+  pts.forEach(p=>{
+    while(pts[lo].t<p.t-WANDER.half)lo++;
+    let sum=0,n=0;for(let j=lo;j<pts.length&&pts[j].t<=p.t+WANDER.half;j++){sum+=pts[j].ms;n++;}
+    if(n>=4){p.s=sum/n;sm.push(p);rest.push(p.ms-p.s);cnt+=n;}
+  });
+  if(sm.length<FIND.minN*4)return null;
+  const w=sd(sm.map(p=>p.s)),sc=sd(rest);
+  if(w<WANDER.ms||w<WANDER.noise*sc/Math.sqrt(cnt/sm.length))return null;
+  const vals=sm.map(p=>p.s).sort((a,b)=>a-b),q=f=>vals[Math.round(f*(vals.length-1))];
+  return {what:'wander',kind:'run',sd:Math.round(w),scatter:Math.round(sc),early:Math.round(q(0.05)),late:Math.round(q(0.95)),secs:T,
+    n:sm.length,slots:sm.filter(p=>Math.abs(p.s)>tol).map(p=>p.i),pos:[],ks:[]};
+}
+function wanderText(w){
+  const e=w.early<0?Math.abs(w.early)+' ms early':'',l=w.late>0?w.late+' ms late':'';
+  let t='Your timing wanders off the click and back: a few beats at a time you drift '+(e&&l?'up to '+e+' and up to '+l:'up to '+(e||l))+'.';
+  t+=w.scatter<w.sd?' Your strokes stay even with each other, so it is the pulse that moves: listen for the click under your strokes.':' Listen for the click under your strokes.';
+  return t;
+}
+/* The flams and drags of a run as sentences, one each. */
+function graceNotes(st){
+  const out=[];
+  const lv=x=>x.gd===null?'':', '+Math.abs(x.gd)+' dB '+(x.gd<=0?'under':'over')+' the main stroke';
+  if(st[1]){
+    const x=st[1];let t='Your flams have the grace note '+x.lead+' ms ahead on average (spread '+x.sd+' ms)'+lv(x)+'.';
+    if(x.lead<GRACE.flat)t+=' That is close to flat: start the grace note a little earlier.';
+    else if(x.lead>GRACE.open)t+=' That is open, so it is heard as two strokes: bring the grace note closer.';
+    if(x.gd!==null&&x.gd>-GRACE.loud)t+=' Play the grace note from lower, so it is softer than the main stroke.';
+    out.push(t);
+  }
+  if(st[2]){
+    const x=st[2];let t='Your drags start '+x.lead+' ms before the main stroke on average (spread '+x.sd+' ms)'+lv(x)+'.';
+    if(x.gd!==null&&x.gd>-GRACE.loud)t+=' Keep the grace notes low, so they are softer than the main stroke.';
+    out.push(t);
+  }
+  return out;
 }
 /* How each buzz stroke sounded. bnc is the times of the bounces heard (run time, s), res the timing of each judged stroke.
    For each buzz stroke that was heard: n, the bounces after it, and fill, how much of the way to the next stroke it rang
@@ -2368,6 +2458,325 @@ function buzzNote(st,ns){
   if(few>0)s+=' '+few+' of '+st.length+' sounded like single strokes. Press the stick into the pad a little more, so it buzzes.';
   else if(fl.length>=4&&mean(fl)<0.7)s+=' There are gaps between them: let each buzz ring until the next stroke.';
   return s;
+}
+/* ---------- findings: where in the music a run goes wrong ---------- */
+/* The on-time window for a stroke: the window tol, capped at 40% of the stroke spacing (sl.w is half of it), so at a fast tempo neighbouring strokes stay apart. */
+const slotWin=(sl,tol)=>Math.min(tol,Math.round(sl.w*800));
+/* A finding is only reported when it is large, repeated and clearly beyond the player's own scatter: at least minN strokes from
+   minPasses passes, a shift of at least ms, and at least se standard errors. An exercise tests about 30 groups, so se is 3.5, not 2:
+   at 2 a run of pure scatter reports something more often than not, at 3 one run in 20, at 3.5 about one in 100. A miss finding needs miss more of the group missed
+   than of the rest, and settling needs settle more of the first pass off time than of the later passes. A run with fewer than more
+   strokes heard gets only its first finding: the others are too often chance. */
+const FIND={minN:6,minPasses:3,se:3.5,ms:6,miss:0.15,settle:0.2,more:64,db:3,span:20};
+/* Levels: a group's loudness against strokes of the same kind (accents, ghost notes or the rest), at least db apart. Drift: the
+   slope of timing or loudness against time across an exercise of at least span seconds, judged by the change from its start to its
+   end. A keyboard run has no levels, and a stroke in a tight slot or one that clipped has none either, so they stay out. */
+/* A straight line through points x, y: its slope b and the standard error of b. */
+function slope(x,y){
+  const n=x.length;if(n<3)return null;
+  const mx=mean(x),my=mean(y);let sxx=0,sxy=0;
+  for(let i=0;i<n;i++){sxx+=(x[i]-mx)*(x[i]-mx);sxy+=(x[i]-mx)*(y[i]-my);}
+  if(!(sxx>0))return null;
+  const b=sxy/sxx;let rss=0;
+  for(let i=0;i<n;i++){const e=y[i]-my-b*(x[i]-mx);rss+=e*e;}
+  return {b:b,se:Math.sqrt(rss/(n-2)/sxx)};
+}
+/* The hand or rest at each position, as the finding copy writes a group: RLRR. */
+const stickOf=notes=>notes.map(n=>n==='_'?'_':hnd(n)).join('');
+/* Each position's roles in the sticking, worked out from the notes due. wrap marks a role that reads the pass before, so it does
+   not hold in the first pass, where the count-in comes before. */
+function strokeRoles(sg){
+  const n=sg.notes,N=n.length,idx=[];
+  for(let i=0;i<N;i++)if(n[i]!=='_')idx.push(i);
+  const S=idx.length,out=n.map(()=>[]);
+  if(S<2)return out;
+  const at=j=>idx[((j%S)+S)%S],h=j=>hnd(n[at(j)]);
+  /* whether a rest comes between stroke j-1 and stroke j */
+  const rest=j=>{const a=at(j-1),b=at(j);return a<b?b-a>1:(N-1-a)+b>0;};
+  for(let j=0;j<S;j++){
+    const i=at(j),r=[],wrap=j<2;
+    const second=k=>!rest(k)&&h(k)===h(k-1)&&(rest(k-1)||h(k-1)!==h(k-2));
+    if(rest(j))r.push('rest');
+    else if(second(j))r.push('double2');
+    else if(h(j)!==h(j-1)&&second(j-1))r.push('afterDouble');
+    if(second(j+1))r.push('double1');
+    r.forEach(x=>out[i].push({role:x,wrap:wrap}));
+  }
+  return out;
+}
+/* Where the sticking changes inside an exercise: between two groups (spaces in the pattern) that are played differently, and at the
+   end of a pass going back to its start. Each seam is the 2 strokes before it and the 2 after. */
+function seamsOf(sg){
+  const n=sg.notes,N=n.length,starts=[];
+  for(let i=0;i<N;i++)if(i===0||sg.groupStart[i])starts.push(i);
+  if(starts.length<2)return [];
+  const grp=starts.map((s,g)=>n.slice(s,g+1<starts.length?starts[g+1]:N)),idx=[];
+  for(let i=0;i<N;i++)if(n[i]!=='_')idx.push(i);
+  const S=idx.length,out=[];
+  starts.forEach((s,g)=>{
+    const prev=grp[(g-1+grp.length)%grp.length],cur=grp[g];
+    if(stickOf(prev)===stickOf(cur))return;
+    let j=idx.findIndex(i=>i>=s);if(j<0)j=S;
+    const before=[j-2,j-1].map(k=>idx[(k+S)%S]),after=[j,j+1].map(k=>idx[k%S]);
+    out.push({at:s,from:stickOf(prev),to:stickOf(cur),before:before,after:after,pass:g===0});
+  });
+  return out;
+}
+/* Where each position falls in its beat, as a name, or '' on the beat and for other places. */
+function beatPlaces(sg){
+  let acc=0;
+  return sg.subs.map(s=>{
+    const f=Math.round((acc-Math.floor(acc+1e-9))*1e6)/1e6;acc+=1/s;
+    return ({0.25:'e',0.5:'and',0.75:'a',0.333333:'trip2',0.666667:'trip3'})[f]||'';
+  });
+}
+/* The findings for a run: plan is the run's plan, seg its per-exercise results (sm offsets in ms, null for a miss, one per stroke due in
+   order), tol the on-time window in ms. Each finding compares a group of strokes with the same exercise's other strokes, so a
+   constant latency cancels out. Sorted by score: how many strokes would have been on time had the group matched the rest. */
+function findings(plan,seg,tol){
+  const out=[];
+  plan.segs.forEach((sg,si)=>{
+    const Q=seg[si];if(!Q||!Q.sm||Q.sm.length<FIND.minN*2)return;
+    const len=Q.sm.length,sl=k=>plan.slots[sg.first+k],pass=k=>Math.floor(sl(k).k/sg.N),posOf=k=>sl(k).pos;
+    const last=pass(len-1);
+    const groups=[];   /* {kind,ks,...} */
+    const all=[];for(let k=0;k<len;k++)all.push(k);
+    for(let i=0;i<sg.N;i++)if(sg.notes[i]!=='_')groups.push({kind:'pos',pos:[i],ks:all.filter(k=>posOf(k)===i)});
+    const seams=seamsOf(sg);
+    seams.forEach(sm=>{
+      const inB=new Set(sm.before),inA=new Set(sm.after);
+      /* at the pass seam, the strokes before it need a next pass and the strokes after it a pass before */
+      const ks=all.filter(k=>{const p=posOf(k);return (inB.has(p)&&(!sm.pass||pass(k)<sg.passes-1))||(inA.has(p)&&(!sm.pass||pass(k)>0));});
+      groups.push({kind:'seam',seam:sm,pos:[...new Set(sm.before.concat(sm.after))].sort((a,b)=>a-b),ks:ks});
+    });
+    const roles=strokeRoles(sg),byRole=new Map();
+    roles.forEach((rs,i)=>rs.forEach(x=>{const g=byRole.get(x.role)||{kind:'ctx',role:x.role,pos:[],ks:[]};g.pos.push(i);all.forEach(k=>{if(posOf(k)===i&&!(x.wrap&&pass(k)===0))g.ks.push(k);});byRole.set(x.role,g);}));
+    byRole.forEach(g=>{g.ks.sort((a,b)=>a-b);groups.push(g);});
+    /* the stroke after an accent and the one before it, when they are not accents themselves */
+    const dy=k=>sl(k).dy||'';
+    if(all.some(k=>dy(k)==='A')){
+      groups.push({kind:'ctx',role:'afterAcc',ks:all.filter(k=>k>0&&dy(k)!=='A'&&dy(k-1)==='A')});
+      groups.push({kind:'ctx',role:'beforeAcc',ks:all.filter(k=>k+1<len&&dy(k)!=='A'&&dy(k+1)==='A')});
+      groups.push({kind:'ctx',role:'acc',ks:all.filter(k=>dy(k)==='A')});   /* accents pulled early, or pushed late */
+    }
+    if(all.some(k=>dy(k)==='g'))groups.push({kind:'ctx',role:'ghost',ks:all.filter(k=>dy(k)==='g')});
+    const places=beatPlaces(sg),byPlace=new Map();
+    places.forEach((p,i)=>{if(p&&sg.notes[i]!=='_'){const g=byPlace.get(p)||{kind:'beat',place:p,pos:[],ks:[]};g.pos.push(i);byPlace.set(p,g);}});
+    byPlace.forEach(g=>{g.ks=all.filter(k=>g.pos.indexOf(posOf(k))>=0);groups.push(g);});
+    const seamAt=i=>seams.find(s=>s.after.indexOf(i)>=0)||seams.find(s=>s.before.indexOf(i)>=0)||null;
+    /* the player's scatter in this exercise: each heard stroke against the average of its own position, so a stroke that is
+       steadily early or late does not count as scatter */
+    const heardAll=all.filter(k=>Q.sm[k]!==null),pm=new Map();
+    heardAll.forEach(k=>{const p=posOf(k),o=pm.get(p)||[];o.push(Q.sm[k]);pm.set(p,o);});
+    const spread=heardAll.length>2?sd(heardAll.map(k=>Q.sm[k]-mean(pm.get(posOf(k))))):0;
+    /* how far strokes a land from strokes b, and the standard error of that, taking each side's spread as at least the
+       exercise's, so a small group that happens to be tight does not look certain */
+    const shift=(a,b)=>{
+      const x=a.map(k=>Q.sm[k]),y=b.map(k=>Q.sm[k]),sx=Math.max(spread,x.length>1?sd(x):0),sy=Math.max(spread,y.length>1?sd(y):0);
+      return {d:mean(x)-mean(y),se:Math.sqrt(sx*sx/x.length+sy*sy/y.length)};
+    };
+    const sure=v=>Math.abs(v.d)>=FIND.ms&&Math.abs(v.d)>=FIND.se*v.se;
+    const found=[],seen=new Map();
+    const add=f=>{
+      /* the same strokes found twice: keep the name that says most (a role or a place in the beat over a single position) */
+      const key=f.what+'|'+f.ks.join(','),rank={ctx:3,beat:2,seam:1,pos:0},o=seen.get(key);
+      if(o&&rank[o.kind]>=rank[f.kind])return;
+      if(o)found.splice(found.indexOf(o),1);
+      seen.set(key,f);found.push(f);
+    };
+    const base={seg:si,ex:sg.idx};
+    groups.forEach(g=>{
+      if(!g.ks.length)return;
+      const inG=new Set(g.ks),rest=all.filter(k=>!inG.has(k));
+      const heard=g.ks.filter(k=>Q.sm[k]!==null),heardR=rest.filter(k=>Q.sm[k]!==null);
+      const info=g.info=Object.assign({},base,{kind:g.kind,role:g.role,place:g.place,seam:g.kind==='seam'?g.seam:(g.kind==='pos'?seamAt(g.pos[0]):null),pos:g.pos||[...new Set(g.ks.map(posOf))].sort((a,b)=>a-b),ks:g.ks,slots:g.ks.map(k=>sg.first+k)});
+      /* timing: the group's average against the rest of the exercise */
+      if(heard.length>=FIND.minN&&heardR.length>=FIND.minN&&new Set(heard.map(pass)).size>=FIND.minPasses){
+        const v=shift(heard,heardR),d=v.d;
+        if(sure(v)){
+          let score=0;
+          heard.forEach(k=>{const w=slotWin(sl(k),tol),was=Math.abs(Q.sm[k])<=w,could=Math.abs(Q.sm[k]-d)<=w;score+=(could?1:0)-(was?1:0);});
+          add(Object.assign({what:'ms',d:Math.round(d),n:heard.length,heard:heard,score:Math.max(0,score)},info));
+        }
+      }
+      /* misses: a stroke or a change that is missed more often than the rest */
+      if((g.kind==='pos'||g.kind==='seam')&&g.ks.length>=FIND.minN&&rest.length>=FIND.minN&&new Set(g.ks.map(pass)).size>=FIND.minPasses){
+        const m=g.ks.length-heard.length,mr=rest.length-heardR.length,pa=m/g.ks.length,pb=mr/rest.length,pp=(m+mr)/len;
+        const se=Math.sqrt(pp*(1-pp)*(1/g.ks.length+1/rest.length));
+        if(m>=3&&pa-pb>=FIND.miss&&pa-pb>=FIND.se*se)add(Object.assign({what:'miss',miss:m,n:g.ks.length,score:Math.round(m-pb*g.ks.length)},info));
+      }
+    });
+    /* a wide group that is only off because a narrower one inside it is: the rest of the wide group, without the narrow one,
+       is no different from the strokes outside it. The narrow one says more, so the wide one goes. */
+    const ms=found.filter(f=>f.what==='ms');
+    ms.forEach(f=>{
+      const inF=new Set(f.ks),outside=heardAll.filter(k=>!inF.has(k));
+      const inner=ms.some(g=>{
+        if(g===f||g.ks.length>=f.ks.length||Math.sign(g.d)!==Math.sign(f.d)||Math.abs(g.d)<=Math.abs(f.d)||!g.ks.every(k=>inF.has(k)))return false;
+        const inG=new Set(g.ks),left=f.heard.filter(k=>!inG.has(k));
+        return left.length<FIND.minN||!sure(shift(left,outside));
+      });
+      if(inner)found.splice(found.indexOf(f),1);
+    });
+    found.forEach(f=>{delete f.heard;out.push(f);});
+    /* rushing or dragging: the timing against time, each stroke taken from its own position's average, so a stroke that is always
+       early does not tilt the line */
+    const tOf=k=>sl(k).t;
+    if(heardAll.length>=FIND.minN*2&&last>=FIND.minPasses-1){
+      const t0=tOf(heardAll[0]),t1=tOf(heardAll[heardAll.length-1]),T=t1-t0;
+      const v=T>=FIND.span?slope(heardAll.map(tOf),heardAll.map(k=>Q.sm[k]-mean(pm.get(posOf(k))))):null;
+      if(v&&Math.abs(v.b*T)>=FIND.ms&&Math.abs(v.b)>=FIND.se*v.se){
+        const m=mean(heardAll.map(k=>Q.sm[k])),tb=mean(heardAll.map(tOf));
+        let score=0;
+        heardAll.forEach(k=>{const w=slotWin(sl(k),tol),was=Math.abs(Q.sm[k])<=w,could=Math.abs(Q.sm[k]-v.b*(tOf(k)-tb))<=w;score+=(could?1:0)-(was?1:0);});
+        out.push(Object.assign({what:'drift',kind:'run',from:Math.round(m+v.b*(t0-tb)),to:Math.round(m+v.b*(t1-tb)),d:Math.round(v.b*T),secs:T,n:heardAll.length,score:Math.max(0,score),pos:[],ks:[],slots:[]},base));
+      }
+    }
+    /* dynamics, from the loudness of each heard stroke */
+    const lev=k=>Q.sb&&Q.sb[k]!==null&&Q.sb[k]!==undefined&&!sl(k).tight?Q.sb[k]:null;
+    const cls=k=>dy(k)==='A'?'A':(dy(k)==='g'?'g':'n');
+    const loud=all.filter(k=>lev(k)!==null);
+    if(loud.length>=FIND.minN*2){
+      const lm=new Map();
+      loud.forEach(k=>{const p=posOf(k),o=lm.get(p)||[];o.push(lev(k));lm.set(p,o);});
+      const lsp=loud.length>2?sd(loud.map(k=>lev(k)-mean(lm.get(posOf(k))))):0;
+      const lshift=(a,b)=>{
+        const x=a.map(lev),y=b.map(lev),sx=Math.max(lsp,x.length>1?sd(x):0),sy=Math.max(lsp,y.length>1?sd(y):0);
+        return {d:mean(x)-mean(y),se:Math.sqrt(sx*sx/x.length+sy*sy/y.length)};
+      };
+      const lsure=v=>Math.abs(v.d)>=FIND.db&&Math.abs(v.d)>=FIND.se*v.se;
+      const enough=a=>a.length>=FIND.minN&&new Set(a.map(pass)).size>=FIND.minPasses;
+      const lscore=(n,d)=>Math.round(n*Math.min(1,Math.abs(d)/(2*FIND.db))/2);
+      const lfound=[],lseen=new Map();
+      const ladd=f=>{
+        const key=f.ks.join(','),o=lseen.get(key);
+        if(o&&o.kind==='ctx')return;
+        if(o)lfound.splice(lfound.indexOf(o),1);
+        lseen.set(key,f);lfound.push(f);
+      };
+      /* a stroke of the pattern louder or softer than the others of its kind */
+      groups.filter(g=>g.kind==='pos'&&g.info).forEach(g=>{
+        const a=g.ks.filter(k=>lev(k)!==null),c=a.length?cls(a[0]):'';
+        if(!a.length||a.some(k=>cls(k)!==c))return;
+        const inG=new Set(g.ks),b=loud.filter(k=>!inG.has(k)&&cls(k)===c);
+        if(!enough(a)||!enough(b))return;
+        const v=lshift(a,b);
+        if(lsure(v))ladd(Object.assign({},g.info,{what:'db',cls:c,ks:a,slots:a.map(k=>sg.first+k),d:Math.round(v.d),n:a.length,score:lscore(a.length,v.d)}));
+      });
+      /* the tap after an accent (a downstroke that did not stop low) and the tap before one (an upstroke lifted too early), each
+         against the other taps */
+      const near=new Set();
+      groups.filter(x=>x.kind==='ctx'&&(x.role==='afterAcc'||x.role==='beforeAcc')).forEach(x=>x.ks.forEach(k=>near.add(k)));
+      ['afterAcc','beforeAcc'].forEach(role=>{
+        const g=groups.find(x=>x.kind==='ctx'&&x.role===role);if(!g||!g.info)return;
+        const a=g.ks.filter(k=>lev(k)!==null&&cls(k)==='n'),b=loud.filter(k=>!near.has(k)&&cls(k)==='n');
+        if(!enough(a)||!enough(b))return;
+        const v=lshift(a,b);
+        if(v.d>0&&lsure(v))ladd(Object.assign({},g.info,{what:'db',cls:'n',ks:a,slots:a.map(k=>sg.first+k),d:Math.round(v.d),n:a.length,score:lscore(a.length,v.d)}));
+      });
+      /* A stroke that is only louder because it follows or leads an accent is told by that finding. An accent is only a problem
+         when soft and a ghost note when loud; with two accents a bar, a loud one is the other one being soft. */
+      lfound.filter(f=>f.kind==='pos').forEach(f=>{
+        const wide=lfound.some(g=>g.kind==='ctx'&&Math.sign(g.d)===Math.sign(f.d)&&f.ks.every(k=>g.ks.indexOf(k)>=0));
+        if(wide||(f.cls==='A'&&f.d>0)||(f.cls==='g'&&f.d<0))lfound.splice(lfound.indexOf(f),1);
+      });
+      lfound.forEach(f=>out.push(f));
+      /* getting louder or softer across the exercise, each stroke taken from its own position's average */
+      if(last>=FIND.minPasses-1){
+        const t0=tOf(loud[0]),t1=tOf(loud[loud.length-1]),T=t1-t0;
+        const v=T>=FIND.span?slope(loud.map(tOf),loud.map(k=>lev(k)-mean(lm.get(posOf(k))))):null;
+        if(v&&Math.abs(v.b*T)>=FIND.db&&Math.abs(v.b)>=FIND.se*v.se)
+          out.push(Object.assign({what:'dbdrift',kind:'run',d:Math.round(v.b*T),secs:T,n:loud.length,score:lscore(loud.length,v.b*T),pos:[],ks:[],slots:[]},base));
+      }
+    }
+    /* settling: the first pass against the later ones, counting a miss or a stroke off time as a slip */
+    if(last>=FIND.minPasses-1){
+      const slip=k=>Q.sm[k]===null||Math.abs(Q.sm[k])>slotWin(sl(k),tol);
+      const first=all.filter(k=>pass(k)===0),later=all.filter(k=>pass(k)>0);
+      if(first.length>=FIND.minN&&later.length>=FIND.minN){
+        const a=first.filter(slip).length,b=later.filter(slip).length,pa=a/first.length,pb=b/later.length,pp=(a+b)/len;
+        const se=Math.sqrt(pp*(1-pp)*(1/first.length+1/later.length));
+        if(pa-pb>=FIND.settle&&pa-pb>=FIND.se*se)out.push(Object.assign({what:'settle',kind:'pass',first:pa,later:pb,n:first.length,score:Math.round(a-pb*first.length),pos:[],ks:first,slots:first.map(k=>sg.first+k)},base));
+      }
+    }
+  });
+  return out.sort((a,b)=>b.score-a.score||(Math.abs(b.d||0)*b.n)-(Math.abs(a.d||0)*a.n));
+}
+/* A finding as a sentence. The microphone cannot tell the hands apart, so it names the strokes, never the hand that played them. */
+function findingText(f,plan){
+  const sg=plan.segs[f.seg],multi=plan.segs.length>1;
+  const num=i=>sg.notes.slice(0,i+1).filter(x=>x!=='_').length;
+  const change=s=>s.pass?'going back to the start ('+s.from+' to '+s.to+')':'at the change from '+s.from+' to '+s.to;
+  const ROLE={double2:'the second note of each double',double1:'the first note of each double',afterDouble:'the stroke after each double',rest:'the first stroke after a rest',afterAcc:'the stroke after each accent',beforeAcc:'the stroke before each accent',acc:'the accents',ghost:'the ghost notes'};
+  const PLACE={e:'the “e” of each beat',and:'the “&” of each beat',a:'the “a” of each beat',trip2:'the second note of each triplet',trip3:'the third note of each triplet'};
+  const plural=f.kind==='seam'||f.role==='acc'||f.role==='ghost';
+  const pre=multi?'In exercise '+f.ex+', ':'',cap=x=>x.charAt(0).toUpperCase()+x.slice(1);
+  const over=t=>t<90?Math.round(t)+' s':Math.round(t/60)+' min';
+  let who;
+  if(f.what==='drift'){
+    const at=v=>v===0?'on the click':Math.abs(v)+' ms '+(v>0?'late':'early');
+    return cap(pre+'you drifted from '+at(f.from)+' to '+at(f.to)+' over '+over(f.secs)+(f.d<0?': you were rushing.':': you were dragging.'));
+  }
+  if(f.what==='dbdrift')return cap(pre+'you got '+Math.abs(f.d)+' dB '+(f.d>0?'louder':'softer')+' over '+over(f.secs)+'. Keep the same stick heights to the end.');
+  if(f.what==='settle')return (multi?'In exercise '+f.ex+', the':'The')+' first pass was '+Math.round(f.first*100)+'% off time and later passes '+Math.round(f.later*100)+'%. It takes a pass to settle.';
+  if(f.kind==='pos'){who='stroke '+num(f.pos[0])+' ('+hnd(sg.notes[f.pos[0]])+')'+(f.seam?', '+change(f.seam)+',':'');}
+  else if(f.kind==='seam')who='the strokes '+change(f.seam);
+  else if(f.kind==='beat')who=PLACE[f.place];
+  else who=ROLE[f.role];
+  let s;
+  if(f.what==='db'){
+    const others={A:'the other accents',g:'the other ghost notes',n:f.kind==='ctx'||plan.slots.some(x=>x.seg===f.seg&&x.dy==='A')?'the other taps':'the other strokes'}[f.cls];
+    s=who+' '+(plural?'are':'is')+' '+Math.abs(f.d)+' dB '+(f.d>0?'louder':'softer')+' than '+others+'.';
+    if(f.role==='afterAcc')s+=' Stop the stick low after each accent.';
+    else if(f.role==='beforeAcc')s+=' Keep it low, and lift the stick only for the accent.';
+  }
+  else if(f.what==='miss')s=who+' '+(plural?'were':'was')+' not heard '+f.miss+' of '+f.n+' times, more often than the rest of the exercise.';
+  else s=who+' '+(plural?'land':'lands')+' '+Math.abs(f.d)+' ms '+(f.d>0?'later':'earlier')+' than the rest of the exercise.';
+  s=(multi?'In exercise '+f.ex+', ':'')+s;
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+/* ---------- practise the change: a short exercise built from the strokes around a finding ---------- */
+/* around strokes either side of the stroke a finding names, slower BPM below the run, played for mins minutes (the app sets the
+   length, so it shows as the Length setting); a drill longer than maxBeats is not offered. */
+const DRILL={around:2,slower:10,maxBeats:16,mins:1};
+/* The position a group finding is clearest at: the most missed, or the furthest off in the finding's direction. */
+function drillPos(f,plan,seg){
+  const Q=seg[f.seg],sg=plan.segs[f.seg],by=new Map();
+  if(!Q||!Q.sm)return -1;
+  f.ks.forEach(k=>{
+    const p=plan.slots[sg.first+k].pos,v=f.what==='db'?(Q.sb?Q.sb[k]:null):Q.sm[k];
+    by.set(p,(by.get(p)||0)+(f.what==='miss'?(v===null?1:0):(v===null?0:v*Math.sign(f.d))));
+  });
+  let best=-1,bs=-Infinity;
+  by.forEach((s,p)=>{if(s>bs){bs=s;best=p;}});
+  return best;
+}
+/* A drill for a seam, a stroke or a stroke's role in the sticking: the strokes either side of it, widened to whole beats so every
+   stroke keeps its place in the beat, written as a routine line. It can run over the end of a pass into the next. Null when the
+   finding has no place in the sticking (a place in the beat, settling) or the drill would be too long. */
+function drillOf(plan,seg,f){
+  if(!f||!(f.kind==='seam'||f.kind==='ctx'||f.kind==='pos'))return null;
+  const sg=plan.segs[f.seg];if(!sg)return null;
+  const n=sg.notes,N=n.length,idx=[];
+  for(let i=0;i<N;i++)if(n[i]!=='_')idx.push(i);
+  const S=idx.length;if(S<2)return null;
+  let a,b;   /* the first and last stroke, counted from the first stroke of a pass, so they can fall in the pass before or after */
+  if(f.kind==='seam'){let j=idx.findIndex(i=>i>=f.seam.at);if(j<0)j=S;a=j-2;b=j+1;}
+  else{const j=idx.indexOf(drillPos(f,plan,seg));if(j<0)return null;a=j-DRILL.around;b=j+DRILL.around;}
+  const md=(x,m)=>((x%m)+m)%m,inB=[];
+  let acc=0;for(let i=0;i<N;i++){inB.push(rb9(acc));acc+=1/sg.subs[i];}
+  const cellOf=j=>Math.floor(j/S)*N+idx[md(j,S)],off=c=>Math.floor(c/N)*sg.passBeats+inB[md(c,N)];
+  let s=cellOf(a),e=cellOf(b)+1;
+  for(let k=0;k<3*N&&!isInt(off(s));k++)s--;
+  for(let k=0;k<3*N&&!isInt(off(e));k++)e++;
+  if(!isInt(off(s))||!isInt(off(e)))return null;
+  const beats=Math.round(off(e)-off(s));
+  if(beats<1||beats>DRILL.maxBeats)return null;
+  const notes=[],gs=[],subs=[];
+  for(let c=s;c<e;c++){notes.push(n[md(c,N)]);gs.push(c===s||!!sg.groupStart[md(c,N)]);subs.push(sg.subs[md(c,N)]);}
+  const sig=sg.sig?{n:beats,d:sg.sig.d,groups:defGroups(beats,sg.sig.d)}:null;
+  return {notes:notes,strokes:notes.filter(x=>x!=='_').length,beats:beats,bpm:Math.max(40,Math.round(sg.bpm)-DRILL.slower),
+    text:showPattern(notes,gs,subs,0,sig)};
 }
 function fmtTime(s){
   s=Math.max(0,Math.round(s));
@@ -2961,7 +3370,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.139';                           /* shown beside the title */
+const VERSION='1.5.158';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3550,8 +3959,7 @@ function beginRun(mode){
     nextClick:0,pulseIdx:-1,nextFin:0,pending:new Map(),cur:-1,showSeg:0,gridSeg:-1,
     errs:[],lv:[],seq:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,streak:0,best:0,checked:0,bad:0,trace:[],res:new Map(),showG:0,missRun:0,trail:[],live:'',pts:0,sk:0,hud:scoreOn&&mode==='play'&&!!LV_PTS[S.click],tm:[],
     fin:new Set(),paused:false,ci:null,bnc:[],bzn:new Map(),lastPk:0,dyc:lat?'':dynCode(),dyl:[],
-    seg:plan.segs.map(sg=>({errs:[],lv:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,checked:0,bad:0,sc:[],sm:[],sb:[],sy:[],sw:[],ev:[],da:0,dg:0,
-      posSum:new Array(sg.N).fill(0),posCnt:new Array(sg.N).fill(0)})),
+    seg:plan.segs.map(sg=>({errs:[],lv:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,checked:0,bad:0,sc:[],sm:[],sb:[],sy:[],sw:[],ev:[],da:0,dg:0})),
     dirty:true,ended:false,totalExercises:routineParsed.exercises.length,
     startExercise:S.mode==='routine'?S.startExercise:1
   };
@@ -3600,7 +4008,7 @@ function tick(){
 }
 /* The score as the run goes. Strokes judged too soft or too loud only count against it when the run ends, so the final score can come out a little lower. */
 /* The on-time window for a stroke: the setting, capped at 40% of the stroke spacing (sl.w is half of it), so at a fast tempo neighbouring strokes stay apart. */
-const slotTol=sl=>Math.min(S.tol,Math.round(sl.w*800));
+const slotTol=sl=>slotWin(sl,S.tol);
 /* The window, as said beside a score when it is not the standard one. */
 /* The window's bonus, as its own line on a score card; none at the widest window. */
 const winNote=tol=>winMult(tol)>1?'\u00b1'+(tol||20)+' ms window: points \u00d7'+winMult(tol):'';
@@ -3697,10 +4105,11 @@ function finalizeSlot(i){
     r.seq.push({db:db,hand:hand,dy:sl.dy||''});if(r.seq.length>STRIP_MAX)r.seq.shift();   /* one entry per stroke due, so a miss leaves a gap in the level bars */
     r.missRun=0;if(r.mode==='lat')latLive(r);
     if(on){r.within++;Q.within++;r.streak++;if(r.streak>r.best)r.best=r.streak;}else r.streak=0;
-    Q.posSum[pos]+=ms;Q.posCnt[pos]++;
     r.trace.push({ms:ms,hand:hand,wrong:wrong});if(r.trace.length>STRIP_MAX)r.trace.shift();
   }
-  r.res.set(i,{ms:ms,wrong:wrong?det.hand:null,db:h.kb?null:strokeDb(h.pk,h.raw)});
+  const rv={ms:ms,wrong:wrong?det.hand:null,db:h.kb?null:strokeDb(h.pk,h.raw)};
+  if(gm&&gm.gr.length){rv.gl=Math.round((gm.t-Math.min.apply(null,gm.gr))*1000);rv.gd=Math.round(mean(gm.gdb)-gm.db);}   /* for the flam and drag summary */
+  r.res.set(i,rv);
 }
 /* Calibration shows its running answer while you play. The reading is the latency you would get if the run ended now. */
 function latLive(r){
@@ -3848,6 +4257,7 @@ function showRunResult(){
   /* The review is rebuilt from the saved run, the same way a run's page does it. */
   rvModel=lastRun&&lastRun.run?reviewModel(lastRun.run):null;
   if(rvModel)showReview();else{rowMap.forEach(lvsRow);roleRows();winKey='';paintRows(view,null);}
+  if(rvModel&&view&&view.errs){coachNote($('advHead'),coachItems(view)[0]);coachList(view);}   /* the findings can now be shown on the review staff */
   if(lastRun)setReview(true);
   showResult();
 }
@@ -4118,7 +4528,7 @@ function staffLine(sg,opt){
   const padL=sg.sig?PADL_SIG:PADL,padR=PADR;
   const gp=gapsOf(durs),ext=gp.ext,gapAt=gp.gapAt,totalExt=gp.total;
   const LW=Math.max(avail,Math.ceil(MINSLOT*opt.beats/opt.dmin)+opt.ext+padL+padR),u=(LW-padL-padR-opt.ext)/opt.beats;
-  const H=92,Y0=8,Y=54,TOP=28,SX=6;                  /* staff line, stem top, stem offset from note centre */
+  const H=100,Y0=8,Y=54,TOP=28,SX=6;                  /* staff line, stem top, stem offset from note centre */
   const mk=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
   const svg=mk('svg',{viewBox:'0 '+Y0+' '+LW+' '+H,class:'staff','aria-hidden':'true'});
   const off=gp.offs;
@@ -4174,6 +4584,9 @@ function staffLine(sg,opt){
       }
       g._slot=-1;
     }else{
+      /* shown while a coaching note marks this stroke: a bracket under the timing, its line, and its ends where a marked run starts (l) and stops (r). The lines span the whole stroke, so a run's bracket is unbroken. */
+      const bl=x0(i)+1,br=x0(i)+xw(i)-1;
+      [[x0(i),104,xw(i),2,'h'],[bl,100,2,6,'l'],[br-2,100,2,6,'r']].forEach(q=>g.appendChild(mk('rect',{class:'mks '+q[4],x:q[0],y:q[1],width:q[2],height:q[3]})));
       g.appendChild(mk('ellipse',{class:'nh',cx:cx,cy:Y,rx:6.6,ry:4.7,transform:'rotate(-20 '+cx+' '+Y+')'}));
       g.appendChild(mk('line',{class:'stem',x1:cx+SX,x2:cx+SX,y1:Y-1,y2:TOP}));
       /* a buzz stroke: a z across the stem */
@@ -4380,11 +4793,19 @@ let winKey='',lastCur=null;
 const playing=()=>!!run&&!run.ended&&run.mode==='play';
 /* The window applies before Start, while playing and after Stop. After Stop it scrolls by hand, so every stroke can still be checked. */
 const winWanted=()=>labelMode!=='lat'&&((+$('rows').dataset.lines||1)>=2||(document.body.dataset.state==='done'&&rowMap.size>winLines()));
+/* Whether the staff after a run has strokes above or below its box: a fade on that edge, and a line of text under it. */
+function rowsCue(){
+  const box=$('rows'),rv=box.classList.contains('rv'),over=rv&&box.scrollHeight>box.clientHeight+2;
+  box.classList.toggle('more-up',over&&box.scrollTop>2);
+  box.classList.toggle('more-dn',over&&box.scrollTop+box.clientHeight<box.scrollHeight-2);
+  const m=$('rowsMore');m.hidden=!over;
+  if(over)m.textContent='Scroll the staff to see all '+rowMap.size+' passes.';
+}
 function syncWindow(cursor){
   const box=$('rows'),tr=$('rowsTrack');
   if(!winWanted()){
     if(box.classList.contains('win')){box.classList.remove('win','rv');box.style.removeProperty('--winh');tr.style.transform='';winKey='';}
-    return;
+    rowsCue();return;
   }
   const lines=[];
   [...rowMap.keys()].sort((x,y)=>x-y).forEach(k=>{const o=rowMap.get(k);o.el.querySelectorAll('svg.staff').forEach((sv,i)=>lines.push({sv:sv,o:o,i:i}));});
@@ -4405,6 +4826,7 @@ function syncWindow(cursor){
   box.classList.add('win');box.classList.toggle('rv',review);if(!review)box.scrollTop=0;
   const n=winLines();box.style.setProperty('--winh',Math.ceil(n*lh+(n-1)*2+labH*2)+'px');
   tr.style.transform=review?'':'translateY(-'+top+'px)';
+  rowsCue();
 }
 /* Shows pass g on top with the next passes underneath. When g is the pass that was second, the rows slide
    up one place and a fresh row comes in from below. */
@@ -4516,15 +4938,25 @@ function paintCard(el,res,ended,tol,bz){
 }
 function paintRows(r,cursor,heard){
   if(rvModel&&document.body.dataset.state==='done')r=rvModel;
-  const ended=!!(r&&r.ended),tol=(r&&r.tol)||S.tol;
+  const ended=!!(r&&r.ended),tol=(r&&r.tol)||S.tol,marks=markOn()?markSet:null;
   rowMap.forEach((o,g)=>{
     o.cards.forEach((el,i)=>{
       if(el._slot<0)return;
       paintCard(el,r?r.res.get(el._slot):null,ended,tol,r&&r.bzn?r.bzn.get(el._slot):undefined);
       const on=!!cursor&&g===cursor.g&&i===cursor.i;
       if(on!==el._now){el._now=on;el.classList.toggle('now',on);}
+      const mk=marks&&marks.has(el._slot);
+      if(mk!==!!el._mk){el._mk=mk;el.classList.toggle('mk',mk);}
+    });
+    /* a bracket closes where the marked run ends: at a stroke that is not marked, or the end of the line */
+    o.cards.forEach((el,i)=>{
+      const same=c=>c&&c._mk&&c.ownerSVGElement===el.ownerSVGElement;
+      el.classList.toggle('mkL',!!el._mk&&!same(o.cards[i-1]));
+      el.classList.toggle('mkR',!!el._mk&&!same(o.cards[i+1]));
     });
   });
+  if($('mkKey').hidden===!!marks)$('mkKey').hidden=!marks;   /* the key explains the brackets while a note is shown */
+  if($('rows').classList.contains('mking')!==!!marks)$('rows').classList.toggle('mking',!!marks);
   movePlayhead(r,cursor,heard);placeLvMeter(r,cursor);
   lastCur=r&&!r.ended?cursor:null;syncWindow(lastCur);
   drawHwy(r,heard);
@@ -4958,7 +5390,7 @@ function updateLevel(r){
 }
 function updateGauge(r){
   updateLevel(r);
-  const last=r?r.errs.slice(-32):[];
+  const last=r?r.errs:[];   /* the card shows only after a run, so it covers all of it */
   const zone=$('gZone');
   zone.style.width=(S.tol/80*100)+'%';zone.style.left=(50-S.tol/80*50)+'%';
   if(last.length<3){
@@ -4975,31 +5407,116 @@ function updateGauge(r){
   $('gBand').style.left=(50+lo/80*100)+'%';$('gBand').style.width=((hi-lo)/80*100)+'%';
 }
 /* What to work on, most important first. */
-function insightParts(r){
+/* The coaching notes after a run, most useful first. A note from findings() carries it as f, so it can be shown on the staff. */
+const sg1=n=>n===1?'1 pass':n+' passes';
+function coachItems(r){
   if(!r||!r.errs.length)return [];
-  if(r.errs.length<8)return ['Keep going. Notes on your timing appear after a few passes.'];
+  if(r.errs.length<8)return [{t:'Keep going. Notes on your timing appear after a few passes.'}];
   const parts=[];
-  if(r.slots&&r.miss/r.slots>0.1)parts.push(r.miss+' strokes were not heard. Check the trigger line in Settings, under Device.');
-  if(r.checked>=8&&r.bad/r.checked>0.15)parts.push('The other hand played '+r.bad+' of '+r.checked+' strokes.');   /* keys name the hand */
+  if(r.slots&&r.miss/r.slots>0.1)parts.push({t:r.miss+' strokes were not heard. Check the trigger line in Settings, under Device.'});
+  if(r.checked>=8&&r.bad/r.checked>0.15)parts.push({t:'The other hand played '+r.bad+' of '+r.checked+' strokes.'});   /* keys name the hand */
   if(r.hand.L.length>=4&&r.hand.R.length>=4){
     const d=mean(r.hand.R)-mean(r.hand.L);
-    if(Math.abs(d)>=4)parts.push('Your '+(d>0?'right':'left')+' hand lands '+Math.abs(d).toFixed(0)+' ms later than your '+(d>0?'left':'right')+'.');
+    if(Math.abs(d)>=4)parts.push({t:'Your '+(d>0?'right':'left')+' hand lands '+Math.abs(d).toFixed(0)+' ms later than your '+(d>0?'left':'right')+'.'});
   }
-  if(r.gridSeg>=0){
-    const sg=r.plan.segs[r.gridSeg],Q=r.seg[r.gridSeg];
-    let wi=-1,wv=0;
-    for(let i=0;i<sg.N;i++){
-      if(Q.posCnt[i]>=3){const a=Q.posSum[i]/Q.posCnt[i];if(Math.abs(a)>Math.abs(wv)){wv=a;wi=i;}}
-    }
-    if(wi>=0&&Math.abs(wv)>=6)parts.push((r.plan.segs.length>1?'In exercise '+sg.idx+', stroke ':'Stroke ')+sg.notes.slice(0,wi+1).filter(n=>n!=='_').length+' ('+hnd(sg.notes[wi])+') drifts most, '+Math.abs(wv).toFixed(0)+' ms '+(wv>0?'late':'early')+'.');
+  /* the costliest places in the music where the strokes go wrong, in any exercise of the run: up to four, or only the first
+     in a short run, where the rest are mostly chance */
+  const wd=r.res?wander(r.plan.slots,r.res,r.tol||S.tol):null;
+  if(wd)parts.push({t:wanderText(wd),f:wd});
+  if(r.seg)findings(r.plan,r.seg,S.tol).filter(f=>!wd||f.what!=='drift').slice(0,r.errs.length>=FIND.more?4:1).forEach(f=>parts.push({t:findingText(f,r.plan),f:f}));
+  /* an exercise played fewer than FIND.minPasses times is too short to say which of its strokes go wrong, so say so */
+  if(r.seg&&r.errs.length>=FIND.more){
+    const segs=r.plan.segs,short=segs.filter(sg=>sg.passes<FIND.minPasses);
+    if(short.length===segs.length)parts.push({t:(segs.length>1?'Each exercise':'The exercise')+' played '+(short.length>1&&new Set(short.map(sg=>sg.passes)).size>1?'fewer than '+FIND.minPasses+' passes':sg1(short[0].passes))+', so no single stroke was checked. Notes on single strokes need at least '+FIND.minPasses+' passes: set Each exercise to '+FIND.minPasses+' passes or more.'});
+    else if(short.length)parts.push({t:(short.length===1?'Exercise '+short[0].idx+' played':'Exercises '+short.map(sg=>sg.idx).join(', ')+' played')+' fewer than '+FIND.minPasses+' passes, so '+(short.length===1?'its':'their')+' single strokes were not checked.'});
   }
-  if(!r.kb&&r.plan.slots.some(x=>x.bz)){const st=buzzStats(r.plan.slots,r.res,r.bnc||[]),bn=buzzNote(st,buzzSingles(r.plan.slots,st,r.res).size);if(bn)parts.push(bn);}
+  if(!r.kb&&r.res&&r.plan.slots.some(x=>x.gr))graceNotes(graceStats(r.plan.slots,r.res)).forEach(t=>parts.push({t:t}));
+  if(!r.kb&&r.plan.slots.some(x=>x.bz)){const st=buzzStats(r.plan.slots,r.res,r.bnc||[]),bn=buzzNote(st,buzzSingles(r.plan.slots,st,r.res).size);if(bn)parts.push({t:bn});}
   const lvs=levelStats(r.lv);
-  if(lvs&&lvs.diff!==null&&Math.abs(lvs.diff)>=3)parts.push('Your '+(lvs.diff<0?'left':'right')+' hand is '+Math.abs(lvs.diff).toFixed(0)+' dB quieter than your '+(lvs.diff<0?'right':'left')+'.');
-  if(!parts.length)parts.push('Timing is even across both hands and all strokes.');
+  if(lvs&&lvs.diff!==null&&Math.abs(lvs.diff)>=3)parts.push({t:'Your '+(lvs.diff<0?'left':'right')+' hand is '+Math.abs(lvs.diff).toFixed(0)+' dB quieter than your '+(lvs.diff<0?'right':'left')+'.'});
+  if(!parts.length)parts.push({t:r.slots&&r.within/r.slots<0.8?'No one hand or stroke is off more than the others.':'Timing is even across both hands and all strokes.'});
   return parts;
 }
-const insightText=r=>insightParts(r).join(' ');
+/* A note's text. When it is a finding and the run is over, buttons follow: one marks its strokes on the review staff, and one
+   loads a drill of the strokes around it, slower. */
+function coachNote(el,it){
+  el.textContent=it?it.t:'';
+  if(!it||!it.f||!view||!view.ended)return;
+  if(markSlotsFor(it.f)){
+    const b=document.createElement('button');b.type='button';b.className='btn link inl';
+    b.dataset.mk=findKey(it.f);markBtn(b);
+    b.addEventListener('click',()=>toggleMark(it.f));
+    el.append(' ',b);
+  }
+  const d=drillFor(it.f);
+  if(d){
+    const b=document.createElement('button');b.type='button';b.className='btn link inl';b.dataset.drill='';
+    b.textContent='Practise at '+d.bpm+' BPM';
+    b.addEventListener('click',()=>practiseDrill(d));
+    el.append(' ',b);
+  }
+}
+/* A drill for a finding of the run on the review, if its text reads back as one exercise. */
+function drillFor(f){
+  let d;
+  try{d=drillOf(view.plan,view.seg,f);}catch(e){return null;}
+  if(!d)return null;
+  const p=parseRoutine(d.text);
+  return p.errors.length||p.exercises.length!==1?null:d;
+}
+/* Puts the drill on the Play page at its slower tempo, named after the routine it came from. It does not start. */
+function practiseDrill(d){
+  if(run&&!run.ended)return;
+  const from=curName().replace(/ drill$/,''),name=from==='Unsaved routine'?'Drill':from+' drill';
+  guard(()=>{
+    setRoutineText(setHeader(d.text,'title',name));
+    S.bpm=d.bpm;$('bpm').value=S.bpm;
+    S.eachUnit='min';S.eachVal=DRILL.mins;$('eachUnit').value=S.eachUnit;$('eachVal').value=S.eachVal;syncEach();
+    lastRun=null;refreshPreview();renderAdvice();setReview(false);
+    save();syncInfo();
+    setStatus('Loaded a drill of the strokes around it at '+d.bpm+' BPM. Press Start to play it.');
+    showTab('play');window.scrollTo(0,0);
+  });
+}
+/* Coaching after a run: the first note is the headline (#advHead), the rest are listed under it. */
+function coachList(r){
+  const ul=$('insight');ul.textContent='';
+  for(const it of coachItems(r).slice(1)){const li=document.createElement('li');coachNote(li,it);ul.appendChild(li);}
+}
+/* A finding shown on the review staff: its strokes get an outline, and the staff scrolls to the first of them. The marks belong
+   to one review (markRm), so a new run or Done clears them. */
+let markKey='',markSet=null,markRm=null;
+const findKey=f=>[f.what,f.kind,f.seg,f.slots.length,f.slots[0]].join('|');
+const markOn=()=>!!markSet&&markRm===rvModel&&!!rvModel&&document.body.dataset.state==='done';
+/* the review staff's slots for a finding's strokes, which are slots of the live run */
+function markSlotsFor(f){
+  const m=view&&rvModel?lvsSlots(view):null;if(!m)return null;
+  const want=new Set(f.slots),out=new Set();
+  m.forEach((live,i)=>{if(want.has(live))out.add(i);});
+  return out.size?out:null;
+}
+/* a Show on staff button reads Hide on staff while its strokes are marked */
+function markBtn(b){
+  const on=markOn()&&b.dataset.mk===markKey;
+  b.textContent=on?'Hide on staff':'Show on staff';   /* the label says the state, so no aria-pressed */
+}
+function toggleMark(f){
+  const k=findKey(f);
+  if(markOn()&&markKey===k){markKey='';markSet=null;markRm=null;}
+  else{markSet=markSlotsFor(f);markKey=markSet?k:'';markRm=markSet?rvModel:null;}
+  document.querySelectorAll('#advice [data-mk]').forEach(markBtn);
+  paintRows(view,null);
+  if(markOn())scrollToMark();
+}
+function scrollToMark(){
+  const keys=[...rowMap.keys()].sort((a,b)=>a-b);
+  let card=null;
+  for(const g of keys){card=rowMap.get(g).cards.find(el=>el._mk);if(card)break;}
+  if(!card)return;
+  const box=$('rows'),sv=card.ownerSVGElement;
+  box.scrollIntoView({block:'nearest'});
+  if(box.classList.contains('rv'))box.scrollTop+=sv.getBoundingClientRect().top-box.getBoundingClientRect().top;
+}
 function updateStats(r){
   const sp=r?sd(r.errs.slice(-32)):NaN;
   $('sWithin').textContent=r&&r.slots?Math.round(r.within/r.slots*100)+'%':'—';
@@ -5012,7 +5529,7 @@ function updateStats(r){
   const ls=r?levelStats(r.lv):null;
   $('sLevel').textContent=ls&&ls.sd!==null?ls.sd.toFixed(1):'—';
   $('sLR').textContent=ls&&ls.diff!==null?fmtDb(ls.diff):'—';
-  $('insight').textContent=insightText(r);
+  coachList(r);
 }
 /* A strip that scrolls sideways: the run is as wide as it needs to be, and only the part in view is painted. While you play it
    follows the newest stroke, and scrolling back stops that until you press Newest. */
@@ -5260,14 +5777,14 @@ function recordRun(r){
 }
 /* After a run the score is brought into view. The run layout is still being undone, so the jump repeats once the page has settled. */
 function showResult(){
-  const go=()=>{const b=$('advice');if(b.hidden||curTab!=='play')return;const r=b.getBoundingClientRect();if(r.bottom>innerHeight||r.top<0)scrollBy(0,r.top-12);};
+  const go=()=>{const b=$('advTop');if(b.hidden||curTab!=='play')return;const r=b.getBoundingClientRect();if(r.bottom>innerHeight||r.top<0)scrollBy(0,r.top-12);};
   go();requestAnimationFrame(()=>{go();});setTimeout(go,150);setTimeout(go,450);
 }
 function renderAdvice(){
   const box=$('advice');
   $('advExport').hidden=!(lastRun&&lastRun.run&&view&&view.ended&&view.env);   /* only a run with its loudness kept (the microphone) */
-  if(!lastRun){box.hidden=true;$('advDiscard').hidden=true;return;}
-  box.hidden=false;
+  if(!lastRun){box.hidden=$('advTop').hidden=true;$('advDiscard').hidden=true;return;}
+  box.hidden=$('advTop').hidden=false;
   $('advFirst').hidden=true;
   const L=lastRun,adv=adviceFor(L.rows.map(x=>({idx:x.idx,pct:x.pct,passes:x.passes})));
   const tgt=Math.round(TARGET*100)+'%';
@@ -5319,11 +5836,11 @@ function renderAdvice(){
     }
   }
   /* One sentence on what to work on. */
-  const fix=(view&&view.errs?insightParts(view)[0]:'')||'';
+  const fix=view&&view.errs?coachItems(view)[0]:null;
   if(!n)body='Stopped before one full pass, so nothing was scored.';
   else if(adv.cleared)body='';
   else if(one)body='Stay at '+S.bpm+' BPM until this settles.';
-  else body='Work on '+adv.weak.slice().sort((a,b)=>a.pct-b.pct).slice(0,6).map(b=>'exercise '+b.idx+' ('+Math.round(b.pct*100)+'%)').join(', ')+(adv.weak.length>6?' and more':'')+'. Stay at '+S.bpm+' BPM until they settle.';
+  else body='Work on '+adv.weak.slice().sort((a,b)=>a.pct-b.pct).slice(0,6).map((b,i)=>'exercise '+b.idx+' ('+Math.round(b.pct*100)+'%'+(i?'':' on time')+')').join(', ')+(adv.weak.length>6?' and more':'')+'. Stay at '+S.bpm+' BPM until they settle.';
   {   /* what was just earned gets its own moment at the top, once */
     const wins=[];
     if(L.newTempo&&L.newTempo.length)wins.push('New best tempo: '+(L.newTempo.length<=2?L.newTempo.map(x=>showKey(x.key)+' at '+x.bpm+' BPM').join(', '):L.newTempo.length+' exercises at a new tempo'));
@@ -5334,7 +5851,7 @@ function renderAdvice(){
   if(L.skipped)body+=' '+L.skipped+(L.skipped===1?' exercise was':' exercises were')+' stopped before one full pass and not scored.';
   if(!L.saved)body+=' Your browser would not save the records.';
   if(L.practice)body='Practice run, not saved. Your time still counts today. '+body;
-  $('advHead').textContent=fix;$('advBody').textContent=body;
+  coachNote($('advHead'),fix);$('advBody').textContent=body;
 }
 /* Discard takes the run out of your records and goes back to the start, as Done does: a discarded run has nothing
    left to review. Undo in the status line puts the run, and a routine saved with it, back and shows the result again. */
@@ -6873,6 +7390,7 @@ document.addEventListener('pointerdown',ev=>{if(rowMenu&&!rowMenu.contains(ev.ta
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&rowMenu)closeRowMenu();});
 /* a scroll closes it, except a small nudge of the page itself, such as a phone settling as the menu opens */
 window.addEventListener('scroll',ev=>{if(rowMenu&&!(ev.target===document&&Math.abs(scrollY-menuY)<=30))closeRowMenu();},true);window.addEventListener('resize',closeRowMenu);
+$('rows').addEventListener('scroll',rowsCue,{passive:true});   /* the fade moves to whichever edge still has strokes past it */
 /* A row of a run's exercise list: its number and sticking, and an empty actions cell for the caller to fill. */
 function exRow(i,k){
   const row=document.createElement('div');row.className='row num';
@@ -7229,7 +7747,6 @@ function syncRunUI(){
 function setReview(on){
   document.body.dataset.review=on?'1':'0';
   $('advDone').hidden=!on;
-  $('detBox').open=!on||document.documentElement.dataset.layout==='desktop';   /* the details wait behind a tap after a run on a phone */
   if(on){window.scrollTo(0,0);const h=$('advHead');h.tabIndex=-1;h.focus({preventScroll:true});}
 }
 function setRunning(on){
@@ -7775,7 +8292,7 @@ function syncLayout(){
   if(document.documentElement.dataset.layout===want)return;
   const first=!document.documentElement.dataset.layout;
   document.documentElement.dataset.layout=want;
-  if(want==='desktop'){$('setBox').open=true;$('detBox').open=true;$('exBox').open=true;}   /* nothing is tucked away where there is room */
+  if(want==='desktop'){$('setBox').open=true;$('exBox').open=true;}   /* nothing is tucked away where there is room */
   placeAdv();
   if(!first)window.dispatchEvent(new Event('resize'));
 }
@@ -7783,7 +8300,7 @@ function syncLayout(){
 function placeAdv(){
   const a=$('advBtns1');if(!a)return;
   if(document.documentElement.dataset.layout==='desktop')$('advBar').append(a);
-  else $('advBody').after(a);
+  else $('scoreBox').after(a);
 }
 /* A tempo button that repeats while held: after 0.4 s it steps by 1, getting quicker, then by 5 to the next multiple of 5.
    The click that ends a hold is not counted again. */

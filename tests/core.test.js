@@ -592,3 +592,247 @@ test('audio clock: a clock that stops for half a second is caught', () => {
   assert.equal(v.ok, false);
   assert.ok(v.slip > 0.45, JSON.stringify(v));
 });
+
+/* ---------- findings ---------- */
+/* a seeded random number generator and normal scatter, so the synthetic runs are the same every time */
+const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const gauss = r => () => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
+/* a run's per-exercise results: off(sg, slot, pass) gives each stroke's offset in ms, or null for a miss */
+const fakeRun = (pl, off) => pl.segs.map(sg => {
+  const sm = [];
+  for (let k = 0; k < sg.passes * sg.strokes; k++) { const sl = pl.slots[sg.first + k]; sm.push(off(sg, sl, Math.floor(sl.k / sg.N))); }
+  return { sm };
+});
+const fplan = (text, passes) => {
+  const p = c.parseRoutine(text);
+  const ex = c.resolveExercises(p.exercises, { unit: 'pass', v: passes || 8 }, { bpm: 60, subdiv: 4 });
+  return c.buildPlan(ex, { gapBeats: 0, clickMode: 'strokes', dyn: null });
+};
+
+test('findings: a late stroke at a change of sticking is found and named', () => {
+  const pl = fplan('RLRR RRLR'), g = gauss(rng(1));
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 + (sl.pos === 5 ? 18 : 0)), 20);
+  assert.ok(f.length);
+  assert.equal(f[0].what, 'ms');
+  assert.deepEqual(plain(f[0].pos), [5]);
+  assert.ok(f[0].d >= 12 && f[0].d <= 24, String(f[0].d));
+  assert.match(c.findingText(f[0], pl), /^Stroke 6 \(R\), at the change from RLRR to RRLR, lands \d+ ms later than the rest of the exercise\.$/);
+});
+
+test('findings: an early stroke reads as earlier', () => {
+  const pl = fplan('RLRR RRLR'), g = gauss(rng(2));
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 - (sl.pos === 5 ? 18 : 0)), 20);
+  assert.match(c.findingText(f[0], pl), /lands \d+ ms earlier/);
+});
+
+test('findings: random scatter rarely gives a finding', () => {
+  let hits = 0;
+  for (let s = 0; s < 200; s++) {
+    const pl = fplan('RLRR RRLR'), g = gauss(rng(100 + s));
+    if (c.findings(pl, fakeRun(pl, () => g() * 8), 20).length) hits++;
+  }
+  assert.ok(hits <= 10, hits + ' of 200 runs of scatter gave a finding');
+});
+
+test('findings: a stroke that is often not heard', () => {
+  const pl = fplan('RLRL RLRL'), g = gauss(rng(3)), r = rng(4);
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => sl.pos === 3 && r() < 0.6 ? null : g() * 6), 20).filter(x => x.what === 'miss');
+  assert.ok(f.length);
+  assert.ok(f[0].pos.includes(3));
+  assert.match(c.findingText(f[0], pl), /not heard \d+ of \d+ times/);
+});
+
+test('findings: a first pass off time and later passes on time', () => {
+  const pl = fplan('RLRL RLRL'), g = gauss(rng(5));
+  const f = c.findings(pl, fakeRun(pl, (sg, sl, p) => p === 0 ? 40 * (sl.pos % 2 ? 1 : -1) + g() * 4 : g() * 4), 20);
+  const s = f.find(x => x.what === 'settle');
+  assert.ok(s);
+  assert.match(c.findingText(s, pl), /^The first pass was 100% off time and later passes \d+%\. It takes a pass to settle\.$/);
+});
+
+test('findings: every exercise of a routine is read, each against itself', () => {
+  const pl = fplan('RLRL RLRL\nRLRR RRLR'), g = gauss(rng(6));
+  /* the first exercise is 15 ms late throughout, which says nothing; in the second, stroke 6 is late */
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 + (sg.idx === 1 ? 15 : sl.pos === 5 ? 18 : 0)), 20);
+  assert.ok(f.length);
+  assert.ok(f.every(x => x.ex === 2));
+  assert.match(c.findingText(f[0], pl), /^In exercise 2, stroke 6 \(R\)/);
+});
+
+test('findings: the second note of each double', () => {
+  const pl = fplan('RRLL RRLL'), g = gauss(rng(7));
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 + (sl.pos % 2 ? 15 : 0)), 20);
+  assert.equal(f[0].role, 'double2');
+  assert.match(c.findingText(f[0], pl), /^The second note of each double lands \d+ ms later/);
+});
+
+/* ---------- drills from findings ---------- */
+const drillRun = (text, off) => { const pl = fplan(text), g = gauss(rng(1)); const sr = fakeRun(pl, (sg, sl) => g() * 6 + off(sl)); return { pl, sr, f: c.findings(pl, sr, 20) }; };
+const parsesAsOne = d => { const p = c.parseRoutine(d.text); assert.deepEqual(plain(p.errors), [], d.text); assert.equal(p.exercises.length, 1, d.text); };
+
+test('drills: a late change of sticking gives the whole beats around it, 10 BPM slower', () => {
+  const { pl, sr, f } = drillRun('RLRL RLRL RLRR RRLR', sl => sl.pos === 13 ? 20 : 0);
+  const d = c.drillOf(pl, sr, f[0]);
+  assert.equal(d.text, '16 RLRR RRLR');
+  assert.equal(d.bpm, 50);
+  assert.equal(d.beats, 2);
+  parsesAsOne(d);
+});
+test('drills: the window can wrap into the previous pass', () => {
+  const { pl, sr, f } = drillRun('RLRR RLRL RLRL RLRL', sl => sl.pos === 0 ? 20 : 0);
+  const d = c.drillOf(pl, sr, f[0]);
+  assert.equal(d.text, '16 RLRL RLRR');   /* the last beat of one pass, then the first of the next */
+  parsesAsOne(d);
+});
+test('drills: a stroke role gives a drill, and a place in the beat does not', () => {
+  const { pl, sr, f } = drillRun('RRLL RRLL', sl => sl.pos % 2 ? 15 : 0);
+  const role = f.find(x => x.role === 'double2'), beat = f.find(x => x.kind === 'beat');
+  assert.equal(c.drillOf(pl, sr, role).text, '16 RRLL RRLL');
+  assert.equal(c.drillOf(pl, sr, beat), null);
+});
+test('drills: triplets keep their grouping and the tempo never goes below 40 BPM', () => {
+  const { pl, sr, f } = drillRun('8t RLR LRL RLR LRR', sl => sl.pos === 10 ? 20 : 0);
+  const d = c.drillOf(pl, sr, f[0]);
+  assert.equal(d.text, '8t RLR LRR RLR');
+  parsesAsOne(d);
+  pl.segs[0].bpm = 45;
+  assert.equal(c.drillOf(pl, sr, f[0]).bpm, 40);
+});
+
+/* ---------- findings: tempo over time and dynamics ---------- */
+/* a run with levels: off gives each offset in ms (null for a miss), lv each level in dB (null for none, as on a keyboard) */
+const fakeLvRun = (pl, off, lv) => pl.segs.map(sg => {
+  const sm = [], sb = [];
+  for (let k = 0; k < sg.passes * sg.strokes; k++) {
+    const sl = pl.slots[sg.first + k], p = Math.floor(sl.k / sg.N), v = off(sg, sl, p);
+    sm.push(v === null ? null : Math.round(v));
+    const d = v === null ? null : lv(sg, sl, p);
+    sb.push(d === null ? null : Math.round(d));
+  }
+  return { sm, sb };
+});
+const aplan = (text, passes) => {
+  const p = c.parseRoutine(text);
+  const ex = c.resolveExercises(p.exercises, { unit: 'pass', v: passes || 16 }, { bpm: 60, subdiv: 4 });
+  return c.buildPlan(ex, { gapBeats: 0, clickMode: 'strokes', dyn: { acc: 'g', oth: 'n' } });
+};
+
+test('findings: rushing across a run is found as a drift from late to early', () => {
+  const pl = fplan('RLRL RLRL', 16), g = gauss(rng(11)), T = pl.slots[pl.slots.length - 1].t;
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 + 4 - 16 * sl.t / T), 20).filter(x => x.what === 'drift');
+  assert.equal(f.length, 1);
+  assert.ok(f[0].d <= -10 && f[0].d >= -22, String(f[0].d));
+  assert.ok(f[0].from > 0 && f[0].to < 0, f[0].from + ' to ' + f[0].to);
+  assert.match(c.findingText(f[0], pl), /^You drifted from \d+ ms late to \d+ ms early over \d+ s: you were rushing\.$/);
+  assert.equal(c.drillOf(pl, fakeRun(pl, () => 0), f[0]), null);
+});
+
+test('findings: dragging reads as dragging', () => {
+  const pl = fplan('RLRL RLRL', 16), g = gauss(rng(12)), T = pl.slots[pl.slots.length - 1].t;
+  const f = c.findings(pl, fakeRun(pl, (sg, sl) => g() * 6 + 16 * sl.t / T), 20).filter(x => x.what === 'drift');
+  assert.match(c.findingText(f[0], pl), /you were dragging\.$/);
+});
+
+test('findings: scatter and level noise rarely give a drift or a level finding', () => {
+  let hits = 0;
+  for (let s = 0; s < 200; s++) {
+    const pl = aplan('RLRR LRLL', 8), g = gauss(rng(300 + s));
+    const f = c.findings(pl, fakeLvRun(pl, () => g() * 8, (sg, sl) => -20 + (sl.dy === 'A' ? 8 : 0) + g() * 2.5), 20);
+    if (f.some(x => x.what === 'drift' || x.what === 'db' || x.what === 'dbdrift')) hits++;
+  }
+  assert.ok(hits <= 10, hits + ' of 200 runs of scatter gave a finding');
+});
+
+test('findings: a loud tap after each accent asks for a downstroke', () => {
+  const pl = aplan('RLRR LRLL'), g = gauss(rng(13));
+  const sr = fakeLvRun(pl, () => g() * 5, (sg, sl) => {
+    const prev = pl.slots[pl.slots.indexOf(sl) - 1];
+    return -20 + (sl.dy === 'A' ? 8 : 0) + (sl.dy !== 'A' && prev && prev.dy === 'A' ? 5 : 0) + g() * 1.5;
+  });
+  const f = c.findings(pl, sr, 20).filter(x => x.what === 'db');
+  assert.equal(f.length, 1, JSON.stringify(f.map(x => [x.kind, x.role, x.d])));
+  assert.equal(f[0].role, 'afterAcc');
+  assert.equal(c.findingText(f[0], pl), 'The stroke after each accent is ' + f[0].d + ' dB louder than the other taps. Stop the stick low after each accent.');
+  assert.ok(f[0].d >= 3 && f[0].d <= 7, String(f[0].d));
+  assert.ok(f[0].slots.length >= 24);
+});
+
+test('findings: a loud tap before each accent is an upstroke lifted early', () => {
+  const pl = aplan('RLRR LRLL'), g = gauss(rng(14));
+  const sr = fakeLvRun(pl, () => g() * 5, (sg, sl) => {
+    const next = pl.slots[pl.slots.indexOf(sl) + 1];
+    return -20 + (sl.dy === 'A' ? 8 : 0) + (sl.dy !== 'A' && next && next.dy === 'A' ? 5 : 0) + g() * 1.5;
+  });
+  const f = c.findings(pl, sr, 20).filter(x => x.what === 'db');
+  assert.equal(f[0].role, 'beforeAcc');
+  assert.match(c.findingText(f[0], pl), /^The stroke before each accent is \d+ dB louder than the other taps\. Keep it low, and lift the stick only for the accent\.$/);
+});
+
+test('findings: one soft accent is found against the other accents', () => {
+  const pl = aplan('RLRR LRLL'), g = gauss(rng(15));
+  const f = c.findings(pl, fakeLvRun(pl, () => g() * 5, (sg, sl) => -20 + (sl.dy === 'A' ? (sl.pos === 4 ? 3 : 8) : 0) + g() * 1.5), 20).filter(x => x.what === 'db');
+  assert.equal(f.length, 1);
+  assert.deepEqual(plain(f[0].pos), [4]);
+  assert.match(c.findingText(f[0], pl), /^Stroke 5 \(L\), at the change from RLRR to LRLL, is \d+ dB softer than the other accents\.$/);
+});
+
+test('findings: accents pulled early are named as the accents', () => {
+  const pl = aplan('RLRR LRLL'), g = gauss(rng(16));
+  const f = c.findings(pl, fakeLvRun(pl, (sg, sl) => g() * 5 - (sl.dy === 'A' ? 12 : 0), (sg, sl) => -20 + (sl.dy === 'A' ? 8 : 0) + g() * 1.5), 20).filter(x => x.what === 'ms');
+  assert.equal(f[0].role, 'acc');
+  assert.match(c.findingText(f[0], pl), /^The accents land \d+ ms earlier than the rest of the exercise\.$/);
+});
+
+test('findings: getting softer across a run', () => {
+  const pl = aplan('RLRL RLRL'), g = gauss(rng(17)), T = pl.slots[pl.slots.length - 1].t;
+  const f = c.findings(pl, fakeLvRun(pl, () => g() * 5, (sg, sl) => -20 + (sl.dy === 'A' ? 8 : 0) - 6 * sl.t / T + g() * 1.5), 20).filter(x => x.what === 'dbdrift');
+  assert.equal(f.length, 1);
+  assert.match(c.findingText(f[0], pl), /^You got \d dB softer over \d+ s\. Keep the same stick heights to the end\.$/);
+});
+
+test('findings: a keyboard run has no levels, so no dynamics findings', () => {
+  const pl = aplan('RLRR LRLL'), g = gauss(rng(13));
+  const f = c.findings(pl, fakeLvRun(pl, () => g() * 5, () => null), 20);
+  assert.ok(!f.some(x => x.what === 'db' || x.what === 'dbdrift'));
+});
+
+test('flams and drags: the grace lead and level are summarised, with a word when flat, open or loud', () => {
+  const slots = [], res = new Map(), g = gauss(rng(18));
+  for (let i = 0; i < 24; i++) {
+    slots.push({ gr: i % 3 === 2 ? 2 : (i % 3 ? 1 : 0) });
+    if (slots[i].gr === 1) res.set(i, { ms: 0, gl: Math.round(9 + g()), gd: -1 });
+    else if (slots[i].gr === 2) res.set(i, { ms: 0, gl: Math.round(80 + g() * 5), gd: -8 });
+    else res.set(i, { ms: 0 });
+  }
+  const st = c.graceStats(slots, res);
+  assert.equal(st[1].n, 8);
+  assert.ok(st[1].lead >= 8 && st[1].lead <= 10);
+  assert.equal(st[2].gd, -8);
+  const t = c.graceNotes(st);
+  assert.equal(t.length, 2);
+  assert.match(t[1], /^Your drags start \d+ ms before the main stroke on average \(spread \d+ ms\), 8 dB under the main stroke\.$/);
+  assert.match(t[0], /^Your flams have the grace note \d+ ms ahead on average \(spread \d+ ms\), 1 dB under the main stroke\. That is close to flat: start the grace note a little earlier\. Play the grace note from lower, so it is softer than the main stroke\.$/);
+  assert.equal(c.graceStats(slots.slice(0, 12), res)[1], undefined);   /* 4 flams are too few */
+  assert.deepEqual(plain(c.graceStats(slots, new Map())), {});
+});
+
+test('wander: strokes that drift off the click and back together are found, across exercises', () => {
+  const run = (off, rate = 4, secs = 120) => {
+    const slots = [], res = new Map();
+    for (let i = 0; i < secs * rate; i++) { const t = i / rate; slots.push({ t }); res.set(i, { ms: Math.round(off(t, i)) }); }
+    return c.wander(slots, res, 20);
+  };
+  const g = gauss(rng(21));
+  const w = run(t => 40 * Math.sin(t / 3) + g() * 5);   /* a slow swing of 40 ms, with even strokes */
+  assert.ok(w, 'found');
+  assert.ok(w.early <= -30 && w.late >= 30, JSON.stringify(w));
+  assert.ok(w.slots.length > 0);
+  assert.match(c.wanderText(w), /^Your timing wanders off the click and back: a few beats at a time you drift up to \d+ ms early and up to \d+ ms late\. Your strokes stay even with each other, so it is the pulse that moves: listen for the click under your strokes\.$/);
+  assert.equal(run(() => -25 + g() * 5), null, 'a steady offset does not wander');
+  assert.equal(run(t => 40 * Math.sin(t / 3), 4, 10), null, 'too short');
+  let hits = 0;
+  for (let k = 0; k < 200; k++) if (run(() => g() * 25, 2)) hits++;   /* loose strokes, two a second */
+  assert.ok(hits <= 4, hits + ' of 200 noise runs wander');
+  const res = new Map([[0, { miss: true }]]);
+  assert.equal(c.wander([{ t: 0 }], res, 20), null);
+});

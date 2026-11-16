@@ -592,7 +592,76 @@ test('a stray exercise is deleted from a run, and an unheard one is not scored',
   await ctx.close();
 });
 
+audioTest('coaching says when the exercises were too short for notes on single strokes', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: ['16 RLRL RLRL RLRL RLRL', '16 LRLR LRLR LRLR LRLR'].join(String.fromCharCode(10)), eachUnit: 'pass', eachVal: 2, seeded: true });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  await p.evaluate(() => {
+    const T = window.__T, r = T.run(), pl = r.plan;
+    pl.slots.forEach((s, i) => T.hit({ t: r.t0 + s.t + ((i * 7) % 5 - 2) / 1000, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } }));
+  });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  const t = await p.evaluate(() => document.getElementById('advice').innerText);
+  assert.match(t, /Each exercise played 2 passes, so no single stroke was checked\. Notes on single strokes need at least 3 passes: set Each exercise to 3 passes or more\./, t);
+  /* once the run is over, the early-or-late gauge covers the whole run, not the last 32 strokes */
+  const g = await p.evaluate(() => { const e = window.__T.run().errs; return { span: document.querySelector('#leadBox h3').textContent, val: document.getElementById('gVal').textContent, n: e.length, mean: e.reduce((a, b) => a + b, 0) / e.length }; });
+  assert.equal(g.span, 'Early or late, whole run');
+  assert.ok(g.n > 32, 'more strokes than the live window');
+  assert.equal(parseFloat(g.val.replace('−', '-')), Math.round(g.mean * 10) / 10 + 0, JSON.stringify(g));
+  assert.deepEqual(p.errors, []);
+});
+
 /* One keyboard run with perfect hits. Returns how many runs were saved and the result text. */
+audioTest('a finding after a run marks its strokes on the review staff, in brackets while the rest fade, and a second tap clears them', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: '16 RLRL RLRL', eachUnit: 'pass', eachVal: 10, seeded: true });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  await p.evaluate(() => {
+    const T = window.__T, r = T.run(), pl = r.plan;
+    pl.slots.forEach((s, i) => {
+      const hand = pl.segs[s.seg].notes[s.pos].slice(-1), late = s.pos === 2 ? 0.03 : 0;   /* the third stroke always 30 ms late */
+      T.hit({ t: r.t0 + s.t + late + ((i * 7) % 5 - 2) / 1000, kb: true, f: null, det: { hand, conf: 1 } });
+    });
+  });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  /* the hands differ too, since only the right hand is late, so the finding may come second */
+  const note = await p.evaluate(() => document.querySelector('#advice [data-mk]').parentElement.innerText);
+  assert.match(note, /^Stroke 3 \(R\) lands \d+ ms later than the rest of the exercise\. Show on staff Practise at 110 BPM$/, note);
+  const btn = p.locator('#advice [data-mk]').first();
+  assert.equal(await btn.textContent(), 'Show on staff');
+  assert.equal(await p.isVisible('#mkKey'), false);
+  await btn.click();
+  await p.waitForFunction(() => +getComputedStyle(document.querySelector('#rows g.cd:not(.mk)')).opacity < 0.6, null, { timeout: 3000 });   /* the fade runs over a moment */
+  const on = await p.evaluate(() => {
+    const mk = [...document.querySelectorAll('#rows g.cd.mk')];
+    return { n: mk.length, texts: [...new Set(mk.map(c => c.querySelector('.lt').textContent))], edge: mk.length ? [...mk[0].querySelectorAll('.mks')].filter(e => getComputedStyle(e).display !== 'none').length : '', dim: getComputedStyle(document.querySelector('#rows g.cd:not(.mk)')).opacity, lit: mk.length ? getComputedStyle(mk[0]).opacity : '', label: document.querySelector('#advice [data-mk]').textContent, key: !document.getElementById('mkKey').hidden };
+  });
+  assert.equal(on.n, 10, 'one stroke in each of the ten passes');
+  assert.deepEqual(on.texts, ['R']);
+  assert.equal(on.edge, 3, 'a single marked stroke is bracketed underneath, with both ends');
+  assert.ok(+on.dim < 1 && +on.lit === 1, 'the strokes the note does not mean fade back');
+  assert.equal(on.label, 'Hide on staff');
+  assert.equal(on.key, true, 'the key under the staff explains the brackets');
+  await btn.click();
+  assert.equal(await p.evaluate(() => document.querySelectorAll('#rows g.cd.mk').length), 0);
+  assert.equal(await p.evaluate(() => document.getElementById('rows').classList.contains('mking')), false, 'nothing stays faded');
+  assert.equal(await btn.textContent(), 'Show on staff');
+  assert.equal(await p.isVisible('#mkKey'), false);
+  /* the drill: the beats around the stroke, 10 BPM slower, loaded on Play but not started */
+  await p.locator('#advice [data-mk] ~ [data-drill]').first().click();
+  if (await p.locator('#confirmModal').isVisible()) await p.click('#cfDiscard');   /* the routine was never saved */
+  const after = await p.evaluate(() => ({ text: document.getElementById('routineText').value, bpm: document.getElementById('bpm').value, sum: document.getElementById('playSummary').textContent, state: document.body.dataset.state, review: document.body.dataset.review || '' }));
+  assert.match(after.text, /^title: .*Drill/im, after.text);
+  assert.match(after.text, /^16 RLRL( RLRL)*$/m, after.text);
+  assert.equal(after.bpm, '110');
+  assert.match(after.sum, /^110 BPM.* plays for 1 minute$/, after.sum);
+  assert.notEqual(after.state, 'run');
+  assert.notEqual(after.review, '1');
+  assert.deepEqual(p.errors, []);
+});
+
 async function runOnce(settings, practice, init) {
   const p = await open(Object.assign({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true }, settings), null, init);
   if (practice) await p.evaluate(() => { const s = document.getElementById('score'); s.value = '0'; s.dispatchEvent(new Event('change')); });
