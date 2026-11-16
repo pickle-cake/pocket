@@ -277,8 +277,8 @@ body[data-run="1"] .notice{display:none}
 .cd.early .lt{font-style:italic}      /* a second cue beside colour: early leans, late is underlined */
 .cd.late .lt{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .cd.miss .lt{fill:var(--muted);opacity:.4}
-.staff .mkb{fill:var(--ink);display:none}
-.cd.mk .mkb{display:block}   /* a finding's strokes: a bar above the beams, joined across neighbours, in the empty space there. Shape, not colour, so it reads beside the timing colours. */
+.staff .mks{fill:var(--ink);display:none}
+.cd.mk .mks.h,.cd.mk.mkL .mks.l,.cd.mk.mkR .mks.r{display:block}   /* a finding's strokes: a bracket under the timing, round one stroke or a run of them. Shape, not colour, so it reads beside the timing colours. */
 .rows.mking .cd:not(.mk){opacity:.3}   /* and the strokes it does not mean step back */
 @media (prefers-reduced-motion:no-preference){.cd .lt{transition:fill var(--dur-1) var(--ease)}.cd{transition:opacity var(--dur-1) var(--ease)}}   /* heard to judged: the colour fades in */
 .staff .acc{stroke:var(--ink);stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;fill:none}
@@ -764,7 +764,8 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .res .shd{display:flex;align-items:baseline;gap:8px}
 .res .shd b{font:800 var(--t-hero) var(--font-display);font-variant-numeric:tabular-nums}   /* the score: the result's hero */
 .res .shd span{font:500 16px var(--font-body);color:var(--muted);white-space:nowrap}
-.res .shd em{margin-left:auto;align-self:center;font:700 11px var(--font-body);letter-spacing:.06em;text-transform:uppercase;background:var(--fill);color:var(--accent-ink);padding:4px 9px;border-radius:999px;font-style:normal;text-align:center}   /* centred when a narrow phone wraps it to two lines */
+#advRes{overflow:hidden}
+.res .hsbar{margin:calc(-1*var(--s-4)) calc(-1*var(--s-4)) 0;padding:var(--s-2) var(--s-4);font:700 11px var(--font-body);letter-spacing:.06em;text-transform:uppercase;background:var(--fill);color:var(--accent-ink);text-align:center}   /* a new high score: a band across the top of the card */   /* centred when a narrow phone wraps it to two lines */
 .res .sbar{position:relative;height:10px;border-radius:999px;background:var(--line)}
 .res .sbar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--fill);min-width:10px}
 .res .sbar u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.7}
@@ -782,7 +783,7 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .key .k.ok{color:var(--ok)}.key .k.early{color:var(--early);font-style:italic}
 .key .k.late{color:var(--late);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .key .k.miss{color:var(--muted);opacity:.4}
-.key .k.box{border-top:3px solid var(--ink);padding:0 var(--s-1)}   /* like a marked stroke on the staff: a bar above it */
+.key .k.box{padding:2px var(--s-1);background:linear-gradient(var(--ink),var(--ink)) bottom/100% 2px,linear-gradient(var(--ink),var(--ink)) bottom left/2px 5px,linear-gradient(var(--ink),var(--ink)) bottom right/2px 5px;background-repeat:no-repeat}   /* like a marked stroke on the staff: a bracket under it */
 @media (max-width:359px){.tabs button{font-size:13px;letter-spacing:0}}   /* four tab names fit the narrowest phones */
 .dur{display:grid;grid-template-columns:minmax(70px,1fr) minmax(110px,1.4fr);gap:8px}
 .maxline{margin:-10px 0 0;font-size:13px;color:var(--muted);text-align:right}
@@ -1524,8 +1525,9 @@ RLRR LRLL RLRR LRLL</pre>
         <button class="btn link" type="button" data-help="help-play">More in Help</button>
       </div>
       <div class="card res" id="advRes">
+        <p class="hsbar" id="advHs" hidden>New high score</p>
         <span class="slab">Score</span>
-        <div class="shd"><b id="advScore"></b><span id="advMax"></span><em id="advHs" hidden>New high score</em></div>
+        <div class="shd"><b id="advScore"></b><span id="advMax"></span></div>
         <div class="sbar" id="advScoreBar"><i></i><u></u></div>
         <div class="scap"><span id="advOfMax"></span><span id="advPrev"></span></div>
         <p class="swin" id="advBonus" hidden></p>
@@ -3368,7 +3370,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.154';                           /* shown beside the title */
+const VERSION='1.5.155';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4526,7 +4528,7 @@ function staffLine(sg,opt){
   const padL=sg.sig?PADL_SIG:PADL,padR=PADR;
   const gp=gapsOf(durs),ext=gp.ext,gapAt=gp.gapAt,totalExt=gp.total;
   const LW=Math.max(avail,Math.ceil(MINSLOT*opt.beats/opt.dmin)+opt.ext+padL+padR),u=(LW-padL-padR-opt.ext)/opt.beats;
-  const H=92,Y0=8,Y=54,TOP=28,SX=6;                  /* staff line, stem top, stem offset from note centre */
+  const H=100,Y0=8,Y=54,TOP=28,SX=6;                  /* staff line, stem top, stem offset from note centre */
   const mk=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
   const svg=mk('svg',{viewBox:'0 '+Y0+' '+LW+' '+H,class:'staff','aria-hidden':'true'});
   const off=gp.offs;
@@ -4582,7 +4584,9 @@ function staffLine(sg,opt){
       }
       g._slot=-1;
     }else{
-      g.appendChild(mk('rect',{class:'mkb',x:x0(i),y:12,width:xw(i),height:3}));   /* shown while a coaching note marks this stroke */
+      /* shown while a coaching note marks this stroke: a bracket under the timing, its line, and its ends where a marked run starts (l) and stops (r). The lines span the whole stroke, so a run's bracket is unbroken. */
+      const bl=x0(i)+1,br=x0(i)+xw(i)-1;
+      [[x0(i),104,xw(i),2,'h'],[bl,100,2,6,'l'],[br-2,100,2,6,'r']].forEach(q=>g.appendChild(mk('rect',{class:'mks '+q[4],x:q[0],y:q[1],width:q[2],height:q[3]})));
       g.appendChild(mk('ellipse',{class:'nh',cx:cx,cy:Y,rx:6.6,ry:4.7,transform:'rotate(-20 '+cx+' '+Y+')'}));
       g.appendChild(mk('line',{class:'stem',x1:cx+SX,x2:cx+SX,y1:Y-1,y2:TOP}));
       /* a buzz stroke: a z across the stem */
@@ -4944,8 +4948,14 @@ function paintRows(r,cursor,heard){
       const mk=marks&&marks.has(el._slot);
       if(mk!==!!el._mk){el._mk=mk;el.classList.toggle('mk',mk);}
     });
+    /* a bracket closes where the marked run ends: at a stroke that is not marked, or the end of the line */
+    o.cards.forEach((el,i)=>{
+      const same=c=>c&&c._mk&&c.ownerSVGElement===el.ownerSVGElement;
+      el.classList.toggle('mkL',!!el._mk&&!same(o.cards[i-1]));
+      el.classList.toggle('mkR',!!el._mk&&!same(o.cards[i+1]));
+    });
   });
-  if($('mkKey').hidden===!!marks)$('mkKey').hidden=!marks;   /* the key explains the bars while a note is shown */
+  if($('mkKey').hidden===!!marks)$('mkKey').hidden=!marks;   /* the key explains the brackets while a note is shown */
   if($('rows').classList.contains('mking')!==!!marks)$('rows').classList.toggle('mking',!!marks);
   movePlayhead(r,cursor,heard);placeLvMeter(r,cursor);
   lastCur=r&&!r.ended?cursor:null;syncWindow(lastCur);

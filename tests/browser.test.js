@@ -613,7 +613,7 @@ audioTest('coaching says when the exercises were too short for notes on single s
 });
 
 /* One keyboard run with perfect hits. Returns how many runs were saved and the result text. */
-audioTest('a finding after a run marks its strokes on the review staff, with a bar above them while the rest fade, and a second tap clears them', async () => {
+audioTest('a finding after a run marks its strokes on the review staff, in brackets while the rest fade, and a second tap clears them', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '16 RLRL RLRL', eachUnit: 'pass', eachVal: 10, seeded: true });
   await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
@@ -636,14 +636,14 @@ audioTest('a finding after a run marks its strokes on the review staff, with a b
   await p.waitForFunction(() => +getComputedStyle(document.querySelector('#rows g.cd:not(.mk)')).opacity < 0.5, null, { timeout: 3000 });   /* the fade runs over a moment */
   const on = await p.evaluate(() => {
     const mk = [...document.querySelectorAll('#rows g.cd.mk')];
-    return { n: mk.length, texts: [...new Set(mk.map(c => c.querySelector('.lt').textContent))], edge: mk.length ? getComputedStyle(mk[0].querySelector('.mkb')).display : '', dim: getComputedStyle(document.querySelector('#rows g.cd:not(.mk)')).opacity, lit: mk.length ? getComputedStyle(mk[0]).opacity : '', label: document.querySelector('#advice [data-mk]').textContent, key: !document.getElementById('mkKey').hidden };
+    return { n: mk.length, texts: [...new Set(mk.map(c => c.querySelector('.lt').textContent))], edge: mk.length ? [...mk[0].querySelectorAll('.mks')].filter(e => getComputedStyle(e).display !== 'none').length : '', dim: getComputedStyle(document.querySelector('#rows g.cd:not(.mk)')).opacity, lit: mk.length ? getComputedStyle(mk[0]).opacity : '', label: document.querySelector('#advice [data-mk]').textContent, key: !document.getElementById('mkKey').hidden };
   });
   assert.equal(on.n, 10, 'one stroke in each of the ten passes');
   assert.deepEqual(on.texts, ['R']);
-  assert.equal(on.edge, 'block', 'a bar above each marked stroke');
+  assert.equal(on.edge, 3, 'a single marked stroke is bracketed underneath, with both ends');
   assert.ok(+on.dim < 1 && +on.lit === 1, 'the strokes the note does not mean fade back');
   assert.equal(on.label, 'Hide on staff');
-  assert.equal(on.key, true, 'the key under the staff explains the bars');
+  assert.equal(on.key, true, 'the key under the staff explains the brackets');
   await btn.click();
   assert.equal(await p.evaluate(() => document.querySelectorAll('#rows g.cd.mk').length), 0);
   assert.equal(await p.evaluate(() => document.getElementById('rows').classList.contains('mking')), false, 'nothing stays faded');
