@@ -585,7 +585,7 @@ test('a stray exercise is deleted from a run, and an unheard one is not scored',
   await p.waitForTimeout(300);
   t = await text();
   assert.doesNotMatch(t, /\d not played/);
-  assert.match(t, /88%/);                      /* both exercises were played, so the run now has an overall score */
+  assert.match(t, /87%/);                      /* both exercises were played, so the run now has an overall score, rounded down */
   const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')).runs[0]);
   assert.equal(saved.ne, 2);
   assert.deepEqual(p.errors, []);
@@ -1033,6 +1033,23 @@ audioTest('scores and rewards start off, and with them off a run is saved and cl
   assert.ok(o.ach, 'no Achievements tab');
   assert.doesNotMatch(o.tol, /points/, 'the windows give no points');
   assert.doesNotMatch(await p.evaluate(() => document.getElementById('pvHist').innerText), /Score:/, 'history shows no score');
+});
+
+
+audioTest('after a run a note says what to play next time, and Play says it again with the last result', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } }); }); });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  assert.equal(await p.textContent('#advNext'), 'Next time: try 125 BPM.');
+  assert.equal(await p.textContent('#advBody'), '', 'no closing advice repeats it');
+  await p.evaluate(() => document.getElementById('advDone').click());
+  await p.waitForTimeout(200);
+  assert.ok(await p.isVisible('#lastNote'), 'Play shows the last result');
+  assert.equal(await p.textContent('#lastNote'), 'Last time: 100% on time at 120 BPM. Try 125 BPM.');
+  assert.deepEqual(await p.evaluate('[onPct(0.896), onPct(0.9), onPct(0.29)]'), ['89%', '90%', '29%'], 'on time rounds down, so below the target never reads 90%');
 });
 
 audioTest('rests keep the streak and score nothing unless hit, and a hit on a rest is a miss', async () => {

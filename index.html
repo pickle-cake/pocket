@@ -775,6 +775,7 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .res .sacc b{font:800 var(--t-display) var(--font-display);font-variant-numeric:tabular-nums;white-space:nowrap}
 .res[data-ok="1"] .sacc b{color:var(--ok)}
 .res .sacc>span{font-size:13px;color:var(--muted)}
+.res .snext{margin:0;font:500 var(--t-small) var(--font-body);color:var(--ink)}   /* what to play next time, under the share on time: a note, not a button */
 .res.solo .slab,.res.solo .shd,.res.solo .sbar,.res.solo .scap,.res.solo .swin{display:none}
 .res.solo .sacc{border-top:0;padding-top:0}
 .res.solo .sacc b{font:800 var(--t-hero) var(--font-display)}   /* the hero of the result card */
@@ -1363,7 +1364,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Scores and rewards:</b> turn them on under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
-        <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run the app names the weak exercises and suggests staying at that tempo until they settle. Any tempo is always allowed.</li>
+        <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run a note says what to play next time: stay at that tempo and work on the lowest exercise, or, once cleared, try 5 BPM faster. Play shows it again, with your last result, when you next open that exercise or routine. On time is rounded down, so 89.6% reads 89%. Any tempo is always allowed.</li>
         <li><b>Coaching</b> after a run names the strokes that go wrong most often, such as one that is always late. It needs at least 3 passes of an exercise to tell a habit from chance, so set Each exercise to 3 passes or more.</li>
         <li><b>Discard</b>, under a result, removes the run from your records, for example after a bad microphone read. Undo puts it back.</li>
         <li><b>Progress page:</b> every exercise, sorted by accuracy, with accuracy at your last tempo, trend and early/late bias, grouped by click level. Play loads that exercise. A routine is cleared at a tempo when one run covered every exercise and all reached 90%.</li>
@@ -1444,6 +1445,7 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="field"><label for="eachVal"><span class="routine-only">Each exercise</span><span class="single-only">Length</span></label>
           <div class="dur"><input type="number" id="eachVal" min="1" max="200" step="1" inputmode="decimal"><select id="eachUnit" aria-label="Measured in"><option value="min">min</option><option value="pass">passes</option></select></div></div>
       </div>
+      <p class="hint" id="lastNote" hidden></p>
       <p class="hint" id="eachNote" hidden></p>
       <div class="field"><span class="lbl" id="clickLbl">Click</span>
         <div class="seg wide" id="clickSeg" role="group" aria-labelledby="clickLbl" aria-describedby="clickHint">
@@ -1540,6 +1542,7 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="scap"><span id="advPrev"></span></div>
         <p class="swin" id="advBonus" hidden></p>
         <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span> &middot; <span id="advSub"></span></small></span></div>
+        <p class="snext" id="advNext" hidden></p>
       </div>
       <section class="panel" id="scoreBox" hidden aria-label="Score breakdown">
         <h3>Score breakdown</h3>
@@ -2817,6 +2820,15 @@ const showPattern=(notes,gs,subs,def,sig,src)=>showSig(sig)+(src||nameMarkers(fm
 const LEVELS=[{v:'strokes',n:'Easy'},{v:'beat',n:'Medium'},{v:'half',n:'Hard'},{v:'bar',n:'Extreme'},{v:'none',n:'Master'}];   /* the click fades out; an old run saved as 'off' was count-in only and was never scored */
 const levelName=v=>(LEVELS.find(l=>l.v===v)||{n:''}).n;
 const TARGET=0.9;                                /* accuracy that counts as cleared at a tempo */
+/* An on-time share as a whole percentage, rounded down, so a run below the target never reads as the target. */
+const onPct=v=>Math.floor(v*100+1e-9)+'%';
+/* What to play next time, from a result: one exercise or a whole routine, its share on time, its tempo, and for a routine
+   the lowest exercise below the target ({idx,pct}) or null. */
+const TRY_STEP=5;
+function nextText(o){
+  if(o.pct>=TARGET)return o.bpm+TRY_STEP<=220?'try '+(o.bpm+TRY_STEP)+' BPM.':'try less click or a tighter window.';
+  return 'stay at '+o.bpm+' BPM'+(o.low?' and work on exercise '+o.low.idx+', the lowest at '+onPct(o.low.pct)+' on time.':' until it reaches '+onPct(TARGET)+' on time.');
+}
 function hash32(str){let h=5381;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;return h.toString(36);}
 /* One canonical text per rhythm, whatever the default subdivision or spacing was. */
 function patKey(notes,gs,subs,def,sig){return sigPrefix(sig)+fmtPattern(notes,gs,subs.map(x=>x||def),0);}
@@ -3378,7 +3390,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.163';                           /* shown beside the title */
+const VERSION='1.5.164';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5534,7 +5546,7 @@ function scrollToMark(){
 }
 function updateStats(r){
   const sp=r?sd(r.errs.slice(-32)):NaN;
-  $('sWithin').textContent=r&&r.slots?Math.round(r.within/r.slots*100)+'%':'—';
+  $('sWithin').textContent=r&&r.slots?onPct(r.within/r.slots):'—';
   $('sSpread').textContent=isNaN(sp)?'—':sp.toFixed(1);
   $('sHits').textContent=r?r.errs.length+' of '+r.slots:'—';
   $('sL').textContent=r&&r.hand.L.length?fmtMs(mean(r.hand.L),1):'—';
@@ -5815,13 +5827,13 @@ function renderAdvice(){
       $('advFirstTol').textContent='\u00b1'+(L.run&&L.run.tol||S.tol)+' ms';$('advFirstTgt').textContent=tgt;$('advFirstScore').hidden=!S.game;$('advFirst').hidden=false;
     }
     /* One big result: the share of strokes on time, what it means for the target, and how it compares with your best at this tempo. */
-    const pct=Math.round(100*played.reduce((t,x)=>t+x.pct*x.due,0)/due),pb=x=>L.prevBest&&L.prevBest.has(x.key)?L.prevBest.get(x.key):null;
-    $('advPct').textContent=pct+'%';
+    const share=played.reduce((t,x)=>t+x.pct*x.due,0)/due,pb=x=>L.prevBest&&L.prevBest.has(x.key)?L.prevBest.get(x.key):null;
+    $('advPct').textContent=onPct(share);
     $('advRes').dataset.ok=adv.cleared?'1':'0';
     if(one){
       const x=played[0],b=pb(x);
       $('advStat').textContent=adv.cleared?'Cleared the '+tgt+' target':'Target is '+tgt;
-      $('advSub').textContent=b===null?'First run at this tempo':(x.pct>b+1e-9?'New best, was '+Math.round(b*100)+'%':'Best at this tempo: '+Math.round(b*100)+'%');
+      $('advSub').textContent=b===null?'First run at this tempo':(x.pct>b+1e-9?'New best, was '+onPct(b):'Best at this tempo: '+onPct(b));
     }else{
       const nb=played.filter(x=>{const b=pb(x);return b!==null&&x.pct>b+1e-9;}).length;
       $('advStat').textContent=played.filter(x=>x.pct>=TARGET).length+' of '+n+' cleared';
@@ -5851,9 +5863,12 @@ function renderAdvice(){
   /* One sentence on what to work on. */
   const fix=view&&view.errs?coachItems(view)[0]:null;
   if(!n)body='Stopped before one full pass, so nothing was scored.';
-  else if(adv.cleared)body='';
-  else if(one)body='Stay at '+S.bpm+' BPM until this settles.';
-  else body='Work on '+adv.weak.slice().sort((a,b)=>a.pct-b.pct).slice(0,6).map((b,i)=>'exercise '+b.idx+' ('+Math.round(b.pct*100)+'%'+(i?'':' on time')+')').join(', ')+(adv.weak.length>6?' and more':'')+'. Stay at '+S.bpm+' BPM until they settle.';
+  else body='';
+  {   /* a suggestion for the next run, under the share on time: text, not a button, as the next run may be another day */
+    const nx=$('advNext'),low=one?null:adv.weak.slice().sort((a,b)=>a.pct-b.pct)[0]||null;
+    nx.hidden=!due;
+    if(due)nx.textContent='Next time: '+nextText({pct:adv.cleared?1:0,bpm:L.run&&L.run.bpm||S.bpm,low:low});
+  }
   {   /* what was just earned gets its own moment at the top, once */
     const wins=[];
     if(L.newTempo&&L.newTempo.length)wins.push('New best tempo: '+(L.newTempo.length<=2?L.newTempo.map(x=>showKey(x.key)+' at '+x.bpm+' BPM').join(', '):L.newTempo.length+' exercises at a new tempo'));
@@ -5946,14 +5961,14 @@ function sparkline(vals){
   svg.appendChild(el('polyline',{points:vals.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' '),class:'sp-l',fill:'none'}));
   svg.appendChild(el('circle',{cx:x(vals.length-1),cy:y(vals[vals.length-1]),r:2.5,class:'sp-d'}));
   const d=vals[vals.length-1]-vals[0],w=document.createElement('span');
-  w.className='sparkwrap';w.title=Math.round(vals[0]*100)+'% to '+Math.round(vals[vals.length-1]*100)+'% over '+vals.length+' runs';
+  w.className='sparkwrap';w.title=onPct(vals[0])+' to '+onPct(vals[vals.length-1])+' over '+vals.length+' runs';
   w.appendChild(svg);
   const t=document.createElement('span');t.className='sp-n '+(d>0.02?'ok':(d<-0.02?'late':''));t.textContent=d>0.02?'▲':(d<-0.02?'▼':'►');
   w.appendChild(t);return w;
 }
 const biasCls=v=>isNaN(v)?'':(v<-2.5?'early':(v>2.5?'late':'ok'));
 const accCls=p=>p>=TARGET?'ok':'late';
-const accCell=p=>[Math.round(p*100)+'%',accCls(p)];
+const accCell=p=>[onPct(p),accCls(p)];
 function renderPractice(){
   const days=practiceDays(recs.runs,recs.sum),now=new Date(),mins=k=>Math.round((days.get(k)||0)/60);
   const mon=(now.getDay()+6)%7,start=new Date(now.getFullYear(),now.getMonth(),now.getDate()-mon-21);
@@ -6093,7 +6108,7 @@ function renderScoreGroups(stats,practise,usual){
     const rows=stats.filter(x=>x.lv===l.v);
     if(!rows.length)return;
     const weakest=Math.min.apply(null,rows.map(x=>x.recent));
-    panel.appendChild(listRow(l.n,false,rows.length+(rows.length===1?' exercise':' exercises')+' \u00B7 '+clearedN(rows)+' cleared \u00B7 Lowest accuracy: '+Math.round(weakest*100)+'%','',mean(rows.map(x=>x.recent)),()=>{scoreLevel=l.v;pgPush();renderProgress();}));
+    panel.appendChild(listRow(l.n,false,rows.length+(rows.length===1?' exercise':' exercises')+' \u00B7 '+clearedN(rows)+' cleared \u00B7 Lowest accuracy: '+onPct(weakest),'',mean(rows.map(x=>x.recent)),()=>{scoreLevel=l.v;pgPush();renderProgress();}));
   });
   box.appendChild(panel);
   if(!cur)return;
@@ -6237,7 +6252,7 @@ function renderScoreSummary(stats){
   weak.forEach((x,i)=>{
     const r=document.createElement('div');r.className='row';
     const a=document.createElement('span');a.className='rt seq';a.textContent=showKey(x.k)+(x.dy?' \u00B7 '+dynText(x.dy):'');
-    const b=document.createElement('span');b.className='rm';b.textContent=Math.round(x.recent*100)+'% at '+x.bpm+' BPM'+(i===0?' \u00B7 lowest accuracy':'');
+    const b=document.createElement('span');b.className='rm';b.textContent=onPct(x.recent)+' at '+x.bpm+' BPM'+(i===0?' \u00B7 lowest accuracy':'');
     const ra=document.createElement('span');ra.className='ra';ra.appendChild(iconBtn('play','Play this exercise',()=>practisePattern(x.k,x.lv,x.dy)));
     r.append(a,b,ra);box.appendChild(r);
   });
@@ -6535,7 +6550,7 @@ function renderHistoryDays(){
       const tm=x=>new Date(x.t).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
       const bpms=f.map(x=>x.bpm),lo=Math.min.apply(null,bpms),hi=Math.max.apply(null,bpms);
       const best=bestPct(f);
-      const sub=f.length+' runs · '+tm(f[f.length-1])+' – '+tm(r)+' · '+(r.lv==='off'?'Count-in only':levelName(r.lv))+' · '+(lo===hi?lo:lo+'–'+hi)+' BPM'+(best!==null?' · best '+Math.round(best*100)+'%':'');
+      const sub=f.length+' runs · '+tm(f[f.length-1])+' – '+tm(r)+' · '+(r.lv==='off'?'Count-in only':levelName(r.lv))+' · '+(lo===hi?lo:lo+'–'+hi)+' BPM'+(best!==null?' · best '+onPct(best):'');
       groupRow(panel,t.text,t.mono,sub,dyLine(r),fig.acc,f);
     });
     box.appendChild(panel);
@@ -6681,7 +6696,7 @@ function renderHistoryGroups(){
   list.slice(0,histShown).forEach(g=>{
     const f=g[0],t=runTitle(f),fig=runFigures(f);
     const best=bestPct(g);
-    const sub=(f.lv==='off'?'Count-in only':levelName(f.lv))+' · '+g.length+(g.length===1?' run':' runs')+' · latest '+dayWord(f.t)+(best!==null&&g.length>1?' · best '+Math.round(best*100)+'%':'');
+    const sub=(f.lv==='off'?'Count-in only':levelName(f.lv))+' · '+g.length+(g.length===1?' run':' runs')+' · latest '+dayWord(f.t)+(best!==null&&g.length>1?' · best '+onPct(best):'');
     if(g.length===1)panel.appendChild(listRow(t.text,t.mono,sub,dyLine(f),fig.acc,()=>openHist({run:f.id}),null,f));else groupRow(panel,t.text,t.mono,sub,dyLine(f),fig.acc,g);
   });
   if(panel.children.length)box.appendChild(panel);
@@ -7841,6 +7856,7 @@ function syncInfo(){
     $('eachVal').disabled=!!routineParsed.each||(run&&!run.ended);
     $('eachUnit').disabled=!!routineParsed.each||(run&&!run.ended);
   }
+  syncLastNote();
   $('startBtn').disabled=(!ok||setupNeeded())&&!(run&&!run.ended);   /* while set-up is needed the welcome hides Start; disabled still stops the Space shortcut */
   const sum=$('playSummary');
   if(!exercises.length)sum.textContent=S.mode==='single'?'Type an exercise in the editor, then press Start.':'Add some exercises in the editor, then press Start.';
@@ -7873,6 +7889,22 @@ function syncDyCtl(){
 /* BPM counts the pulse. Say so when that is the eighth note. */
 function pulseNote(exercises){
   return exercises.some(b=>b.sig&&b.sig.d===8)?' (per eighth note)':(exercises.some(b=>b.sig&&b.sig.d===2)?' (per half note)':'');
+}
+/* The last saved run of what is loaded, at this click and accent rule, and what to play next: "Last time: 88% at 90 BPM. Stay at 90 BPM." */
+function syncLastNote(){
+  const el=$('lastNote'),ex=allExercises();let e=null,pct=NaN,low=null;
+  if(ex.length&&!(run&&!run.ended)&&!lastRun){   /* not beside the result it repeats */
+    const keys=ex.map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig)),cd=S.click,dy=dynCode();
+    if(S.mode==='single'||keys.length===1){e=guide().pat.get(statKey(keys[0],cd,dy));if(e)pct=e.last;}
+    else{
+      e=guide().rt.get(statKey(routineKeyOf(keys),cd,dy));
+      const r=e&&e.recs&&e.recs[e.recs.length-1];pct=r?r.pct:NaN;
+      const lr=e&&[...recs.runs].reverse().find(x=>x.rk===e.rk&&x.lv===cd&&(x.dy||'')===(dy||''));
+      if(lr){const w=lr.exercises.map((b,i)=>({idx:b.idx||i+1,pct:b.due>0?b.within/b.due:1})).filter(b=>b.pct<TARGET).sort((a,b)=>a.pct-b.pct);low=w[0]||null;}
+    }
+  }
+  el.hidden=!(e&&e.bpm&&!isNaN(pct));
+  if(!el.hidden){const t=nextText({pct:pct,bpm:e.bpm,low:low});el.textContent='Last time: '+onPct(pct)+' on time at '+e.bpm+' BPM. '+t[0].toUpperCase()+t.slice(1);}
 }
 function routineGuide(){
   const e=guide().rt.get(statKey(routineKeyOf(allExercises().map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig))),S.click,dynCode()));
