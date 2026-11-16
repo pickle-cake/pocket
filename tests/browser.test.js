@@ -613,7 +613,7 @@ audioTest('coaching says when the exercises were too short for notes on single s
 });
 
 /* One keyboard run with perfect hits. Returns how many runs were saved and the result text. */
-audioTest('a finding after a run marks its strokes on the review staff, with an outline, and a second tap clears them', async () => {
+audioTest('a finding after a run marks its strokes on the review staff, with a bar above them while the rest fade, and a second tap clears them', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '16 RLRL RLRL', eachUnit: 'pass', eachVal: 10, seeded: true });
   await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
@@ -633,17 +633,20 @@ audioTest('a finding after a run marks its strokes on the review staff, with an 
   assert.equal(await btn.textContent(), 'Show on staff');
   assert.equal(await p.isVisible('#mkKey'), false);
   await btn.click();
+  await p.waitForFunction(() => +getComputedStyle(document.querySelector('#rows g.cd:not(.mk)')).opacity < 0.5, null, { timeout: 3000 });   /* the fade runs over a moment */
   const on = await p.evaluate(() => {
     const mk = [...document.querySelectorAll('#rows g.cd.mk')];
-    return { n: mk.length, texts: [...new Set(mk.map(c => c.querySelector('.lt').textContent))], edge: mk.length ? getComputedStyle(mk[0].querySelector('.bg')).stroke : '', label: document.querySelector('#advice [data-mk]').textContent, key: !document.getElementById('mkKey').hidden };
+    return { n: mk.length, texts: [...new Set(mk.map(c => c.querySelector('.lt').textContent))], edge: mk.length ? getComputedStyle(mk[0].querySelector('.mkb')).display : '', dim: getComputedStyle(document.querySelector('#rows g.cd:not(.mk)')).opacity, lit: mk.length ? getComputedStyle(mk[0]).opacity : '', label: document.querySelector('#advice [data-mk]').textContent, key: !document.getElementById('mkKey').hidden };
   });
   assert.equal(on.n, 10, 'one stroke in each of the ten passes');
   assert.deepEqual(on.texts, ['R']);
-  assert.notEqual(on.edge, 'transparent');
+  assert.equal(on.edge, 'block', 'a bar above each marked stroke');
+  assert.ok(+on.dim < 1 && +on.lit === 1, 'the strokes the note does not mean fade back');
   assert.equal(on.label, 'Hide on staff');
-  assert.equal(on.key, true, 'the key under the staff explains the boxes');
+  assert.equal(on.key, true, 'the key under the staff explains the bars');
   await btn.click();
   assert.equal(await p.evaluate(() => document.querySelectorAll('#rows g.cd.mk').length), 0);
+  assert.equal(await p.evaluate(() => document.getElementById('rows').classList.contains('mking')), false, 'nothing stays faded');
   assert.equal(await btn.textContent(), 'Show on staff');
   assert.equal(await p.isVisible('#mkKey'), false);
   /* the drill: the beats around the stroke, 10 BPM slower, loaded on Play but not started */
