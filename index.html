@@ -858,6 +858,10 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <div class="field"><label for="layout">Layout</label>
         <select id="layout"><option value="auto">Automatic</option><option value="phone">Phone</option><option value="desktop">Desktop</option></select>
         <p class="hint">Automatic uses the desktop layout on a wide window. This is kept on this device only.</p></div>
+      <button class="toggle" id="game" type="button" role="switch" aria-checked="true" aria-labelledby="gameLbl" aria-describedby="gameHint">
+        <span class="toggle-text"><span class="toggle-title" id="gameLbl">Scores and rewards</span><span class="toggle-meta" id="gameHint">The score, streak meter, high scores and medals. Off shows on time only; your runs are still saved and exercises still cleared</span></span>
+        <span class="toggle-state" aria-hidden="true"></span><span class="toggle-track" aria-hidden="true"></span>
+      </button>
     </section>
 
     </div>
@@ -1162,7 +1166,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>Library:</b> your saved routines, each with Edit and Play. <b>New</b> starts a routine, <b>Import</b> adds one from a file or a link, and <b>Export</b> saves the whole library as one file that Import reads back (it can also be hosted as a library). A title such as "Rudiment: Single stroke roll" groups the routine under Rudiment. Routines with no group go under Other. The ⋮ on a routine has Download and Delete. Delete asks for a second tap, and Undo follows. The chevron opens a routine to show its exercises.</li>
         <li><b>An unsaved routine</b> is what you are working on. It is kept as you type, but a saved routine changes only when you press Save. The app asks before you open another routine and lose unsaved work. The editor opens full screen from Edit, and Back returns you.</li>
         <li><b>Progress:</b> <b>History</b> lists your runs by exercise or routine, with Play. <b>Scores</b> shows each exercise (sorted by accuracy) and each routine: tempo, accuracy, trend, early or late, and evenness. <b>Achievements</b> shows your practice days for the last four weeks, a streak that forgives one rest day a week, and badges.</li>
-        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, the Visualisation switch, click volume, colours), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
+        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, the Visualisation switch, click volume, colours, scores and rewards), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
       </ul>
     </section>
 
@@ -1352,7 +1356,8 @@ RLRR LRLL RLRR LRLL</pre>
       <h3>Scores, tempo and progress</h3>
       <ul>
         <li><b>On time</b> is the share of due strokes inside your on-time window. With an accent or ghost rule a stroke must also be played as written: an accent clearly louder and a ghost clearly softer than its neighbours. An exercise needs at least one full pass to be scored.</li>
-        <li><b>Score:</b> every run is scored when Scored is on. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Extreme and 5 on Master). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best share is kept for each window. The streak carries from one exercise to the next. The total never goes below zero. Your best score at each click level is an achievement, and a new one is announced when the run ends.</li>
+        <li><b>Score:</b> every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Extreme and 5 on Master). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best share is kept for each window. The streak carries from one exercise to the next. The total never goes below zero. Your best score at each click level is an achievement, and a new one is announced when the run ends.</li>
+        <li><b>Scores and rewards:</b> in Settings, Preferences, you can turn off the score, the streak meter, high scores and medals. Results then show on time only. Your runs are still saved, exercises are still cleared at 90% and the tempo still moves up. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run the app names the weak exercises and suggests staying at that tempo until they settle. Any tempo is always allowed.</li>
@@ -1452,10 +1457,10 @@ RLRR LRLL RLRR LRLL</pre>
       <div class="sbody">
     <section class="panel cfg" aria-label="More settings">
       <div class="fields">
-        <div class="field"><label for="score">Scoring</label>
+        <div class="field"><label for="score">History</label>
           <select id="score">
-            <option value="1">Scored</option>
-            <option value="0">Practice</option>
+            <option value="1">Save the run</option>
+            <option value="0">Warm-up, not saved</option>
           </select></div>
         <div class="field"><label for="accent">Accent</label>
           <select id="accent">
@@ -1520,7 +1525,7 @@ RLRR LRLL RLRR LRLL</pre>
         <ul>
           <li><b>On time</b> is the share of strokes that landed within <span id="advFirstTol"></span> of the click. Clear <span id="advFirstTgt"></span> to move the tempo up.</li>
           <li><b>The staff</b> keeps every stroke. The key under it shows which look means on time, early, late or not heard.</li>
-          <li><b>Score</b> adds points for each stroke: the most for on time, a little for early or late. On-time strokes in a row raise a multiplier.</li>
+          <li id="advFirstScore"><b>Score</b> adds points for each stroke: the most for on time, a little for early or late. On-time strokes in a row raise a multiplier.</li>
         </ul>
         <button class="btn link" type="button" data-help="help-play">More in Help</button>
       </div>
@@ -3370,7 +3375,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.159';                           /* shown beside the title */
+const VERSION='1.5.160';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3421,6 +3426,7 @@ S.eachVal=S.eachUnit==='pass'?clamp(Math.round(+S.eachVal)||8,1,200):clamp(+S.ea
 S.gap=+S.gap===0?0:4;
 S.pulse=S.pulse!==false;
 S.view=S.view==='hwy'?'hwy':'staff';
+S.game=S.game!==false;   /* scores, the streak meter, high scores and medals. Off hides them; runs are still saved, cleared and timed. */
 S.palette=S.palette==='cb'?'cb':'std';
 S.layout=S.layout==='phone'||S.layout==='desktop'?S.layout:'auto';
 S.resultHelp=S.resultHelp===true;
@@ -3429,7 +3435,7 @@ if(typeof S.libId!=='string')S.libId='';
 /* When each library routine was last opened, on this device, newest first: the picker lists the latest ones at the top. */
 S.libOpened=Array.isArray(S.libOpened)?S.libOpened.filter(o=>o&&typeof o.id==='string'&&isFinite(+o.t)).slice(0,20).map(o=>({id:o.id,t:+o.t})):[];
 S.startExercise=1;
-const PORTABLE=['bpm','tol','accent','others','vol','click','eachUnit','eachVal','gap','pulse','view','palette','theme'];   /* settings that travel in an export. Microphone, latency and sensitivity belong to the device and stay out. */
+const PORTABLE=['bpm','tol','accent','others','vol','click','eachUnit','eachVal','gap','pulse','view','game','palette','theme'];   /* settings that travel in an export. Microphone, latency and sensitivity belong to the device and stay out. */
 S.expSel=(S.expSel&&typeof S.expSel==='object')?{hist:S.expSel.hist!==false,lib:S.expSel.lib!==false,lists:S.expSel.lists!==false,set:S.expSel.set!==false}:{hist:true,lib:true,lists:true,set:true};   /* what the Export dialog ticks, remembered */
 if(!isFinite(+S.lastExport))S.lastExport=0;
 if(!isFinite(+S.expRuns))S.expRuns=0;
@@ -3957,7 +3963,7 @@ function beginRun(mode){
   const r={
     mode:mode,plan:plan,w0:Date.now(),t0:ctx.currentTime+0.25,kb:S.input==='kb',
     nextClick:0,pulseIdx:-1,nextFin:0,pending:new Map(),cur:-1,showSeg:0,gridSeg:-1,
-    errs:[],lv:[],seq:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,streak:0,best:0,checked:0,bad:0,trace:[],res:new Map(),showG:0,missRun:0,trail:[],live:'',pts:0,sk:0,hud:scoreOn&&mode==='play'&&!!LV_PTS[S.click],tm:[],
+    errs:[],lv:[],seq:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,streak:0,best:0,checked:0,bad:0,trace:[],res:new Map(),showG:0,missRun:0,trail:[],live:'',pts:0,sk:0,hud:S.game&&scoreOn&&mode==='play'&&!!LV_PTS[S.click],tm:[],
     fin:new Set(),paused:false,ci:null,bnc:[],bzn:new Map(),lastPk:0,dyc:lat?'':dynCode(),dyl:[],
     seg:plan.segs.map(sg=>({errs:[],lv:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,checked:0,bad:0,sc:[],sm:[],sb:[],sy:[],sw:[],ev:[],da:0,dg:0})),
     dirty:true,ended:false,totalExercises:routineParsed.exercises.length,
@@ -5716,7 +5722,7 @@ function guide(){
   return guideMemo;
 }
 function exerciseGuide(sg){
-  if(!scoreOn)return 'practice';
+  if(!scoreOn)return 'warm-up';
   const e=guide().pat.get(statKey(patKey(sg.notes,sg.groupStart,sg.subs,sg.defSub,sg.sig),S.click,dynCode()));
   if(!e)return 'new';
   return e.cleared?'cleared at '+e.cleared:'not cleared yet';
@@ -5803,7 +5809,7 @@ function renderAdvice(){
     /* The first result a device sees says how to read it, once. The run keeps the flag, so redrawing it keeps the note. */
     if(L.firstHelp||!S.resultHelp){
       L.firstHelp=true;if(!S.resultHelp){S.resultHelp=true;save();}
-      $('advFirstTol').textContent='\u00b1'+(L.run&&L.run.tol||S.tol)+' ms';$('advFirstTgt').textContent=tgt;$('advFirst').hidden=false;
+      $('advFirstTol').textContent='\u00b1'+(L.run&&L.run.tol||S.tol)+' ms';$('advFirstTgt').textContent=tgt;$('advFirstScore').hidden=!S.game;$('advFirst').hidden=false;
     }
     /* One big result: the share of strokes on time, what it means for the target, and how it compares with your best at this tempo. */
     const pct=Math.round(100*played.reduce((t,x)=>t+x.pct*x.due,0)/due),pb=x=>L.prevBest&&L.prevBest.has(x.key)?L.prevBest.get(x.key):null;
@@ -5819,7 +5825,7 @@ function renderAdvice(){
       $('advSub').textContent=nb?nb+(nb===1?' new best':' new bests'):(played.every(x=>pb(x)===null)?'First run at this tempo':'No new bests');
     }
     {   /* how the score came about */
-      const sb=$('scoreBox'),on=!L.practice;sb.hidden=!on;
+      const sb=$('scoreBox'),on=!L.practice&&S.game;sb.hidden=!on;
       if(on){
         const d=scoreBreakdown(L.run),p=LV_PTS[L.run.lv],f=n=>n.toLocaleString('en-US');
         $('bDue').textContent=f(d.due);$('bRestBox').hidden=!d.rest;$('bRest').textContent=f(d.rest);$('bOn').textContent=f(d.on);$('bOff').textContent=f(d.off);$('bMiss').textContent=f(d.miss);$('bBest').textContent=f(d.best);
@@ -5827,7 +5833,7 @@ function renderAdvice(){
       }
     }
     {   /* the score, against a flawless run of what was played and against the best before */
-      const mx=L.practice?0:runMax(L.run),r=$('advRes');   /* the same maximum as the run's page */
+      const mx=L.practice||!S.game?0:runMax(L.run),r=$('advRes');   /* the same maximum as the run's page */
       r.classList.toggle('solo',!mx);
       if(mx){
         const f=n=>n.toLocaleString('en-US');
@@ -5854,7 +5860,7 @@ function renderAdvice(){
   }
   if(L.skipped)body+=' '+L.skipped+(L.skipped===1?' exercise was':' exercises were')+' stopped before one full pass and not scored.';
   if(!L.saved)body+=' Your browser would not save the records.';
-  if(L.practice)body='Practice run, not saved. Your time still counts today. '+body;
+  if(L.practice)body='Warm-up, not saved. Your time still counts today. '+body;
   coachNote($('advHead'),fix);$('advBody').textContent=body;
 }
 /* Discard takes the run out of your records and goes back to the start, as Done does: a discarded run has nothing
@@ -5996,7 +6002,7 @@ function medal(b,i,earned){const t=tierOf(i,b.at.length);return drawMedal(b.gl,M
 /* The unlocked panel on the result: the best step this run earned, and how far the next one is. */
 /* The result's one celebration card: the best badge just earned, with any new best tempo as a line; or the new best tempo alone. */
 function renderUnlocked(L,wins){
-  const box=$('advBadge'),won=(L.won||[]).slice().sort((a,b)=>{const A=BADGES.find(x=>x.id===a.id),B=BADGES.find(x=>x.id===b.id);return tierOf(b.i,B.at.length)-tierOf(a.i,A.at.length)||b.i-a.i;});
+  const box=$('advBadge'),won=(S.game&&L.won||[]).slice().sort((a,b)=>{const A=BADGES.find(x=>x.id===a.id),B=BADGES.find(x=>x.id===b.id);return tierOf(b.i,B.at.length)-tierOf(a.i,A.at.length)||b.i-a.i;});
   box.classList.toggle('plain',!won.length);
   box.hidden=!won.length&&!(wins&&wins.length);
   if(!won.length){
@@ -6099,7 +6105,7 @@ function renderScoreGroups(stats,practise,usual){
   stt.appendChild(statBox(isNaN(ms)?'\u2014':fmtMs(ms,1),'ms',isNaN(ms)?'muted':biasCls(ms)));
   stt.appendChild(statBox(isNaN(db)?'\u2014':'\u00B1'+db.toFixed(1),'dB'));
   wrap.appendChild(stt);
-  {   /* how the level's exercises are spread over the eight medals */
+  if(S.game){   /* how the level's exercises are spread over the eight medals */
     const cnt=MTIER.map(()=>0);let none=0;rows.forEach(x=>{if(x.cleared)cnt[masteryTier(x.k,x.cleared)]++;else none++;});
     const bar=document.createElement('div');bar.className='tbar';bar.setAttribute('role','img');
     const parts=[];
@@ -6141,7 +6147,7 @@ function renderScoreGroups(stats,practise,usual){
       if(x.dy)bits.push(dynText(x.dy));
       if(x.da||x.dg)bits.push('last run: '+causeText(x.da,x.dg));
       const done=x.cleared&&x.cleared>=x.bpm;
-      if(x.cleared){const t=masteryTier(x.k,x.cleared);bits.push((done?'Cleared at ':'best cleared ')+x.cleared+' BPM, '+MTIER[t]+' ('+strokeRate(x.k,x.cleared)+' strokes/min)'+(done?'.':''));}
+      if(x.cleared){const t=masteryTier(x.k,x.cleared);bits.push((done?'Cleared at ':'best cleared ')+x.cleared+' BPM'+(S.game?', '+MTIER[t]+' ('+strokeRate(x.k,x.cleared)+' strokes/min)':'')+(done?'.':''));}
       const nt=document.createElement('span');nt.className='rm'+(done?' go':'');nt.textContent=bits.join(' \u00B7 ');row.appendChild(nt);
       list.appendChild(row);
     });
@@ -6276,6 +6282,7 @@ function renderStorage(){
 function showSetup(v){setSview(v);showTab('setup');}
 let histShown=20,histDays=7,hview='day';
 function setPview(v){
+  if(v==='ach'&&!S.game)v='hist';
   showTabs(v,[['stats','pvStats','pvBtnStats'],['hist','pvHist','pvBtnHist'],['ach','pvAch','pvBtnAch']]);
 }
 const partialRun=r=>!!(r.sk&&r.sk.length);   /* some exercises of the routine were not played, so there is no overall accuracy */
@@ -6462,7 +6469,7 @@ function runMeta(r,withTime,noScore){
   bits.push(r.bpm+' BPM');
   if(r.tol&&r.tol!==20)bits.push('\u00b1'+r.tol+' ms');   /* a window other than the standard one */
   const m=runMins(r);if(m)bits.push(m);
-  if(!noScore&&r.lv!=='off'){const v=runScore(r);if(v)bits.push('Score: '+v.toLocaleString('en-US'));}
+  if(!noScore&&S.game&&r.lv!=='off'){const v=runScore(r);if(v)bits.push('Score: '+v.toLocaleString('en-US'));}
   return bits.join(' · ');
 }
 const dyLine=r=>{if(!r.dy)return '';const t=dynText(r.dy);return t.charAt(0).toUpperCase()+t.slice(1);};
@@ -6593,7 +6600,7 @@ function renderRunPage(r){
   const f=runFigures(r),a=accHtml(f.acc);
   if(!off){   /* the score first, against a flawless run of what was played and the best at this level; the same card as after a run */
     const sc=runScore(r),mx=runMax(r),f0=n=>n.toLocaleString('en-US'),d=scoreBreakdown(r);
-    const card=document.createElement('div');card.className='card res';
+    const card=document.createElement('div');card.className='card res'+(S.game?'':' solo');   /* rewards off: on time only */
     const mk=(tag,cls,txt,par)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;(par||card).appendChild(e);return e;};
     mk('span','slab','Score');
     const hd=mk('div','shd');mk('b',null,f0(sc),hd);mk('span',null,'of '+f0(mx),hd);
@@ -7845,7 +7852,7 @@ function syncInfo(){
   syncDyCtl();
   {   /* what the closed drawer holds, so a setting that matters is never hidden */
     const ac=$('accent');
-    const parts=[scoreOn?'Scored':'Practice',S.accent?'Accent: '+ac.options[ac.selectedIndex].text.toLowerCase():'No accents'];
+    const parts=[scoreOn?'Saved':'Warm-up',S.accent?'Accent: '+ac.options[ac.selectedIndex].text.toLowerCase():'No accents'];
     if(S.accent&&S.others==='g')parts.push('Ghost notes');
     if(S.mode==='routine')parts.push(S.gap?'Count-in between':'Straight on');
     $('setSum').textContent=$('setBox').open?'More settings':parts.join(' · ');   /* open: just the name; closed: what is inside */
@@ -8361,6 +8368,12 @@ function closeTempo(){
 }
 function applyView(){document.documentElement.dataset.view=S.view;}
 function syncView(){$('view').setAttribute('aria-checked',String(S.view==='hwy'));}
+/* Scores and rewards: the switch, the Achievements tab and the points on each window. */
+function syncGame(){
+  $('game').setAttribute('aria-checked',String(S.game));
+  $('pvBtnAch').hidden=!S.game;
+  [...$('tol').options].forEach(o=>{if(!o.dataset.t)o.dataset.t=o.textContent;o.textContent=S.game?o.dataset.t:o.dataset.t.replace(/, points .*$/,'');});
+}
 function applyTheme(){
   const d=S.theme==='dark',b=$('themeBtn');
   document.documentElement.dataset.theme=S.theme;
@@ -8442,6 +8455,7 @@ function wire(){
   $('palette').addEventListener('change',e=>{S.palette=e.target.value;applyTheme();save();});
   $('layout').addEventListener('change',e=>{S.layout=e.target.value;save();syncLayout();});
   if(wideMQ)wideMQ.addEventListener('change',syncLayout);
+  $('game').addEventListener('click',()=>{S.game=!S.game;syncGame();save();if(!S.game&&!$('pvAch').hidden)setPview('hist');renderAll();});
   $('view').addEventListener('click',()=>{S.view=S.view==='hwy'?'staff':'hwy';syncView();applyView();save();if(run&&!run.ended)drawHwy(run);});
   $('pulse').addEventListener('change',e=>{S.pulse=e.target.value==='on';save();if(!S.pulse)clearPulse();});
   $('csvBtn').addEventListener('click',downloadCsv);
@@ -8615,7 +8629,7 @@ function init(){
   $('accent').value=S.accent;
   $('tol').value=String(S.tol);
   $('gap').value=String(S.gap);
-  $('pulse').value=S.pulse?'on':'off';syncView();$('palette').value=S.palette;$('layout').value=S.layout;
+  $('pulse').value=S.pulse?'on':'off';syncView();syncGame();$('palette').value=S.palette;$('layout').value=S.layout;
   syncEach();
   $('ver').textContent='v'+VERSION;
   renderLibrary();

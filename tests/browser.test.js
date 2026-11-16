@@ -864,7 +864,7 @@ audioTest('Master (count-in only) is scored and saved', async () => {
 audioTest('a practice run shows its result but saves nothing', async () => {
   const o = await runOnce({ click: 'beat' }, true);
   assert.deepEqual(o.saved, []);
-  assert.match(o.text, /Practice run, not saved/);
+  assert.match(o.text, /Warm-up, not saved/);
   assert.ok(!o.discard);
 });
 
@@ -1018,6 +1018,23 @@ audioTest('a scored run shows its score against the maximum, flags a new high sc
   assert.doesNotMatch(p0.text, /high score/i, 'a practice run is not scored');
 });
 
+audioTest('with scores and rewards off a run is saved and cleared, and shows on time with no score, streak meter or medals', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true, game: false });
+  const n0 = await p.evaluate(() => ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).length);
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  assert.ok(await p.evaluate(() => document.getElementById('live').hidden), 'no live score or streak meter');
+  await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } }); }); });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  const o = await p.evaluate(() => ({ solo: document.getElementById('advRes').classList.contains('solo'), box: document.getElementById('scoreBox').hidden, medal: !!document.querySelector('#advBadge:not([hidden]) .medal'), runs: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).length, ach: document.getElementById('pvBtnAch').hidden, tol: [...document.querySelectorAll('#tol option')].map(o => o.textContent).join('|') }));
+  assert.ok(o.solo, 'on time is the hero'); assert.ok(o.box, 'no score breakdown'); assert.ok(!o.medal, 'no medal');
+  assert.equal(o.runs, n0 + 1, 'the run is still saved');
+  assert.ok(o.ach, 'no Achievements tab');
+  assert.doesNotMatch(o.tol, /points/, 'the windows give no points');
+  assert.doesNotMatch(await p.evaluate(() => document.getElementById('pvHist').innerText), /Score:/, 'history shows no score');
+});
+
 audioTest('rests keep the streak and score nothing unless hit, and a hit on a rest is a miss', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'R_L_ R_L_', eachUnit: 'pass', eachVal: 2, seeded: true });
   await press(p, /^Start/);
@@ -1037,7 +1054,7 @@ audioTest('rests keep the streak and score nothing unless hit, and a hit on a re
 
 test('Play settings: Scoring beside Accent, tops level; Other strokes only once an accent is set', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true }, { width: 390, height: 900 });
-  assert.equal(await p.textContent('#setSum'), 'Scored · No accents');
+  assert.equal(await p.textContent('#setSum'), 'Saved · No accents');
   await p.evaluate(() => { document.getElementById('setBox').open = true; });   /* closed at phone width */
   const r = await p.evaluate(() => { const a = document.getElementById('score').getBoundingClientRect(), b = document.getElementById('accent').getBoundingClientRect(); return { dy: Math.abs(a.top - b.top), side: b.left > a.right - 1 }; });
   assert.ok(await p.isVisible('#score'), 'Scoring is visible');
@@ -1050,7 +1067,7 @@ test('Play settings: Scoring beside Accent, tops level; Other strokes only once 
   assert.equal(await p.evaluate(() => window.__T.S().others), 'g');
   await p.evaluate(() => { document.getElementById('setBox').open = false; });
   await p.waitForFunction(() => document.getElementById('setSum').textContent !== 'More settings');
-  assert.equal(await p.textContent('#setSum'), 'Scored · Accent: each beat · Ghost notes');
+  assert.equal(await p.textContent('#setSum'), 'Saved · Accent: each beat · Ghost notes');
   assert.deepEqual(p.errors, []);
 });
 
