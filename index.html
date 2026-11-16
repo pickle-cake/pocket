@@ -471,7 +471,8 @@ details.how[open]>summary::after{margin:4px 4px 0 0}
 .dayp{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 14px}
 .rp h2{font-weight:600;overflow-wrap:anywhere}.rp h2.seq{font:600 var(--t-data) var(--font-data);letter-spacing:.08em}
 .rp .sb{font-size:13px;color:var(--muted)} .rp .sb.dy{color:var(--accent)}
-.ac.ok{color:var(--ok)} .ac.late{color:var(--late)} .ac.muted{color:var(--muted)}
+.ac.muted{color:var(--muted)}
+.met{color:var(--ink)} .met::before{content:"\2713\00a0"} .below{color:var(--muted)}   /* accuracy that meets the target or falls below it: its own cue, so the timing colours mean only early, on time and late */
 .dayp{overflow:hidden}
 .rp{display:grid;gap:4px}
 
@@ -494,13 +495,13 @@ html.pgopen{overflow:hidden}
 .rp h2{margin:0;font-size:20px;line-height:1.25} .rp h2.seq{font-size:16px}
 .rp .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 8px;text-align:center}
 .rp .stats .v{font:600 20px var(--font-data)} .rp .stats .k{font:600 11px var(--font-body);letter-spacing:.08em;color:var(--muted);margin-top:2px}
-.rp .stats .v.ok{color:var(--ok)} .rp .stats .v.late{color:var(--late)} .rp .stats .v.muted{color:var(--muted)}
-.rp .res{margin:12px 0 4px} .rp .res .sacc b.ok{color:var(--ok)} .rp .res .sacc b.late{color:var(--late)} .rp .res .sacc b.muted{color:var(--muted)}
+.rp .stats .v.muted{color:var(--muted)}
+.rp .res{margin:12px 0 4px} .rp .res .sacc b.muted{color:var(--muted)}
 .rp .bk{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:13px;color:var(--muted)} .rp .bk b{color:var(--ink);font-weight:700}
 .rp .lbl{margin:16px 0 6px}
 .rp .cell.sel{outline:2px solid var(--ink);outline-offset:1px} .rp .cell{cursor:pointer} .rp .lvbars{display:flex;align-items:flex-end;gap:1px;height:56px;border-bottom:1px solid var(--line)} .rp .lvbars i{flex:1;min-width:1px;background:var(--early);cursor:pointer} .rp .lvbars i.acc{background:var(--fill)} .rp .lvbars i.sel{background:var(--ink);box-shadow:0 0 0 2px var(--ink);position:relative} .rp .tapinfo{padding:8px 0}
 .rp .strip{display:grid;grid-template-columns:repeat(12,1fr);gap:4px}
-.rp .cell{aspect-ratio:1;border-radius:4px;background:var(--line)} .rp .cell.ok{background:var(--ok)} .rp .cell.late{background:var(--late)} .rp .cell.skip{background:transparent;border:1px dashed var(--line)} .rp .cell.lvl{background:var(--fill);color:var(--accent-ink);font:700 11px/1 var(--font-body);display:grid;place-items:center}
+.rp .cell{aspect-ratio:1;border-radius:4px;background:var(--line)} .rp .cell.ok{background:var(--ok)} .rp .cell.late{background:var(--late)} .rp .cell.met{background:var(--ink);color:var(--surface);font:700 var(--t-eyebrow)/1 var(--font-body);display:grid;place-items:center} .rp .cell.skip{background:transparent;border:1px dashed var(--line)} .rp .cell.lvl{background:var(--fill);color:var(--accent-ink);font:700 11px/1 var(--font-body);display:grid;place-items:center}
 .rp .key{font-size:13px;color:var(--muted);margin-top:8px}
 .rp .sn{display:flex;flex-wrap:wrap;gap:2px 14px;font:13px var(--font-data);font-variant-numeric:tabular-nums} .rp .sn small{color:var(--muted);font:11px var(--font-body);margin-left:3px}
 .rp .sn .ok{color:var(--ok)} .rp .sn .late{color:var(--late)} .rp .sn .early{color:var(--early)} .rp .sn .muted{color:var(--muted)}
@@ -580,7 +581,7 @@ html.pgopen{overflow:hidden}
 .sp-t{stroke:currentColor;opacity:.35;stroke-dasharray:2 3;stroke-width:1}
 .sp-l{stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
 .sp-d{fill:currentColor}
-.sp-n{font-size:11px} .sp-n.ok{color:var(--ok)} .sp-n.late{color:var(--late)}
+.sp-n{font-size:11px;color:var(--muted)}   /* the arrow is the cue: a trend is not timing */
 body[data-mode="single"] .routine-only{display:none}
 body[data-mode="routine"] .single-only{display:none}
 .urlrow{display:grid;grid-template-columns:1fr auto;gap:8px}
@@ -646,19 +647,16 @@ body[data-edit=type] .buildonly{display:none}
 .lsstaff>*{margin:0}
 .bcodes{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
 .bcode{font:600 14px var(--font-data);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;min-height:44px;padding:0;cursor:pointer}
-.bcode[aria-pressed=true]{background:var(--fill);color:var(--accent-ink);border-color:transparent}
 .bcode:disabled{opacity:.35;cursor:not-allowed}
 .bkeys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .bkey{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:var(--r-md);min-height:56px;cursor:pointer;font:600 14px var(--font-data)}
 .bkey.R,.bkey.L{grid-column:span 2;min-height:64px;font:800 var(--t-display) var(--font-display)}
-.bkey[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}
+.bkey[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}   /* selected like a .seg item: a heavier ink edge, not brass */
 .bkey:disabled{opacity:.35;cursor:not-allowed}
 .estate{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
 #edDiscard{min-height:0;padding:0;font-size:13px}
-.bkey.R{color:var(--accent)}
-.bkey.L{color:var(--early)}
 .bkey,.bcode{background:color-mix(in srgb,var(--ink) 6%,var(--surface));border-color:color-mix(in srgb,var(--ink) 18%,var(--surface))}   /* keys a touch lighter than the panel */
-.bcode[aria-pressed=true]{background:var(--fill);border-color:transparent}
+.bcode[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}   /* the selected note value: solid ink, like a switch that is on; brass is kept for the primary action */
 .bkey:active,.bcode:active{filter:brightness(.92)}
 .erow.editing{outline:2px solid var(--accent);outline-offset:-2px}
 @media (hover:hover){.erow:hover{background:color-mix(in srgb,var(--fill) 8%,transparent)}}
@@ -773,7 +771,6 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .res .swin{margin:0;font:600 var(--t-caption) var(--font-body)}   /* the window bonus, under the share */
 .res .sacc{display:flex;gap:14px;align-items:center;border-top:1px solid var(--line);padding-top:10px}
 .res .sacc b{font:800 var(--t-display) var(--font-display);font-variant-numeric:tabular-nums;white-space:nowrap}
-.res[data-ok="1"] .sacc b{color:var(--ok)}
 .res .sacc>span{font-size:13px;color:var(--muted)}
 .res .snext{margin:0;font:500 var(--t-small) var(--font-body);color:var(--ink)}   /* what to play next time, under the share on time: a note, not a button */
 .res.solo .slab,.res.solo .shd,.res.solo .sbar,.res.solo .scap,.res.solo .swin{display:none}
@@ -1181,7 +1178,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>The moving line</b> reaches each note exactly when it is due. Strike as it arrives.</li>
         <li><b>A note's timing</b> shows a moment after you play it, once the note's on-time window has closed and a later hit can no longer be the better match: then the letter takes the colour of early, on time or late.</li>
         <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket lights up for a moment and a flash shows where the note was: above the line is early, below is late. Under its lane it says heard. A moment later, once the note's window has closed, the stroke is judged: it takes the colour of its timing and the verdict replaces heard.</li>
-        <li><b>Letter colours:</b> green is on time, blue and slanted is early, pink and underlined is late, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as green.</li>
+        <li><b>Letters</b> show each note's timing: on time, early (slanted) or late (underlined), each in its own colour, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as on time.</li>
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
         <li><b>The gauge</b> shows how early or late you played on average over the whole run, once it ends. Left is early, right is late.</li>
         <li><b>The level bars</b> appear when a run ends. Each bar is one stroke's loudness against your own typical stroke: the middle is typical, higher is louder, and blue bars are left hand. Scroll sideways for the whole run. The number is the spread in dB, so smaller is more even. With an accent or ghost rule only the normal strokes count, since accents and ghosts are checked separately. A line below says if one hand is quieter. Clipped hits are left out, and keyboard input has no levels.</li>
@@ -3390,7 +3387,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.165';                           /* shown beside the title */
+const VERSION='1.5.166';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5963,11 +5960,11 @@ function sparkline(vals){
   const d=vals[vals.length-1]-vals[0],w=document.createElement('span');
   w.className='sparkwrap';w.title=onPct(vals[0])+' to '+onPct(vals[vals.length-1])+' over '+vals.length+' runs';
   w.appendChild(svg);
-  const t=document.createElement('span');t.className='sp-n '+(d>0.02?'ok':(d<-0.02?'late':''));t.textContent=d>0.02?'▲':(d<-0.02?'▼':'►');
+  const t=document.createElement('span');t.className='sp-n';t.textContent=d>0.02?'▲':(d<-0.02?'▼':'►');
   w.appendChild(t);return w;
 }
 const biasCls=v=>isNaN(v)?'':(v<-2.5?'early':(v>2.5?'late':'ok'));
-const accCls=p=>p>=TARGET?'ok':'late';
+const accCls=p=>p>=TARGET?'met':'below';   /* accuracy against the target, not timing: a tick and ink, or muted */
 const accCell=p=>[onPct(p),accCls(p)];
 function renderPractice(){
   const days=practiceDays(recs.runs,recs.sum),now=new Date(),mins=k=>Math.round((days.get(k)||0)/60);
@@ -6642,9 +6639,9 @@ function renderRunPage(r){
     const played=items.filter(x=>x.b),pctOf=x=>x.b.due?x.b.within/x.b.due:0;
     page.appendChild(lbl('Exercises'));
     const strip=document.createElement('div');strip.className='strip';
-    items.forEach(x=>{const c=document.createElement('span');c.className='cell '+(!x.b?'skip':off?'':(pctOf(x)>=TARGET?'ok':'late'));strip.appendChild(c);});
+    items.forEach(x=>{const c=document.createElement('span');c.className='cell '+(!x.b?'skip':off?'':accCls(pctOf(x)));strip.appendChild(c);});
     page.appendChild(strip);
-    const key2=document.createElement('div');key2.className='key';key2.textContent=off?'Count-in only: nothing is scored.':'Green: 90% or more. Pink: below 90%. Dashed: not played.';page.appendChild(key2);
+    const key2=document.createElement('div');key2.className='key';key2.textContent=off?'Count-in only: nothing is scored.':'✓: 90% or more. Plain: below 90%. Dashed: not played.';page.appendChild(key2);
     if(hasStaff){staffSection(page,r);staffDone=true;}   /* the grid says where to look; the staff is for looking */
     if(!off&&played.length>1){
       page.appendChild(lbl('Suggested practice'));
