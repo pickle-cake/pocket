@@ -815,3 +815,24 @@ test('flams and drags: the grace lead and level are summarised, with a word when
   assert.equal(c.graceStats(slots.slice(0, 12), res)[1], undefined);   /* 4 flams are too few */
   assert.deepEqual(plain(c.graceStats(slots, new Map())), {});
 });
+
+test('wander: strokes that drift off the click and back together are found, across exercises', () => {
+  const run = (off, rate = 4, secs = 120) => {
+    const slots = [], res = new Map();
+    for (let i = 0; i < secs * rate; i++) { const t = i / rate; slots.push({ t }); res.set(i, { ms: Math.round(off(t, i)) }); }
+    return c.wander(slots, res, 20);
+  };
+  const g = gauss(rng(21));
+  const w = run(t => 40 * Math.sin(t / 3) + g() * 5);   /* a slow swing of 40 ms, with even strokes */
+  assert.ok(w, 'found');
+  assert.ok(w.early <= -30 && w.late >= 30, JSON.stringify(w));
+  assert.ok(w.slots.length > 0);
+  assert.match(c.wanderText(w), /^Your timing wanders off the click and back: a few beats at a time you drift up to \d+ ms early and up to \d+ ms late\. Your strokes stay even with each other, so it is the pulse that moves: listen for the click under your strokes\.$/);
+  assert.equal(run(() => -25 + g() * 5), null, 'a steady offset does not wander');
+  assert.equal(run(t => 40 * Math.sin(t / 3), 4, 10), null, 'too short');
+  let hits = 0;
+  for (let k = 0; k < 200; k++) if (run(() => g() * 25, 2)) hits++;   /* loose strokes, two a second */
+  assert.ok(hits <= 4, hits + ' of 200 noise runs wander');
+  const res = new Map([[0, { miss: true }]]);
+  assert.equal(c.wander([{ t: 0 }], res, 20), null);
+});

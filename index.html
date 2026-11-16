@@ -2320,6 +2320,37 @@ function graceStats(slots,res){
   });
   return out;
 }
+/* Wandering off the click: across the whole run, in time order, the strokes move early and late together over a few beats,
+   then come back. Each heard stroke's offset is averaged with the strokes within half beats either side (at least four of
+   them); the spread of those averages around the run's own average is the wander, and what is left is the stroke-to-stroke
+   scatter. It needs a run of at least FIND.span seconds and a wander of at least ms, and at least noise times what the scatter
+   alone would give to averages of that many strokes. A steady offset does not wander. */
+const WANDER={half:1,ms:10,noise:2.5};
+function wander(slots,res,tol){
+  const pts=[];
+  slots.forEach((s,i)=>{const v=res.get(i);if(v&&!v.miss&&typeof v.ms==='number')pts.push({i:i,t:s.t,ms:v.ms});});
+  if(pts.length<FIND.minN*4)return null;
+  pts.sort((a,b)=>a.t-b.t);
+  const T=pts[pts.length-1].t-pts[0].t;if(T<FIND.span)return null;
+  const sm=[],rest=[];let lo=0,cnt=0;
+  pts.forEach(p=>{
+    while(pts[lo].t<p.t-WANDER.half)lo++;
+    let sum=0,n=0;for(let j=lo;j<pts.length&&pts[j].t<=p.t+WANDER.half;j++){sum+=pts[j].ms;n++;}
+    if(n>=4){p.s=sum/n;sm.push(p);rest.push(p.ms-p.s);cnt+=n;}
+  });
+  if(sm.length<FIND.minN*4)return null;
+  const w=sd(sm.map(p=>p.s)),sc=sd(rest);
+  if(w<WANDER.ms||w<WANDER.noise*sc/Math.sqrt(cnt/sm.length))return null;
+  const vals=sm.map(p=>p.s).sort((a,b)=>a-b),q=f=>vals[Math.round(f*(vals.length-1))];
+  return {what:'wander',kind:'run',sd:Math.round(w),scatter:Math.round(sc),early:Math.round(q(0.05)),late:Math.round(q(0.95)),secs:T,
+    n:sm.length,slots:sm.filter(p=>Math.abs(p.s)>tol).map(p=>p.i),pos:[],ks:[]};
+}
+function wanderText(w){
+  const e=w.early<0?Math.abs(w.early)+' ms early':'',l=w.late>0?w.late+' ms late':'';
+  let t='Your timing wanders off the click and back: a few beats at a time you drift '+(e&&l?'up to '+e+' and up to '+l:'up to '+(e||l))+'.';
+  t+=w.scatter<w.sd?' Your strokes stay even with each other, so it is the pulse that moves: listen for the click under your strokes.':' Listen for the click under your strokes.';
+  return t;
+}
 /* The flams and drags of a run as sentences, one each. */
 function graceNotes(st){
   const out=[];
@@ -3325,7 +3356,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.147';                           /* shown beside the title */
+const VERSION='1.5.148';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5356,12 +5387,14 @@ function coachItems(r){
   }
   /* the costliest places in the music where the strokes go wrong, in any exercise of the run: up to four, or only the first
      in a short run, where the rest are mostly chance */
-  if(r.seg)findings(r.plan,r.seg,S.tol).slice(0,r.errs.length>=FIND.more?4:1).forEach(f=>parts.push({t:findingText(f,r.plan),f:f}));
+  const wd=r.res?wander(r.plan.slots,r.res,r.tol||S.tol):null;
+  if(wd)parts.push({t:wanderText(wd),f:wd});
+  if(r.seg)findings(r.plan,r.seg,S.tol).filter(f=>!wd||f.what!=='drift').slice(0,r.errs.length>=FIND.more?4:1).forEach(f=>parts.push({t:findingText(f,r.plan),f:f}));
   if(!r.kb&&r.res&&r.plan.slots.some(x=>x.gr))graceNotes(graceStats(r.plan.slots,r.res)).forEach(t=>parts.push({t:t}));
   if(!r.kb&&r.plan.slots.some(x=>x.bz)){const st=buzzStats(r.plan.slots,r.res,r.bnc||[]),bn=buzzNote(st,buzzSingles(r.plan.slots,st,r.res).size);if(bn)parts.push({t:bn});}
   const lvs=levelStats(r.lv);
   if(lvs&&lvs.diff!==null&&Math.abs(lvs.diff)>=3)parts.push({t:'Your '+(lvs.diff<0?'left':'right')+' hand is '+Math.abs(lvs.diff).toFixed(0)+' dB quieter than your '+(lvs.diff<0?'right':'left')+'.'});
-  if(!parts.length)parts.push({t:'Timing is even across both hands and all strokes.'});
+  if(!parts.length)parts.push({t:r.slots&&r.within/r.slots<0.8?'No one hand or stroke is off more than the others.':'Timing is even across both hands and all strokes.'});
   return parts;
 }
 /* A note's text. When it is a finding and the run is over, buttons follow: one marks its strokes on the review staff, and one
@@ -5767,7 +5800,7 @@ function renderAdvice(){
   if(!n)body='Stopped before one full pass, so nothing was scored.';
   else if(adv.cleared)body='';
   else if(one)body='Stay at '+S.bpm+' BPM until this settles.';
-  else body='Work on '+adv.weak.slice().sort((a,b)=>a.pct-b.pct).slice(0,6).map(b=>'exercise '+b.idx+' ('+Math.round(b.pct*100)+'%)').join(', ')+(adv.weak.length>6?' and more':'')+'. Stay at '+S.bpm+' BPM until they settle.';
+  else body='Work on '+adv.weak.slice().sort((a,b)=>a.pct-b.pct).slice(0,6).map((b,i)=>'exercise '+b.idx+' ('+Math.round(b.pct*100)+'%'+(i?'':' on time')+')').join(', ')+(adv.weak.length>6?' and more':'')+'. Stay at '+S.bpm+' BPM until they settle.';
   {   /* what was just earned gets its own moment at the top, once */
     const wins=[];
     if(L.newTempo&&L.newTempo.length)wins.push('New best tempo: '+(L.newTempo.length<=2?L.newTempo.map(x=>showKey(x.key)+' at '+x.bpm+' BPM').join(', '):L.newTempo.length+' exercises at a new tempo'));
