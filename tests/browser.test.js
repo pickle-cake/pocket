@@ -592,6 +592,21 @@ test('a stray exercise is deleted from a run, and an unheard one is not scored',
   await ctx.close();
 });
 
+audioTest('coaching says when the exercises were too short for notes on single strokes', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: ['16 RLRL RLRL RLRL RLRL', '16 LRLR LRLR LRLR LRLR'].join(String.fromCharCode(10)), eachUnit: 'pass', eachVal: 2, seeded: true });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  await p.evaluate(() => {
+    const T = window.__T, r = T.run(), pl = r.plan;
+    pl.slots.forEach((s, i) => T.hit({ t: r.t0 + s.t + ((i * 7) % 5 - 2) / 1000, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } }));
+  });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  const t = await p.evaluate(() => document.getElementById('advice').innerText);
+  assert.match(t, /Each exercise played 2 passes, so no single stroke was checked\. Notes on single strokes need at least 3 passes: set Each exercise to 3 passes or more\./, t);
+  assert.deepEqual(p.errors, []);
+});
+
 /* One keyboard run with perfect hits. Returns how many runs were saved and the result text. */
 audioTest('a finding after a run marks its strokes on the review staff, with an outline, and a second tap clears them', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '16 RLRL RLRL', eachUnit: 'pass', eachVal: 10, seeded: true });
