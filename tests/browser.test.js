@@ -610,19 +610,22 @@ audioTest('a finding after a run marks its strokes on the review staff, with an 
   const note = await p.evaluate(() => document.querySelector('#advice [data-mk]').parentElement.innerText);
   assert.match(note, /^Stroke 3 \(R\) lands \d+ ms later than the rest of the exercise\. Show on staff Practise at 110 BPM$/, note);
   const btn = p.locator('#advice [data-mk]').first();
-  assert.equal(await btn.getAttribute('aria-pressed'), 'false');
+  assert.equal(await btn.textContent(), 'Show on staff');
+  assert.equal(await p.isVisible('#mkKey'), false);
   await btn.click();
   const on = await p.evaluate(() => {
     const mk = [...document.querySelectorAll('#rows g.cd.mk')];
-    return { n: mk.length, texts: [...new Set(mk.map(c => c.querySelector('.lt').textContent))], edge: mk.length ? getComputedStyle(mk[0].querySelector('.bg')).stroke : '', pressed: document.querySelector('#advice [data-mk]').getAttribute('aria-pressed') };
+    return { n: mk.length, texts: [...new Set(mk.map(c => c.querySelector('.lt').textContent))], edge: mk.length ? getComputedStyle(mk[0].querySelector('.bg')).stroke : '', label: document.querySelector('#advice [data-mk]').textContent, key: !document.getElementById('mkKey').hidden };
   });
   assert.equal(on.n, 10, 'one stroke in each of the ten passes');
   assert.deepEqual(on.texts, ['R']);
   assert.notEqual(on.edge, 'transparent');
-  assert.equal(on.pressed, 'true');
+  assert.equal(on.label, 'Hide on staff');
+  assert.equal(on.key, true, 'the key under the staff explains the boxes');
   await btn.click();
   assert.equal(await p.evaluate(() => document.querySelectorAll('#rows g.cd.mk').length), 0);
-  assert.equal(await btn.getAttribute('aria-pressed'), 'false');
+  assert.equal(await btn.textContent(), 'Show on staff');
+  assert.equal(await p.isVisible('#mkKey'), false);
   /* the drill: the beats around the stroke, 10 BPM slower, loaded on Play but not started */
   await p.locator('#advice [data-mk] ~ [data-drill]').first().click();
   if (await p.locator('#confirmModal').isVisible()) await p.click('#cfDiscard');   /* the routine was never saved */

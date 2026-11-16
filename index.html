@@ -775,6 +775,7 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .key .k.ok{color:var(--ok)}.key .k.early{color:var(--early);font-style:italic}
 .key .k.late{color:var(--late);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .key .k.miss{color:var(--muted);opacity:.4}
+.key .k.box{border:2px solid var(--ink);border-radius:var(--r-sm);padding:0 var(--s-1)}   /* like a boxed stroke on the staff */
 @media (max-width:359px){.tabs button{font-size:13px;letter-spacing:0}}   /* four tab names fit the narrowest phones */
 .dur{display:grid;grid-template-columns:minmax(70px,1fr) minmax(110px,1.4fr);gap:8px}
 .maxline{margin:-10px 0 0;font-size:13px;color:var(--muted);text-align:right}
@@ -1512,7 +1513,7 @@ RLRR LRLL RLRR LRLL</pre>
       <div class="rows" id="rows" tabindex="0"><div class="rows-track" id="rowsTrack"></div></div>
       <p class="hint" id="rowEnd" hidden></p>
       </div>
-      <p class="cap key"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other stick</p>
+      <p class="cap key"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other stick<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
       <div class="pads kb-only">
         <button class="pad" type="button" data-hand="L" aria-label="Left stick pad">L</button>
         <button class="pad" type="button" data-hand="R" aria-label="Right stick pad">R</button>
@@ -3324,7 +3325,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.146';                           /* shown beside the title */
+const VERSION='1.5.147';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4891,6 +4892,7 @@ function paintRows(r,cursor,heard){
       if(mk!==!!el._mk){el._mk=mk;el.classList.toggle('mk',mk);}
     });
   });
+  if($('mkKey').hidden===!!marks)$('mkKey').hidden=!marks;   /* the key explains the boxes while a note is shown */
   movePlayhead(r,cursor,heard);placeLvMeter(r,cursor);
   lastCur=r&&!r.ended?cursor:null;syncWindow(lastCur);
   drawHwy(r,heard);
@@ -5368,8 +5370,8 @@ function coachNote(el,it){
   el.textContent=it?it.t:'';
   if(!it||!it.f||!view||!view.ended)return;
   if(markSlotsFor(it.f)){
-    const b=document.createElement('button');b.type='button';b.className='btn link inl';b.textContent='Show on staff';
-    b.dataset.mk=findKey(it.f);b.setAttribute('aria-pressed',String(markOn()&&markKey===b.dataset.mk));
+    const b=document.createElement('button');b.type='button';b.className='btn link inl';
+    b.dataset.mk=findKey(it.f);markBtn(b);
     b.addEventListener('click',()=>toggleMark(it.f));
     el.append(' ',b);
   }
@@ -5420,11 +5422,16 @@ function markSlotsFor(f){
   m.forEach((live,i)=>{if(want.has(live))out.add(i);});
   return out.size?out:null;
 }
+/* a Show on staff button reads Hide on staff while its strokes are boxed */
+function markBtn(b){
+  const on=markOn()&&b.dataset.mk===markKey;
+  b.textContent=on?'Hide on staff':'Show on staff';   /* the label says the state, so no aria-pressed */
+}
 function toggleMark(f){
   const k=findKey(f);
   if(markOn()&&markKey===k){markKey='';markSet=null;markRm=null;}
   else{markSet=markSlotsFor(f);markKey=markSet?k:'';markRm=markSet?rvModel:null;}
-  document.querySelectorAll('#advice [data-mk]').forEach(b=>b.setAttribute('aria-pressed',String(markOn()&&b.dataset.mk===markKey)));
+  document.querySelectorAll('#advice [data-mk]').forEach(markBtn);
   paintRows(view,null);
   if(markOn())scrollToMark();
 }
