@@ -1167,7 +1167,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket lights up for a moment and a flash shows where the note was: above the line is early, below is late. Under its lane it says heard. A moment later, once the note's window has closed, the stroke is judged: it takes the colour of its timing and the verdict replaces heard.</li>
         <li><b>Letter colours:</b> green is on time, blue and slanted is early, pink and underlined is late, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as green.</li>
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
-        <li><b>The gauge</b> shows how early or late you played on average over the last 32 strokes, and over the whole run once it ends. Left is early, right is late.</li>
+        <li><b>The gauge</b> shows how early or late you played on average over the whole run, once it ends. Left is early, right is late.</li>
         <li><b>The level bars</b> appear when a run ends. Each bar is one stroke's loudness against your own typical stroke: the middle is typical, higher is louder, and blue bars are left hand. Scroll sideways for the whole run. The number is the spread in dB, so smaller is more even. With an accent or ghost rule only the normal strokes count, since accents and ghosts are checked separately. A line below says if one hand is quieter. Clipped hits are left out, and keyboard input has no levels.</li>
         <li><b>The loudness strip</b> appears under each line of the staff when a run ends, lined up with the notes above it. It draws how loud the pad was, with a faint line where each note was due and the trigger line dashed. Grace notes show as the smaller peaks just before their main stroke, so you can see whether a flam or drag was heard and how close it was. On buzz strokes, a tick at the top marks each bounce counted, and the strip shows why a bounce was or was not counted: too quiet for the trigger line, or too close to the one before. Only the run you just played has it, and it is kept in memory, not saved. To keep it, choose <b>Export</b> under the result: it saves that run with its loudness and every sound heard to a file. Keyboard input has none.</li>
         <li><b>Narrow screens:</b> a busy pass wraps onto two lines at a barline.</li>
@@ -1570,7 +1570,7 @@ RLRR LRLL RLRR LRLL</pre>
     <div id="detBox" class="setbox">
       <div class="sbody">
     <section class="panel" id="leadBox" aria-label="Early or late">
-      <h3>Early or late, <span id="gSpan">last 32 strokes</span></h3>
+      <h3>Early or late, whole run</h3>
       <div class="readout">
         <div class="big"><span id="gVal">—</span><small>ms</small></div>
         <div class="word" id="gWord">Waiting for strokes</div>
@@ -3357,7 +3357,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.150';                           /* shown beside the title */
+const VERSION='1.5.151';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5358,8 +5358,7 @@ function updateLevel(r){
 }
 function updateGauge(r){
   updateLevel(r);
-  const done=!!(r&&r.ended),last=r?(done?r.errs:r.errs.slice(-32)):[];   /* the last 32 while playing, the whole run once it is over */
-  $('gSpan').textContent=done?'whole run':'last 32 strokes';
+  const last=r?r.errs:[];   /* the card shows only after a run, so it covers all of it */
   const zone=$('gZone');
   zone.style.width=(S.tol/80*100)+'%';zone.style.left=(50-S.tol/80*50)+'%';
   if(last.length<3){

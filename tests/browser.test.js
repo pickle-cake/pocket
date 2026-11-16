@@ -605,8 +605,8 @@ audioTest('coaching says when the exercises were too short for notes on single s
   const t = await p.evaluate(() => document.getElementById('advice').innerText);
   assert.match(t, /Each exercise played 2 passes, so no single stroke was checked\. Notes on single strokes need at least 3 passes: set Each exercise to 3 passes or more\./, t);
   /* once the run is over, the early-or-late gauge covers the whole run, not the last 32 strokes */
-  const g = await p.evaluate(() => { const e = window.__T.run().errs; return { span: document.getElementById('gSpan').textContent, val: document.getElementById('gVal').textContent, n: e.length, mean: e.reduce((a, b) => a + b, 0) / e.length }; });
-  assert.equal(g.span, 'whole run');
+  const g = await p.evaluate(() => { const e = window.__T.run().errs; return { span: document.querySelector('#leadBox h3').textContent, val: document.getElementById('gVal').textContent, n: e.length, mean: e.reduce((a, b) => a + b, 0) / e.length }; });
+  assert.equal(g.span, 'Early or late, whole run');
   assert.ok(g.n > 32, 'more strokes than the live window');
   assert.equal(parseFloat(g.val.replace('−', '-')), Math.round(g.mean * 10) / 10 + 0, JSON.stringify(g));
   assert.deepEqual(p.errors, []);
