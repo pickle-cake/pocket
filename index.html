@@ -858,7 +858,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     <section class="panel" aria-label="Game">
       <h3>Game</h3>
       <button class="toggle" id="game" type="button" role="switch" aria-checked="false" aria-labelledby="gameLbl" aria-describedby="gameHint">
-        <span class="toggle-text"><span class="toggle-title" id="gameLbl">Scores and rewards</span><span class="toggle-meta" id="gameHint">The score, streak meter, high scores and medals. Off shows on time only; your runs are still saved and exercises still cleared</span></span>
+        <span class="toggle-text"><span class="toggle-title" id="gameLbl">Scores and rewards</span><span class="toggle-meta" id="gameHint">Adds a live score and streak meter while you play, a score on each result, high scores, medals and achievements</span></span>
         <span class="toggle-state" aria-hidden="true"></span><span class="toggle-track" aria-hidden="true"></span>
       </button>
       <button class="toggle" id="view" type="button" role="switch" aria-checked="false" aria-labelledby="viewLbl" aria-describedby="viewHint">
@@ -1360,7 +1360,7 @@ RLRR LRLL RLRR LRLL</pre>
       <ul>
         <li><b>On time</b> is the share of due strokes inside your on-time window. With an accent or ghost rule a stroke must also be played as written: an accent clearly louder and a ghost clearly softer than its neighbours. An exercise needs at least one full pass to be scored.</li>
         <li><b>Score:</b> with Scores and rewards on, every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Extreme and 5 on Master). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best share is kept for each window. The streak carries from one exercise to the next. The total never goes below zero. Your best score at each click level is an achievement, and a new one is announced when the run ends.</li>
-        <li><b>Scores and rewards:</b> turn them on under Game in Settings, Preferences, for the score, the streak meter, high scores and medals. They start off, and results show on time only. Your runs are still saved, exercises are still cleared at 90% and the tempo still moves up. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
+        <li><b>Scores and rewards:</b> turn them on under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run the app names the weak exercises and suggests staying at that tempo until they settle. Any tempo is always allowed.</li>
@@ -3378,7 +3378,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.162';                           /* shown beside the title */
+const VERSION='1.5.163';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
