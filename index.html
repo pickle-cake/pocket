@@ -844,10 +844,6 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <div class="field"><label for="pulse">Visual pulse</label>
           <select id="pulse"><option value="on">On</option><option value="off">Off</option></select></div>
       </div>
-      <button class="toggle" id="view" type="button" role="switch" aria-checked="false" aria-labelledby="viewLbl" aria-describedby="viewHint">
-        <span class="toggle-text"><span class="toggle-title" id="viewLbl">Visualisation</span><span class="toggle-meta" id="viewHint">Highway, L and R lanes: the strokes come towards you in place of the staff while you play</span></span>
-        <span class="toggle-state" aria-hidden="true"></span><span class="toggle-track" aria-hidden="true"></span>
-      </button>
       <div class="field"><label for="vol">Click volume <output id="volOut"></output></label><input type="range" id="vol" min="0" max="100" step="1"></div>
       <p class="hint mic-only">Use headphones for the click. A click from the speakers is picked up by the microphone and counted as a stroke.</p>
     </section>
@@ -858,8 +854,15 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <div class="field"><label for="layout">Layout</label>
         <select id="layout"><option value="auto">Automatic</option><option value="phone">Phone</option><option value="desktop">Desktop</option></select>
         <p class="hint">Automatic uses the desktop layout on a wide window. This is kept on this device only.</p></div>
+    </section>
+    <section class="panel" aria-label="Game">
+      <h3>Game</h3>
       <button class="toggle" id="game" type="button" role="switch" aria-checked="true" aria-labelledby="gameLbl" aria-describedby="gameHint">
         <span class="toggle-text"><span class="toggle-title" id="gameLbl">Scores and rewards</span><span class="toggle-meta" id="gameHint">The score, streak meter, high scores and medals. Off shows on time only; your runs are still saved and exercises still cleared</span></span>
+        <span class="toggle-state" aria-hidden="true"></span><span class="toggle-track" aria-hidden="true"></span>
+      </button>
+      <button class="toggle" id="view" type="button" role="switch" aria-checked="false" aria-labelledby="viewLbl" aria-describedby="viewHint">
+        <span class="toggle-text"><span class="toggle-title" id="viewLbl">Visualisation</span><span class="toggle-meta" id="viewHint">Highway, L and R lanes: the strokes come towards you in place of the staff while you play</span></span>
         <span class="toggle-state" aria-hidden="true"></span><span class="toggle-track" aria-hidden="true"></span>
       </button>
     </section>
@@ -1166,7 +1169,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>Library:</b> your saved routines, each with Edit and Play. <b>New</b> starts a routine, <b>Import</b> adds one from a file or a link, and <b>Export</b> saves the whole library as one file that Import reads back (it can also be hosted as a library). A title such as "Rudiment: Single stroke roll" groups the routine under Rudiment. Routines with no group go under Other. The ⋮ on a routine has Download and Delete. Delete asks for a second tap, and Undo follows. The chevron opens a routine to show its exercises.</li>
         <li><b>An unsaved routine</b> is what you are working on. It is kept as you type, but a saved routine changes only when you press Save. The app asks before you open another routine and lose unsaved work. The editor opens full screen from Edit, and Back returns you.</li>
         <li><b>Progress:</b> <b>History</b> lists your runs by exercise or routine, with Play. <b>Scores</b> shows each exercise (sorted by accuracy) and each routine: tempo, accuracy, trend, early or late, and evenness. <b>Achievements</b> shows your practice days for the last four weeks, a streak that forgives one rest day a week, and badges.</li>
-        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, the Visualisation switch, click volume, colours, scores and rewards), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
+        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours, and under Game the Scores and rewards and Visualisation switches), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
       </ul>
     </section>
 
@@ -1357,7 +1360,7 @@ RLRR LRLL RLRR LRLL</pre>
       <ul>
         <li><b>On time</b> is the share of due strokes inside your on-time window. With an accent or ghost rule a stroke must also be played as written: an accent clearly louder and a ghost clearly softer than its neighbours. An exercise needs at least one full pass to be scored.</li>
         <li><b>Score:</b> every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Extreme and 5 on Master). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best share is kept for each window. The streak carries from one exercise to the next. The total never goes below zero. Your best score at each click level is an achievement, and a new one is announced when the run ends.</li>
-        <li><b>Scores and rewards:</b> in Settings, Preferences, you can turn off the score, the streak meter, high scores and medals. Results then show on time only. Your runs are still saved, exercises are still cleared at 90% and the tempo still moves up. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
+        <li><b>Scores and rewards:</b> under Game in Settings, Preferences, you can turn off the score, the streak meter, high scores and medals. Results then show on time only. Your runs are still saved, exercises are still cleared at 90% and the tempo still moves up. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run the app names the weak exercises and suggests staying at that tempo until they settle. Any tempo is always allowed.</li>
@@ -3375,7 +3378,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.160';                           /* shown beside the title */
+const VERSION='1.5.161';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
