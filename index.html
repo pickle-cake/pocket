@@ -387,7 +387,7 @@ body[data-run="1"][data-rm="play"] header,body[data-run="1"][data-rm="play"] .ta
 .pcol{display:contents}   /* the Play page groups its controls and its view; on a phone the groups add nothing */
 .page{display:grid;gap:22px}
 .page>*{min-width:0}
-body:not([data-state="done"]) #after,body:not([data-state="done"]) #advice{display:none}
+body:not([data-state="done"]) #after,body:not([data-state="done"]) #advice,body:not([data-state="done"]) #advTop{display:none}
 /* After a run the page stays in focus mode: the result card first, with Again and Done. */
 body[data-tab=pattern] header,body[data-tab=pattern] .tabs{display:none}   /* the editor is a full-screen view */
 .etop{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:8px 0;background:var(--bg)}
@@ -541,7 +541,7 @@ html.pgopen{overflow:hidden}
 .tleg{font:var(--t-caption) var(--font-body);color:var(--muted);margin:0 0 8px}
 /* The one celebration: a card with a medal (or none, for a new best tempo), what was earned and the next goal. */
 #advBadge{display:grid;grid-template-columns:auto 1fr;gap:var(--s-1) var(--s-3);align-items:center;padding:var(--s-4);margin:var(--s-3) 0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
-#advice>#scoreBox{border-top:0;padding-top:var(--s-2)}   /* straight under the score card, which has its own edge */
+#advTop>#scoreBox{border-top:0;padding-top:var(--s-2)}   /* straight under the score card, which has its own edge */
 #advBadge.plain{grid-template-columns:1fr}
 #advBadge .medal{width:72px;height:72px}
 #advBadge .bwt{display:grid;gap:2px;min-width:0}
@@ -770,7 +770,7 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .res.solo .slab,.res.solo .shd,.res.solo .sbar,.res.solo .scap,.res.solo .swin{display:none}
 .res.solo .sacc{border-top:0;padding-top:0}
 .res.solo .sacc b{font:800 var(--t-hero) var(--font-display)}   /* the hero of the result card */
-#advice{gap:10px}
+#advice,#advTop{gap:10px}
 .key .k{font:600 15px var(--font-data)}
 .key .k.ok{color:var(--ok)}.key .k.early{color:var(--early);font-style:italic}
 .key .k.late{color:var(--late);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
@@ -1506,24 +1506,7 @@ RLRR LRLL RLRR LRLL</pre>
       <div class="lvm" id="lvMeter"></div>
     </div>
 
-    <section aria-label="Strokes">
-      <div class="rowswrap">
-      <div class="lvmtr" id="lvMtr" hidden aria-hidden="true"><i></i></div>
-      <div class="bigcount" id="bigCount" hidden aria-hidden="true"></div>
-      <canvas class="hwy" id="hwy" aria-hidden="true"></canvas>
-      <div class="rows" id="rows" tabindex="0"><div class="rows-track" id="rowsTrack"></div></div>
-      <p class="hint" id="rowEnd" hidden></p>
-      </div>
-      <p class="cap key"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other stick<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
-      <div class="pads kb-only">
-        <button class="pad" type="button" data-hand="L" aria-label="Left stick pad">L</button>
-        <button class="pad" type="button" data-hand="R" aria-label="Right stick pad">R</button>
-      </div>
-    </section>
-
-    <div id="stPlay"></div>
-
-    <section id="advice" hidden aria-label="Result">
+    <section id="advTop" hidden aria-label="Score">   <!-- after a run: the result first, then the staff, then the coaching that points into it -->
       <div class="notice" id="advFirst" hidden>
         <p><b>Reading your result</b></p>
         <ul>
@@ -1554,6 +1537,26 @@ RLRR LRLL RLRR LRLL</pre>
         <p class="cap" id="scoreNote"></p>
       </section>
       <div id="advBadge" hidden></div>
+    </section>
+
+    <section aria-label="Strokes">
+      <div class="rowswrap">
+      <div class="lvmtr" id="lvMtr" hidden aria-hidden="true"><i></i></div>
+      <div class="bigcount" id="bigCount" hidden aria-hidden="true"></div>
+      <canvas class="hwy" id="hwy" aria-hidden="true"></canvas>
+      <div class="rows" id="rows" tabindex="0"><div class="rows-track" id="rowsTrack"></div></div>
+      <p class="hint" id="rowEnd" hidden></p>
+      </div>
+      <p class="cap key"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other stick<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
+      <div class="pads kb-only">
+        <button class="pad" type="button" data-hand="L" aria-label="Left stick pad">L</button>
+        <button class="pad" type="button" data-hand="R" aria-label="Right stick pad">R</button>
+      </div>
+    </section>
+
+    <div id="stPlay"></div>
+
+    <section id="advice" hidden aria-label="Coaching">
       <h2 class="rsh">Coaching</h2>
       <p class="insight" id="advHead"></p>
       <ul class="coach" id="insight"></ul>
@@ -3357,7 +3360,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.151';                           /* shown beside the title */
+const VERSION='1.5.152';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5745,14 +5748,14 @@ function recordRun(r){
 }
 /* After a run the score is brought into view. The run layout is still being undone, so the jump repeats once the page has settled. */
 function showResult(){
-  const go=()=>{const b=$('advice');if(b.hidden||curTab!=='play')return;const r=b.getBoundingClientRect();if(r.bottom>innerHeight||r.top<0)scrollBy(0,r.top-12);};
+  const go=()=>{const b=$('advTop');if(b.hidden||curTab!=='play')return;const r=b.getBoundingClientRect();if(r.bottom>innerHeight||r.top<0)scrollBy(0,r.top-12);};
   go();requestAnimationFrame(()=>{go();});setTimeout(go,150);setTimeout(go,450);
 }
 function renderAdvice(){
   const box=$('advice');
   $('advExport').hidden=!(lastRun&&lastRun.run&&view&&view.ended&&view.env);   /* only a run with its loudness kept (the microphone) */
-  if(!lastRun){box.hidden=true;$('advDiscard').hidden=true;return;}
-  box.hidden=false;
+  if(!lastRun){box.hidden=$('advTop').hidden=true;$('advDiscard').hidden=true;return;}
+  box.hidden=$('advTop').hidden=false;
   $('advFirst').hidden=true;
   const L=lastRun,adv=adviceFor(L.rows.map(x=>({idx:x.idx,pct:x.pct,passes:x.passes})));
   const tgt=Math.round(TARGET*100)+'%';
