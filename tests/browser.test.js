@@ -1009,6 +1009,7 @@ audioTest('a scored run shows its score against the maximum, flags a new high sc
   assert.ok(o.chip, 'the first score is a new high score');
   assert.ok(!o.solo);
   assert.match(o.prev, /^First score on Hard at ±20 ms$/);
+  assert.doesNotMatch(await p.evaluate(() => document.querySelector('#advRes .scap').innerText), /%/, 'the score is not given as a second percentage, beside on time');
   assert.equal(await p.evaluate(() => document.querySelector('#advRes .slab').textContent), 'Score');
   const bd = await p.evaluate(() => ({ shown: !document.getElementById('scoreBox').hidden, on: document.getElementById('bOn').textContent, note: document.getElementById('scoreNote').textContent, row: [...document.getElementById('advBtns1').children].filter(b => !b.hidden).map(b => b.id) }));
   assert.ok(bd.shown); assert.match(bd.on, /^\d+$/); assert.match(bd.note, /Hard: 10 points on time/);

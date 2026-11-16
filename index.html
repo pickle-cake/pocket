@@ -1529,7 +1529,7 @@ RLRR LRLL RLRR LRLL</pre>
         <span class="slab">Score</span>
         <div class="shd"><b id="advScore"></b><span id="advMax"></span></div>
         <div class="sbar" id="advScoreBar"><i></i><u></u></div>
-        <div class="scap"><span id="advOfMax"></span><span id="advPrev"></span></div>
+        <div class="scap"><span id="advPrev"></span></div>
         <p class="swin" id="advBonus" hidden></p>
         <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span> &middot; <span id="advSub"></span></small></span></div>
       </div>
@@ -3370,7 +3370,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.158';                           /* shown beside the title */
+const VERSION='1.5.159';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4012,6 +4012,12 @@ const slotTol=sl=>slotWin(sl,S.tol);
 /* The window, as said beside a score when it is not the standard one. */
 /* The window's bonus, as its own line on a score card; none at the widest window. */
 const winNote=tol=>winMult(tol)>1?'\u00b1'+(tol||20)+' ms window: points \u00d7'+winMult(tol):'';
+/* A score against the best before it at its click level and window, in words: the card's one percentage is on time, so the share of a perfect run is only the bar. was is the best share before, or 0. */
+function bestLine(share,was,lv,tol){
+  const at=' on '+levelName(lv)+' at \u00b1'+(tol||20)+' ms';
+  if(!(was>0))return 'First score'+at;
+  return (share>was+1e-9?'New best':share>=was-1e-9?'Equals your best':'Below your best')+at;
+}
 function liveScore(r,sg,c){
   if(!r.hud)return;
   const p=LV_PTS[S.click],si=r.plan.segs.indexOf(sg);
@@ -5824,13 +5830,11 @@ function renderAdvice(){
       const mx=L.practice?0:runMax(L.run),r=$('advRes');   /* the same maximum as the run's page */
       r.classList.toggle('solo',!mx);
       if(mx){
-        const f=n=>n.toLocaleString('en-US'),lv=levelName(L.run.lv);
+        const f=n=>n.toLocaleString('en-US');
         $('advScore').textContent=f(L.score);$('advMax').textContent='/ '+f(mx);$('advHs').hidden=!L.hsNew;
         const bar=$('advScoreBar');bar.firstChild.style.width=Math.min(100,100*L.score/mx)+'%';
         const tk=bar.lastChild,showTk=L.share0>0&&L.share0<1;tk.hidden=!showTk;if(showTk)tk.style.left=(100*L.share0)+'%';
-        const at=' at \u00b1'+(L.run.tol||20)+' ms';
-        $('advPrev').textContent=L.share0>0?'Best on '+lv+at+': '+Math.round(100*L.share0)+'%':'First score on '+lv+at;
-        $('advOfMax').textContent='This run: '+Math.round(100*L.score/mx)+'%';
+        $('advPrev').textContent=bestLine(L.score/mx,L.share0,L.run.lv,L.run.tol)+(showTk&&L.score/mx<L.share0?', marked on the bar':'');
         $('advBonus').hidden=!winNote(L.run.tol);$('advBonus').textContent=winNote(L.run.tol);
       }
     }
@@ -6594,7 +6598,7 @@ function renderRunPage(r){
     mk('span','slab','Score');
     const hd=mk('div','shd');mk('b',null,f0(sc),hd);mk('span',null,'of '+f0(mx),hd);
     const bar=mk('div','sbar');mk('i',null,null,bar).style.width=Math.min(100,100*sc/mx)+'%';
-    const cp=mk('div','scap');mk('span',null,Math.round(100*sc/mx)+'% of max',cp);mk('span',null,'Best on '+levelName(r.lv)+' at \u00b1'+(r.tol||20)+' ms: '+Math.round(100*(bestShares(recs.runs,recs.sum)[shareKey(r.lv,r.tol)]||0))+'%',cp);
+    const cp=mk('div','scap'),best=bestShares(recs.runs,recs.sum)[shareKey(r.lv,r.tol)]||0;mk('span',null,sc/mx>=best-1e-9?'Your best on '+levelName(r.lv)+' at \u00b1'+(r.tol||20)+' ms':bestLine(sc/mx,best,r.lv,r.tol),cp);   /* the best includes this run */
     if(winNote(r.tol))mk('p','swin',winNote(r.tol));
     const ac=mk('div','sacc'),pb=mk('b',null,a[0],ac);pb.className=a[1];
     const sp=mk('span',null,'on time',ac);
