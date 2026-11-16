@@ -679,6 +679,7 @@ async function runOnce(settings, practice, init) {
   const out = await p.evaluate(() => ({
     saved: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).map(r => r.lv),
     text: document.getElementById('advice').innerText,
+    warm: document.getElementById('advWarm').hidden ? '' : document.getElementById('advWarm').textContent,
     discard: !document.getElementById('advDiscard').hidden,
     badge: document.getElementById('advBadge').hidden ? '' : document.getElementById('advBadge').innerText,
     days: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).sum || {}).days || {},
@@ -864,7 +865,9 @@ audioTest('Master (count-in only) is scored and saved', async () => {
 audioTest('a practice run shows its result but saves nothing', async () => {
   const o = await runOnce({ click: 'beat' }, true);
   assert.deepEqual(o.saved, []);
-  assert.match(o.text, /Warm-up, not saved/);
+  assert.equal(o.warm, 'Warm-up · not saved', 'the card says so at the top');
+  assert.match(o.text, /Your time still counts today/);
+  assert.doesNotMatch(o.text, /First run at this tempo|New best|Best at this tempo/, 'not compared with saved runs');
   assert.ok(!o.discard);
 });
 

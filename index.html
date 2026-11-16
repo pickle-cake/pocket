@@ -772,6 +772,7 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .res .sacc{display:flex;gap:14px;align-items:center;border-top:1px solid var(--line);padding-top:10px}
 .res .sacc b{font:800 var(--t-display) var(--font-display);font-variant-numeric:tabular-nums;white-space:nowrap}
 .res .sacc>span{font-size:13px;color:var(--muted)}
+.res .swarm{margin:0}   /* a warm-up says so first: nothing below it is kept */
 .res .snext{margin:0;font:500 var(--t-small) var(--font-body);color:var(--ink)}   /* what to play next time, under the share on time: a note, not a button */
 .res.solo .slab,.res.solo .shd,.res.solo .sbar,.res.solo .scap,.res.solo .swin{display:none}
 .res.solo .sacc{border-top:0;padding-top:0}
@@ -1532,13 +1533,14 @@ RLRR LRLL RLRR LRLL</pre>
         <button class="btn link" type="button" data-help="help-play">More in Help</button>
       </div>
       <div class="card res" id="advRes">
+        <p class="eyebrow swarm" id="advWarm" hidden>Warm-up &middot; not saved</p>
         <p class="hsbar" id="advHs" hidden>New high score</p>
         <span class="slab">Score</span>
         <div class="shd"><b id="advScore"></b><span id="advMax"></span></div>
         <div class="sbar" id="advScoreBar"><i></i><u></u></div>
         <div class="scap"><span id="advPrev"></span></div>
         <p class="swin" id="advBonus" hidden></p>
-        <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span> &middot; <span id="advSub"></span></small></span></div>
+        <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span><span id="advSubW"> &middot; <span id="advSub"></span></span></small></span></div>
         <p class="snext" id="advNext" hidden></p>
       </div>
       <section class="panel" id="scoreBox" hidden aria-label="Score breakdown">
@@ -3387,7 +3389,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.166';                           /* shown beside the title */
+const VERSION='1.5.167';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5827,6 +5829,7 @@ function renderAdvice(){
     const share=played.reduce((t,x)=>t+x.pct*x.due,0)/due,pb=x=>L.prevBest&&L.prevBest.has(x.key)?L.prevBest.get(x.key):null;
     $('advPct').textContent=onPct(share);
     $('advRes').dataset.ok=adv.cleared?'1':'0';
+    $('advWarm').hidden=!L.practice;$('advSubW').hidden=!!L.practice;   /* a warm-up is not saved, so it is not compared with your bests */
     if(one){
       const x=played[0],b=pb(x);
       $('advStat').textContent=adv.cleared?'Cleared the '+tgt+' target':'Target is '+tgt;
@@ -5875,7 +5878,7 @@ function renderAdvice(){
   }
   if(L.skipped)body+=' '+L.skipped+(L.skipped===1?' exercise was':' exercises were')+' stopped before one full pass and not scored.';
   if(!L.saved)body+=' Your browser would not save the records.';
-  if(L.practice)body='Warm-up, not saved. Your time still counts today. '+body;
+  if(L.practice)body='Your time still counts today. '+body;
   coachNote($('advHead'),fix);$('advBody').textContent=body;
 }
 /* Discard takes the run out of your records and goes back to the start, as Done does: a discarded run has nothing
