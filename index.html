@@ -783,7 +783,7 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .key .k.ok{color:var(--ok)}.key .k.early{color:var(--early);font-style:italic}
 .key .k.late{color:var(--late);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .key .k.miss{color:var(--muted);opacity:.4}
-.key .k.box{padding:2px var(--s-1);background:linear-gradient(var(--ink),var(--ink)) bottom/100% 1px,linear-gradient(var(--ink),var(--ink)) bottom left/1px 5px,linear-gradient(var(--ink),var(--ink)) bottom right/1px 5px;background-repeat:no-repeat}   /* like a marked stroke on the staff: a bracket under it */
+.key .k.box{padding:2px var(--s-1);background:linear-gradient(var(--ink),var(--ink)) bottom/100% 2px,linear-gradient(var(--ink),var(--ink)) bottom left/2px 5px,linear-gradient(var(--ink),var(--ink)) bottom right/2px 5px;background-repeat:no-repeat}   /* like a marked stroke on the staff: a bracket under it */
 @media (max-width:359px){.tabs button{font-size:13px;letter-spacing:0}}   /* four tab names fit the narrowest phones */
 .dur{display:grid;grid-template-columns:minmax(70px,1fr) minmax(110px,1.4fr);gap:8px}
 .maxline{margin:-10px 0 0;font-size:13px;color:var(--muted);text-align:right}
@@ -3370,7 +3370,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.157';                           /* shown beside the title */
+const VERSION='1.5.158';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4586,7 +4586,7 @@ function staffLine(sg,opt){
     }else{
       /* shown while a coaching note marks this stroke: a bracket under the timing, its line, and its ends where a marked run starts (l) and stops (r). The lines span the whole stroke, so a run's bracket is unbroken. */
       const bl=x0(i)+1,br=x0(i)+xw(i)-1;
-      [[x0(i),105,xw(i),1,'h'],[bl,100,1,6,'l'],[br-1,100,1,6,'r']].forEach(q=>g.appendChild(mk('rect',{class:'mks '+q[4],x:q[0],y:q[1],width:q[2],height:q[3]})));
+      [[x0(i),104,xw(i),2,'h'],[bl,100,2,6,'l'],[br-2,100,2,6,'r']].forEach(q=>g.appendChild(mk('rect',{class:'mks '+q[4],x:q[0],y:q[1],width:q[2],height:q[3]})));
       g.appendChild(mk('ellipse',{class:'nh',cx:cx,cy:Y,rx:6.6,ry:4.7,transform:'rotate(-20 '+cx+' '+Y+')'}));
       g.appendChild(mk('line',{class:'stem',x1:cx+SX,x2:cx+SX,y1:Y-1,y2:TOP}));
       /* a buzz stroke: a z across the stem */
