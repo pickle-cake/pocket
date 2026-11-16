@@ -1052,6 +1052,19 @@ audioTest('after a run a note says what to play next time, and Play says it agai
   assert.deepEqual(await p.evaluate('[onPct(0.896), onPct(0.9), onPct(0.29)]'), ['89%', '90%', '29%'], 'on time rounds down, so below the target never reads 90%');
 });
 
+audioTest('a routine below the target is told to stay until every exercise reaches 90%, naming no single exercise', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL\n8 RRLL', mode: 'routine', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach((s, i) => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + (s.seg && i % 2 ? 0.04 : 0.005), kb: true, f: null, det: { hand, conf: 1 } }); }); });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  assert.equal(await p.textContent('#advNext'), 'Next time: stay at 120 BPM until every exercise reaches 90% on time.');
+  await p.evaluate(() => document.getElementById('advDone').click());
+  await p.waitForTimeout(200);
+  assert.equal(await p.textContent('#lastNote'), 'Last time: 75% on time at 120 BPM. Stay at 120 BPM until every exercise reaches 90% on time.');
+});
+
 audioTest('rests keep the streak and score nothing unless hit, and a hit on a rest is a miss', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'R_L_ R_L_', eachUnit: 'pass', eachVal: 2, seeded: true });
   await press(p, /^Start/);

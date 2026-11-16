@@ -1364,7 +1364,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Scores and rewards:</b> turn them on under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
-        <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run a note says what to play next time: stay at that tempo and work on the lowest exercise, or, once cleared, try 5 BPM faster. Play shows it again, with your last result, when you next open that exercise or routine. On time is rounded down, so 89.6% reads 89%. Any tempo is always allowed.</li>
+        <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run a note says what to play next time: stay at that tempo until every exercise reaches 90%, or, once cleared, try 5 BPM faster. Play shows it again, with your last result, when you next open that exercise or routine. On time is rounded down, so 89.6% reads 89%. Any tempo is always allowed.</li>
         <li><b>Coaching</b> after a run names the strokes that go wrong most often, such as one that is always late. It needs at least 3 passes of an exercise to tell a habit from chance, so set Each exercise to 3 passes or more.</li>
         <li><b>Discard</b>, under a result, removes the run from your records, for example after a bad microphone read. Undo puts it back.</li>
         <li><b>Progress page:</b> every exercise, sorted by accuracy, with accuracy at your last tempo, trend and early/late bias, grouped by click level. Play loads that exercise. A routine is cleared at a tempo when one run covered every exercise and all reached 90%.</li>
@@ -2822,12 +2822,12 @@ const levelName=v=>(LEVELS.find(l=>l.v===v)||{n:''}).n;
 const TARGET=0.9;                                /* accuracy that counts as cleared at a tempo */
 /* An on-time share as a whole percentage, rounded down, so a run below the target never reads as the target. */
 const onPct=v=>Math.floor(v*100+1e-9)+'%';
-/* What to play next time, from a result: one exercise or a whole routine, its share on time, its tempo, and for a routine
-   the lowest exercise below the target ({idx,pct}) or null. */
+/* What to play next time, from a result: whether it cleared, its tempo, and whether it was a routine. A routine is
+   played as a whole, so the note names no single exercise in it. */
 const TRY_STEP=5;
 function nextText(o){
-  if(o.pct>=TARGET)return o.bpm+TRY_STEP<=220?'try '+(o.bpm+TRY_STEP)+' BPM.':'try less click or a tighter window.';
-  return 'stay at '+o.bpm+' BPM'+(o.low?' and work on exercise '+o.low.idx+', the lowest at '+onPct(o.low.pct)+' on time.':' until it reaches '+onPct(TARGET)+' on time.');
+  if(o.cleared)return o.bpm+TRY_STEP<=220?'try '+(o.bpm+TRY_STEP)+' BPM.':'try less click or a tighter window.';
+  return 'stay at '+o.bpm+' BPM until '+(o.routine?'every exercise reaches ':'it reaches ')+onPct(TARGET)+' on time.';
 }
 function hash32(str){let h=5381;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;return h.toString(36);}
 /* One canonical text per rhythm, whatever the default subdivision or spacing was. */
@@ -3390,7 +3390,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.164';                           /* shown beside the title */
+const VERSION='1.5.165';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5865,9 +5865,9 @@ function renderAdvice(){
   if(!n)body='Stopped before one full pass, so nothing was scored.';
   else body='';
   {   /* a suggestion for the next run, under the share on time: text, not a button, as the next run may be another day */
-    const nx=$('advNext'),low=one?null:adv.weak.slice().sort((a,b)=>a.pct-b.pct)[0]||null;
+    const nx=$('advNext');
     nx.hidden=!due;
-    if(due)nx.textContent='Next time: '+nextText({pct:adv.cleared?1:0,bpm:L.run&&L.run.bpm||S.bpm,low:low});
+    if(due)nx.textContent='Next time: '+nextText({cleared:adv.cleared,bpm:L.run&&L.run.bpm||S.bpm,routine:!one});
   }
   {   /* what was just earned gets its own moment at the top, once */
     const wins=[];
@@ -7892,19 +7892,20 @@ function pulseNote(exercises){
 }
 /* The last saved run of what is loaded, at this click and accent rule, and what to play next: "Last time: 88% at 90 BPM. Stay at 90 BPM." */
 function syncLastNote(){
-  const el=$('lastNote'),ex=allExercises();let e=null,pct=NaN,low=null;
+  const el=$('lastNote'),ex=allExercises();let e=null,pct=NaN,ok=false;
   if(ex.length&&!(run&&!run.ended)&&!lastRun){   /* not beside the result it repeats */
     const keys=ex.map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig)),cd=S.click,dy=dynCode();
-    if(S.mode==='single'||keys.length===1){e=guide().pat.get(statKey(keys[0],cd,dy));if(e)pct=e.last;}
+    if(S.mode==='single'||keys.length===1){e=guide().pat.get(statKey(keys[0],cd,dy));if(e){pct=e.last;ok=pct>=TARGET;}}
     else{
       e=guide().rt.get(statKey(routineKeyOf(keys),cd,dy));
       const r=e&&e.recs&&e.recs[e.recs.length-1];pct=r?r.pct:NaN;
-      const lr=e&&[...recs.runs].reverse().find(x=>x.rk===e.rk&&x.lv===cd&&(x.dy||'')===(dy||''));
-      if(lr){const w=lr.exercises.map((b,i)=>({idx:b.idx||i+1,pct:b.due>0?b.within/b.due:1})).filter(b=>b.pct<TARGET).sort((a,b)=>a.pct-b.pct);low=w[0]||null;}
+      /* cleared only when that run played every exercise and each reached the target, not when the routine's average did */
+      const lr=r&&recs.runs.find(x=>x.t===r.t&&x.rk===e.rk);
+      ok=!!lr&&lr.exercises.length>=lr.ne&&lr.exercises.every(b=>b.due>0&&b.within/b.due>=TARGET);
     }
   }
   el.hidden=!(e&&e.bpm&&!isNaN(pct));
-  if(!el.hidden){const t=nextText({pct:pct,bpm:e.bpm,low:low});el.textContent='Last time: '+onPct(pct)+' on time at '+e.bpm+' BPM. '+t[0].toUpperCase()+t.slice(1);}
+  if(!el.hidden){const t=nextText({cleared:ok,bpm:e.bpm,routine:ex.length>1});el.textContent='Last time: '+onPct(pct)+' on time at '+e.bpm+' BPM. '+t[0].toUpperCase()+t.slice(1);}
 }
 function routineGuide(){
   const e=guide().rt.get(statKey(routineKeyOf(allExercises().map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig))),S.click,dynCode()));
