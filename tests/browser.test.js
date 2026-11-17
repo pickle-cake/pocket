@@ -27,6 +27,8 @@ test.before(async () => {
   browser = await playwright[ENGINE].launch(ENGINE === 'chromium' ? { args: ['--autoplay-policy=no-user-gesture-required', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } : {});
 });
 test.after(async () => { await browser.close(); server.close(); });
+/* Each test's pages are closed when it ends. Left open, they pile up (some still playing), and on CI WebKit runs out of memory part-way and the job is cancelled. */
+test.afterEach(async () => { await Promise.all(browser.contexts().map(c => c.close())); });
 
 /* Tests that play a run need Web Audio. Playwright's WebKit for Windows has none, so there they are skipped. */
 const audioTest = process.env.POCKET_NO_AUDIO ? (name, fn) => test(name, { skip: 'no Web Audio in this WebKit build; CI runs it on Linux' }, fn) : test;
