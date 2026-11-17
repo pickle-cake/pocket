@@ -293,6 +293,7 @@ body[data-run="1"] .notice{display:none}
 [data-view=hwy] body[data-state="run"] .lvmtr{display:none}
 [data-view=hwy] body[data-state="run"] .bigcount{place-items:start center;padding-top:var(--s-4);background:none}   /* the count-in sits over the far end of the road, so the first notes can be seen coming */
 [data-view=hwy] body[data-state="run"] #hwy{display:block}   /* only while playing: before a run the staff is where you pick the exercise to start on, and after it the staff is the review */
+[data-view=hwy] body[data-state="run"] .cap.key{display:none}   /* the key explains the staff's letters, which the road does not show */
 .cap{font-size:13px;color:var(--muted);margin:8px 0 0}
 .pads{display:none;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 body[data-input="kb"][data-run="1"] .pads{display:grid}   /* the pads only show while a run is playing, not on the result */
@@ -3401,7 +3402,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.184';                           /* shown beside the title */
+const VERSION='1.5.185';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
