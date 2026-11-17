@@ -104,7 +104,8 @@ nav a:hover{color:var(--ink)}
 .staff b{font:600 var(--t-title) var(--font-data);letter-spacing:.08em}
 .staff small{font:400 var(--t-eyebrow) var(--font-data);color:var(--muted);font-variant-numeric:tabular-nums}
 .ok{color:var(--ok)}
-.early{color:var(--early);font-style:italic}
+.early{color:var(--early)}
+:is(.staff,.key) .early{font-style:italic}   /* outranks the font shorthand on .staff b and .key b, which resets the slant */
 .late{color:var(--late);text-decoration:underline;text-underline-offset:3px}
 .key{display:flex;flex-wrap:wrap;gap:var(--s-1) var(--s-4);margin:0;padding:0;list-style:none;font:var(--t-caption) var(--font-body);color:var(--muted)}
 code{font-family:var(--font-data);color:var(--ink)}
