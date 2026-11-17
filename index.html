@@ -1544,6 +1544,7 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span><span id="advSubW"> &middot; <span id="advSub"></span></span></small></span></div>
         <p class="snext" id="advNext" hidden></p>
       </div>
+      <div id="advBadge" hidden></div>   <!-- straight under the result, so a reward is seen on a phone without scrolling -->
       <section class="panel" id="scoreBox" hidden aria-label="Score breakdown">
         <h3>Score breakdown</h3>
         <div class="stats">
@@ -1556,7 +1557,6 @@ RLRR LRLL RLRR LRLL</pre>
         </div>
         <p class="cap" id="scoreNote"></p>
       </section>
-      <div id="advBadge" hidden></div>
     </section>
 
     <section aria-label="Strokes">
@@ -3390,7 +3390,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.168';                           /* shown beside the title */
+const VERSION='1.5.169';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
