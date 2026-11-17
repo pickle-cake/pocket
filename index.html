@@ -796,6 +796,7 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .key .k.late{color:var(--late);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .key .k.miss{color:var(--muted);opacity:.4}
 .key .k.ck,.key .k.nc,.key .k.sb{font:800 var(--t-nav) var(--font-display)}   /* the click key: the staff's letters, underlined, plain and faded */
+.key .k.ck,.key .k.nc{color:var(--ink)}   /* click and no-click letters are ink, as on the staff; only a silent bar is faded */
 .key .k.ck{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}.key .k.sb{color:var(--muted)}
 body:not([data-state=idle]) #ckKey,body[data-state=idle] #tmKey{display:none}   /* before a run the key says where the click plays; from the start of a run, what the timing colours mean */
 .key .k.box{padding:2px var(--s-1);background:linear-gradient(var(--ink),var(--ink)) bottom/100% 2px,linear-gradient(var(--ink),var(--ink)) bottom left/2px 5px,linear-gradient(var(--ink),var(--ink)) bottom right/2px 5px;background-repeat:no-repeat}   /* like a marked stroke on the staff: a bracket under it */
@@ -3579,7 +3580,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.204';                           /* shown beside the title */
+const VERSION='1.5.205';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
