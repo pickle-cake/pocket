@@ -218,26 +218,35 @@ test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 
   assert.deepEqual(p.errors, []);
 });
 
-test('Bars with a click: a choice under the click levels, kept, and off on Solo with the reason', async () => {
+test('Bars with a click: bars on and silent bars set with − and +, kept, and off on Solo with the reason', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat' }, { width: 390, height: 844 });
-  assert.equal(await p.getAttribute('#gbAll', 'aria-pressed'), 'true', 'every bar to start with');
-  assert.equal(await p.textContent('#barsHint'), 'The click plays in every bar.');
-  await p.click('#gb13');
-  assert.equal(await p.evaluate(() => window.__T.S().bars), '1-3');
-  assert.equal(await p.getAttribute('#gb13', 'aria-pressed'), 'true');
-  assert.match(await p.textContent('#barsHint'), /^The click plays 1 bar on, 3 off, from the first bar of each exercise\. Silent bars are still scored\. Points ×1\.75\.$/);
-  const w = await p.evaluate(() => ({ page: document.documentElement.scrollWidth, btn: [...document.querySelectorAll('#barsSeg button')].map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }), over: [...document.querySelectorAll('#barsSeg button')].some(b => b.scrollWidth > b.clientWidth) }));
+  const val = () => p.evaluate(() => ['barsOnN', 'barsOffN'].map(i => document.getElementById(i)).map(o => o.firstChild.textContent).join('/') + ' ' + document.getElementById('barsDots').children.length);
+  assert.equal(await val(), '1/0 0', 'every bar to start with, no dots');
+  assert.equal(await p.textContent('#barsHint'), 'The click plays in every bar. Add silent bars with + to let it drop out, then set how many bars click between them.');
+  assert.ok(await p.isDisabled('#barsOnUp'), 'the bars with a click wait for a silent bar');
+  await p.click('#barsOffUp');
+  assert.equal(await val(), '1/1 2');
+  assert.equal(await p.evaluate(() => window.__T.S().bars), '10');
+  assert.equal(await p.textContent('#barsHint'), 'The click plays 1 bar on, 1 off, from the start of each exercise. Silent bars are still scored: points ×1.25.');
+  await p.click('#barsOffUp'); await p.click('#barsOffUp'); await p.click('#barsOnUp');
+  assert.equal(await p.evaluate(() => window.__T.S().bars), '11000');
+  assert.match(await p.textContent('#barsHint'), /2 bars on, 3 off.*×1.75.$/);
+  await p.click('#barsOnUp'); await p.click('#barsOnUp');
+  assert.equal(await val(), '4/3 7', 'up to 4 with the click');
+  assert.ok(await p.isDisabled('#barsOnUp'));
+  const w = await p.evaluate(() => ({ page: document.documentElement.scrollWidth, btn: [...document.querySelectorAll('#barsOnDown, #barsOnUp, #barsOffDown, #barsOffUp')].map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }) }));
   assert.ok(w.btn.every(x => x >= 44), '44px targets: ' + w.btn);
-  assert.ok(!w.over, 'the labels fit their buttons');
   assert.ok(w.page <= 390, 'no sideways scroll');
   await p.click('#ckNone');
-  assert.ok(await p.isDisabled('#gb11'), 'off on Solo');
+  assert.ok(await p.isDisabled('#barsOffDown'), 'off on Solo');
   assert.equal(await p.textContent('#barsHint'), 'Off on Solo: it has no click after the count-in.');
   await p.click('#ckBeat');
-  assert.ok(!(await p.isDisabled('#gb11')));
-  assert.equal(await p.getAttribute('#gb13', 'aria-pressed'), 'true', 'the choice comes back after Solo');
+  assert.ok(!(await p.isDisabled('#barsOffDown')));
+  assert.equal(await p.evaluate(() => window.__T.S().bars), '1111000', 'the setting comes back after Solo');
   await p.reload();
-  assert.equal(await p.evaluate(() => window.__T.S().bars), '1-3', 'kept');
+  assert.equal(await val(), '4/3 7', 'kept');
+  for (let i = 0; i < 3; i++) await p.click('#barsOffDown');
+  assert.equal(await val(), '1/0 0', 'no silent bars is every bar again');
   assert.deepEqual(p.errors, []);
 });
 
