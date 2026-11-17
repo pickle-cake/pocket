@@ -9,7 +9,7 @@ const ENGINE = process.env.POCKET_ENGINE || 'chromium';
 const contextFor = viewport => Object.assign(ENGINE === 'webkit' && viewport.width < 720 ? { ...playwright.devices['iPhone 13'] } : {}, { viewport });
 const { ROOT, html } = require('./helpers');
 
-const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo()};let heardTimer=0;');
+const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo(),unlocked:renderUnlocked};let heardTimer=0;');
 assert.ok(page !== html, 'the test hook did not attach: has handleHit moved?');
 
 let server, base, browser, served = 0;
@@ -700,6 +700,31 @@ audioTest('Restart sits after Stop and needs a second tap, so a stray tap keeps 
   await p.click('#restartBtn');
   await p.waitForFunction(() => window.__T.run() && window.__T.run() !== window.__first && window.__T.run().plan, null, { timeout: 8000 });
   assert.equal(await p.textContent('#restartBtn'), 'Restart');
+  assert.deepEqual(p.errors, []);
+});
+
+test('a new best tempo names its medal and the tempo of the next; a raised medal leads the card when no badge was won', async () => {
+  const p = await open({ game: true });
+  const card = (bpm, was, n = 1) => p.evaluate(([bpm, was, n]) => {
+    const k = '16 RLRR LRLL RLRR LRLL', L = { won: [], newTempo: Array.from({ length: n }, () => ({ key: k, bpm, was })), run: { lv: 'strokes' } };
+    window.__T.unlocked(L, ['New best tempo: ' + (n === 1 ? k + ' at ' + bpm + ' BPM' : n + ' exercises at a new tempo')]);
+    const b = document.getElementById('advBadge');
+    return { lead: b.querySelector('.lbl').textContent, text: b.textContent, medal: !!b.querySelector('.medal') };
+  }, [bpm, was, n]);
+  let c = await card(90, 80);   /* Platinum before and after: a line */
+  assert.equal(c.lead, 'New best tempo');
+  assert.match(c.text, /at 90 BPM. Platinum on Easy. Sapphire at 100 BPM/);
+  c = await card(100, 90);   /* Platinum to Sapphire: the medal leads */
+  assert.equal(c.lead, 'New medal');
+  assert.equal(c.medal, true);
+  assert.match(c.text, /Sapphire on Easy.*cleared at 100 BPM, 400 strokes a minute..*Next: Ruby at 120 BPM/);
+  c = await card(220, 200);
+  assert.match(c.text, /Diamond on Easy, the top medal/);
+  c = await card(90, 80, 2);   /* two exercises: no one medal to name */
+  assert.doesNotMatch(c.text, /Platinum/);
+  await p.evaluate(() => { window.__T.S().game = false; });
+  c = await card(100, 90);
+  assert.doesNotMatch(c.text, /medal|Sapphire/i);
   assert.deepEqual(p.errors, []);
 });
 

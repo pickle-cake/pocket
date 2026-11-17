@@ -1361,7 +1361,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>On time</b> is the share of due strokes inside your on-time window. With an accent or ghost rule a stroke must also be played as written: an accent clearly louder and a ghost clearly softer than its neighbours. An exercise needs at least one full pass to be scored.</li>
         <li><b>Score:</b> with Scores and rewards on, every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Extreme and 5 on Master). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best share is kept for each window. The streak carries from one exercise to the next. The total never goes below zero. Your best score at each click level is an achievement, and a new one is announced when the run ends.</li>
         <li><b>Scores and rewards:</b> turn them on under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
-        <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold.</li>
+        <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold. A run that clears an exercise faster than before shows its medal and the tempo of the next one.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run a note says what to play next time: stay at that tempo until every exercise reaches 90%, or, once cleared, try 5 BPM faster. Play shows it again, with your last result, when you next open that exercise or routine. On time is rounded down, so 89.6% reads 89%. Any tempo is always allowed.</li>
         <li><b>Coaching</b> after a run names the strokes that go wrong most often, such as one that is always late. It needs at least 3 passes of an exercise to tell a habit from chance, so set Each exercise to 3 passes or more.</li>
@@ -3390,7 +3390,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.169';                           /* shown beside the title */
+const VERSION='1.5.170';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5790,7 +5790,7 @@ function recordRun(r){
   }
   const prevBest=new Map();
   rows.forEach(x=>{const b=bestBefore(recs.runs,x.key,x.bpm,S.click,r.dyc);if(b!==null)prevBest.set(x.key,b);});
-  const newTempo=rows.filter(x=>x.pct>=TARGET&&x.bpm>clearedBefore(recs.runs,x.key,S.click,recs.sum,r.dyc)&&scoreOn);
+  const newTempo=rows.filter(x=>x.pct>=TARGET&&x.bpm>(x.was=clearedBefore(recs.runs,x.key,S.click,recs.sum,r.dyc))&&scoreOn);   /* was: the fastest clear before, for the medal it held */
   const bv0=badgeValues(recs.runs,recs.sum),score=runScore(run),hs0=highScores(recs.runs,recs.sum)[run.lv]||0,share0=bestShares(recs.runs,recs.sum)[shareKey(run.lv,run.tol)]||0;
   if(scoreOn)recs.runs.push(run);   /* a practice run is shown but not kept */
   let autoLib=null;   /* a kept routine goes to the library, where Delete removes it; discarding the run takes it back out */
@@ -6018,12 +6018,41 @@ function drawMedal(gl,m,glow,earned,title){
 }
 function medal(b,i,earned){const t=tierOf(i,b.at.length);return drawMedal(b.gl,MMETAL[t],t>=4,earned,b.nm[i]+' \u00b7 '+fmtBadge(b,b.at[i]));}
 /* The mastery medal of one exercise on one level, from its fastest cleared tempo. */
+/* The medal a new best tempo gives, of the exercises this run cleared faster than before: the one that rose most, else the highest. up: it rose; next: the tempo of the next medal, 0 at the top or past 220 BPM. */
+function medalNews(L){
+  if(!S.game||!L.newTempo||!L.newTempo.length)return null;
+  const all=L.newTempo.map(x=>{
+    const t=masteryTier(x.key,x.bpm),t0=x.was>0?masteryTier(x.key,x.was):-1;let next=0;
+    if(t<RATE_AT.length){let b=x.bpm+1;while(b<=220&&strokeRate(x.key,b)<RATE_AT[t])b++;if(b<=220)next=b;}
+    return {key:x.key,bpm:x.bpm,t:t,up:t>t0,next:next};
+  });
+  all.sort((a,b)=>(b.up-a.up)||(b.t-a.t));
+  return all[0];
+}
+const medalName=(m,lv)=>MTIER[m.t]+' on '+levelName(lv);
+const medalTail=m=>m.next?'. '+MTIER[m.t+1]+' at '+m.next+' BPM':', the top medal';
 /* The unlocked panel on the result: the best step this run earned, and how far the next one is. */
 /* The result's one celebration card: the best badge just earned, with any new best tempo as a line; or the new best tempo alone. */
 function renderUnlocked(L,wins){
   const box=$('advBadge'),won=(S.game&&L.won||[]).slice().sort((a,b)=>{const A=BADGES.find(x=>x.id===a.id),B=BADGES.find(x=>x.id===b.id);return tierOf(b.i,B.at.length)-tierOf(a.i,A.at.length)||b.i-a.i;});
-  box.classList.toggle('plain',!won.length);
+  const md=medalNews(L),lv=L.run&&L.run.lv;
+  box.classList.toggle('plain',!won.length&&!(md&&md.up));
   box.hidden=!won.length&&!(wins&&wins.length);
+  if(!won.length&&md&&md.up){   /* a medal just earned or raised leads, drawn as in Progress, with the tempo of the next one */
+    box.textContent='';
+    const tx=document.createElement('div');tx.className='bwt';
+    const lb=document.createElement('span');lb.className='lbl';lb.textContent='New medal';
+    const h=document.createElement('b');h.textContent=medalName(md,lv);
+    const p=document.createElement('span');p.className='sent';p.textContent=showKey(md.key)+' cleared at '+md.bpm+' BPM, '+strokeRate(md.key,md.bpm)+' strokes a minute.';
+    tx.append(lb,h,p);
+    if(L.newTempo.length>1){const q=document.createElement('span');q.className='sent';q.textContent=wins.join(' · ')+'.';tx.appendChild(q);}
+    box.append(drawMedal('note',MMETAL[md.t],md.t>=4,true,medalName(md,lv)),tx);
+    const nx=document.createElement('div');nx.className='bnx';
+    const nm=document.createElement('b');nm.textContent=md.next?'Next: '+MTIER[md.t+1]+' at '+md.next+' BPM':'That is the top medal.';nx.appendChild(nm);
+    box.appendChild(nx);
+    return true;
+  }
+  if(md&&L.newTempo.length===1)wins=wins.map(w=>w+'. '+(md.up?'New medal: ':'')+medalName(md,lv)+medalTail(md));   /* only when the line names the one exercise */
   if(!won.length){
     if(box.hidden)return false;
     box.textContent='';
