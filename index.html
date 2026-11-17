@@ -373,6 +373,7 @@ button.row:disabled{opacity:.4;cursor:not-allowed}
 .m-thr{position:absolute;top:0;bottom:0;width:2px;background:var(--ink)}
 .m-ghost{width:0;background:none;border-left:2px dashed var(--muted)}
 .btns{display:flex;flex-wrap:wrap;gap:var(--s-2)}
+#runBtns #restartBtn{margin-left:auto}   /* Restart throws the run away: a quieter link at the far end from Stop, and it asks twice */
 .btns.even{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}   /* two or three secondary buttons share one width */
 .heard{font:600 13px var(--font-data);color:var(--accent)}
 
@@ -749,8 +750,8 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 /* On a phone the run controls are large and pinned to the bottom of the screen, where a thumb can reach them. */
 :root:not([data-layout=desktop]) body[data-run="1"] .transport{position:fixed;left:0;right:0;bottom:0;z-index:20;grid-template-columns:1fr;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line)}
 :root:not([data-layout=desktop]) body[data-run="1"] .transport #startBtn{width:100%;min-height:72px}
-:root:not([data-layout=desktop]) body[data-run="1"] #runBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-:root:not([data-layout=desktop]) body[data-run="1"] #runBtns .btn{min-height:var(--hit-lg)}
+:root:not([data-layout=desktop]) body[data-run="1"] #runBtns{display:grid;grid-template-columns:1fr auto;gap:var(--s-4)}
+:root:not([data-layout=desktop]) body[data-run="1"] #stopBtn{min-height:var(--hit-lg)}
 :root:not([data-layout=desktop]) body[data-run="1"] #pagePlay{padding-bottom:190px}
 :root:not([data-layout=desktop]) body[data-review="1"] #advBtns1{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);margin:0}
 :root:not([data-layout=desktop]) body[data-review="1"] #advBtns1 .btn{min-height:var(--hit-lg)}
@@ -1186,7 +1187,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>The loudness strip</b> appears under each line of the staff when a run ends, lined up with the notes above it. It draws how loud the pad was, with a faint line where each note was due and the trigger line dashed. Grace notes show as the smaller peaks just before their main stroke, so you can see whether a flam or drag was heard and how close it was. On buzz strokes, a tick at the top marks each bounce counted, and the strip shows why a bounce was or was not counted: too quiet for the trigger line, or too close to the one before. Only the run you just played has it, and it is kept in memory, not saved. To keep it, choose <b>Export</b> under the result: it saves that run with its loudness and every sound heard to a file. Keyboard input has none.</li>
         <li><b>Narrow screens:</b> a busy pass wraps onto two lines at a barline.</li>
         <li><b>Keys:</b> <b>Space</b> starts, pauses and resumes, <b>Enter</b> plays Again after a run, and <b>Escape</b> stops.</li>
-        <li><b>Pause</b> stops the click, and Resume counts you in from the start of that pass. <b>Restart</b> goes back to your start exercise.</li>
+        <li><b>Pause</b> stops the click, and Resume counts you in from the start of that pass. <b>Restart</b> goes back to your start exercise. It asks for a second tap, so a stray tap does not lose the run.</li>
         <li><b>Choosing where to start:</b> with a routine, tap an exercise in the rows (or press &uarr; &darr;). After a run, scroll the staff to look back over every exercise.</li>
       </ul>
       <div class="ex">
@@ -1502,8 +1503,8 @@ RLRR LRLL RLRR LRLL</pre>
       <button class="btn primary" id="startBtn" type="button" aria-describedby="playSummary">Start</button>
       <p class="hint cfg" id="playSummary"></p>
       <div class="btns" id="runBtns" hidden>
-        <button class="btn" id="restartBtn" type="button">Restart</button>
         <button class="btn" id="stopBtn" type="button">Stop</button>
+        <button class="btn link" id="restartBtn" type="button">Restart</button>
       </div>
       <div id="advBar"></div>
     </div>
@@ -3389,7 +3390,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.167';                           /* shown beside the title */
+const VERSION='1.5.168';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -8534,7 +8535,7 @@ function wire(){
   $('recImport').addEventListener('click',()=>$('recFile').click());
   $('recFile').addEventListener('change',async e=>{await importRecs(e.target.files&&e.target.files[0]);e.target.value='';});
   $('recClear').addEventListener('click',openClear);
-  $('restartBtn').addEventListener('click',restartRun);
+  arm($('restartBtn'),restartRun);
   $('stopBtn').addEventListener('click',()=>{if(run&&!run.ended)stopRun();});
   $('settle').addEventListener('input',e=>{S.settle=+e.target.value;$('settleOut').textContent=S.settle+' ms';pushDet();save();});
   $('micCheck').addEventListener('click',toggleCheck);

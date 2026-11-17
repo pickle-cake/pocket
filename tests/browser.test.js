@@ -688,6 +688,21 @@ async function runOnce(settings, practice, init) {
   return out;
 }
 
+audioTest('Restart sits after Stop and needs a second tap, so a stray tap keeps the run', async () => {
+  const p = await open({ input: 'kb', bpm: 60, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 4, seeded: true });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll('#runBtns button')].filter(b => b.offsetParent).map(b => b.id)), ['stopBtn', 'restartBtn']);
+  await p.evaluate(() => { window.__first = window.__T.run(); });
+  await p.click('#restartBtn');
+  assert.equal(await p.textContent('#restartBtn'), 'Tap again to restart');
+  assert.equal(await p.evaluate(() => window.__T.run() === window.__first && !window.__first.ended), true);
+  await p.click('#restartBtn');
+  await p.waitForFunction(() => window.__T.run() && window.__T.run() !== window.__first && window.__T.run().plan, null, { timeout: 8000 });
+  assert.equal(await p.textContent('#restartBtn'), 'Restart');
+  assert.deepEqual(p.errors, []);
+});
+
 audioTest('Export run saves the run just played with its loudness, only when the loudness was kept', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 zRzL', eachUnit: 'pass', eachVal: 1, seeded: true });
   await press(p, /^Start/);
