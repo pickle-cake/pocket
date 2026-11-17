@@ -3402,7 +3402,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.186';                           /* shown beside the title */
+const VERSION='1.5.187';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5100,7 +5100,10 @@ function hwFit(cv){
   if(cv.dataset.fit===key)return;
   cv.dataset.fit=key;cv.style.height='';
   if(!pinned)return;
-  const top=cv.getBoundingClientRect().top+scrollY,below=cv.closest('section').getBoundingClientRect().bottom-cv.getBoundingClientRect().bottom;
+  /* below the road: the pads, then the status line (count-in, playing, paused), kept room for two lines because its wording changes as the run goes */
+  const st=$('status'),inPlay=st.parentElement===$('stPlay')&&!st.hidden,lh=parseFloat(getComputedStyle(st).lineHeight)||18;
+  const end=inPlay?$('stPlay').getBoundingClientRect().bottom+Math.max(0,lh*2-st.offsetHeight):cv.closest('section').getBoundingClientRect().bottom;
+  const top=cv.getBoundingClientRect().top+scrollY,below=end-cv.getBoundingClientRect().bottom;
   const room=de.clientHeight-bar.offsetHeight-top-below-8;   /* 8: a little air above the bar */
   if(room<cv.clientHeight)cv.style.height=Math.max(240,Math.round(room))+'px';
 }
