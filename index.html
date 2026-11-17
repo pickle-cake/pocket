@@ -3401,7 +3401,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.182';                           /* shown beside the title */
+const VERSION='1.5.183';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5092,10 +5092,21 @@ function hwFade(x,col,a){
   else{const m=c.match(/[\d.]+/g);if(m)v='rgba('+m[0]+','+m[1]+','+m[2]+','+a+')';}
   return HW.fade[k]=v;
 }
+/* On a phone the run controls are pinned to the bottom, so the road takes the height left between what is above it and the key and pads below it, and the pads stay in view. Measured again only when the screen, layout or input changes. */
+function hwFit(cv){
+  const de=document.documentElement,bar=document.querySelector('.transport'),pinned=!!bar&&de.dataset.layout!=='desktop'&&getComputedStyle(bar).position==='fixed';
+  const key=[innerWidth,de.clientHeight,pinned,document.body.dataset.input].join('|');
+  if(cv.dataset.fit===key)return;
+  cv.dataset.fit=key;cv.style.height='';
+  if(!pinned)return;
+  const top=cv.getBoundingClientRect().top+scrollY,below=cv.closest('section').getBoundingClientRect().bottom-cv.getBoundingClientRect().bottom;
+  const room=de.clientHeight-bar.offsetHeight-top-below-8;   /* 8: a little air above the bar */
+  if(room<cv.clientHeight)cv.style.height=Math.max(240,Math.round(room))+'px';
+}
 function drawHwy(r,heard){
   const cv=$('hwy');
   if(!cv||S.view!=='hwy'||document.body.dataset.state!=='run')return;
-  hwWatch();
+  hwWatch();hwFit(cv);
   const W=cv.clientWidth,H=cv.clientHeight;
   if(!W||!H)return;
   const dpr=Math.min(2,window.devicePixelRatio||1),pw=Math.round(W*dpr),ph=Math.round(H*dpr);
