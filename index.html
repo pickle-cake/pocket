@@ -563,6 +563,17 @@ html.pgopen{overflow:hidden}
 #advBadge .sent{font:var(--t-small) var(--font-body);color:var(--muted)}
 #advBadge .bnx{grid-column:1/-1;border-top:1px solid var(--line);padding-top:var(--s-2);margin-top:var(--s-1);display:grid;gap:var(--s-1)}
 #advBadge .bnx b{font:600 var(--t-small) var(--font-body)}
+/* Next step: after a cleared run on Master with no silent bars, an offer of one, with the count of a bar with the click and a silent bar. */
+.offer{display:grid;gap:var(--s-3);margin:var(--s-3) 0}
+.offer .eyebrow,.offer h2{margin:0}
+.offer h2{font:600 var(--t-title) var(--font-body)}
+.ofig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s-2) var(--s-3);align-items:baseline;max-width:calc(var(--s-7)*8)}
+.ofig .lbl{margin:0}
+.ofig .bt{display:flex;padding-bottom:var(--s-1);border-bottom:2px solid transparent}
+.ofig .bt span{flex:1;display:grid;justify-items:center;gap:var(--s-1);font:600 var(--t-small) var(--font-data)}
+.ofig .bt span::after{content:'';width:var(--s-1);height:var(--s-3);border-radius:var(--r-sm)}
+.ofig .bt .ck::after{background:var(--ink)}   /* a tick, as under a clicked note on the staff */
+.ofig .bt.sil{color:var(--muted);border-bottom:2px dashed var(--muted)}   /* and a dashed line, as under a silent bar */
 #advBadge .bnx i{display:block;height:6px;border-radius:999px;background:var(--line);overflow:hidden}
 #advBadge .bnx i b{display:block;height:100%;background:var(--fill)}
 @media (prefers-reduced-motion:no-preference){#advBadge.pop{animation:winpop var(--dur-3) var(--ease) both}}   /* once, never looping */
@@ -1207,7 +1218,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <div class="clk" style="--c:16"><div class="clt">4/4: one bar, sixteen strokes</div><span class="cln">Easy</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Medium</span><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><span class="cln">Hard</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Each mark is one stroke. A filled mark has a click.</p>
         <div class="clk" style="--c:6"><div class="clt">6/8: one bar, six eighths</div><span class="cln">Hard</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Extreme follows the two groups of three. Easy and Medium click every eighth here, as each eighth is a beat.</p>
         <p>Choose the click level on the Play page. Easy clicks every stroke (none on rests). Medium clicks the beat and the half beat (1 and &amp;), or the last note of a triplet, so you fill in the notes between; it clicks on rests too. Hard clicks every beat, Extreme the strong beats (1 and 3, or the start of each group), and Master beat 1 of each bar. Solo only clicks the count-in, so you hold the tempo yourself. Each level is scored on its own, against the same grid.</p>
-        <p>Before you start, a tick under a note marks each click, so you can see what a level leaves out. Listen, under the levels, plays the count-in and the click twice through, with the cursor moving along the notes, so you can hear it before you play. Harder: silent bars, under the click level, lets the click drop out: after each bar with the click come up to 4 silent bars, each with a dashed line under its notes. Keep playing and counting, and the click comes back on beat 1. The cycle starts again with each exercise, so its first bar always clicks. The strokes in silent bars are still scored, and each stroke is worth more: a quarter more for each silent bar, up to double, so 1 silent bar is 1.25 times and 3 in a row are 1.75 times. A clear counts at its click level. The coaching says when your time moves in the silent bars, and how your first stroke lands when the click comes back. It is off on Solo, which has no click to leave out.</p>
+        <p>Before you start, a tick under a note marks each click, so you can see what a level leaves out. Listen, under the levels, plays the count-in and the click twice through, with the cursor moving along the notes, so you can hear it before you play. Harder: silent bars, under the click level, lets the click drop out: after each bar with the click come up to 4 silent bars, each with a dashed line under its notes. Keep playing and counting, and the click comes back on beat 1. The cycle starts again with each exercise, so its first bar always clicks. The strokes in silent bars are still scored, and each stroke is worth more: a quarter more for each silent bar, up to double, so 1 silent bar is 1.25 times and 3 in a row are 1.75 times. A clear counts at its click level. The coaching says when your time moves in the silent bars, and how your first stroke lands when the click comes back. It is off on Solo, which has no click to leave out. When a run on Master clears the target with no silent bars, Next step under the result offers one: Try sets it for the next run, and Not now hides the offer until tomorrow.</p>
         <p> Set Scoring to Practice to try something without saving it: you still see the result, but nothing is added to your records. It is back on the next time you open the app. Use headphones, or the click is heard as strokes.</p>
         <button class="btn" type="button" data-try="single" data-text="RLRR LRLL RLRR LRLL">Try it</button>
       </div>
@@ -1573,7 +1584,14 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span><span id="advSubW"> &middot; <span id="advSub"></span></span></small></span></div>
         <p class="snext" id="advNext" hidden></p>
       </div>
-      <div id="advBadge" hidden></div>   <!-- straight under the result, so a reward is seen on a phone without scrolling -->
+      <div id="advBadge" hidden></div>
+      <section class="card offer" id="advOffer" hidden aria-labelledby="offerT">
+        <p class="eyebrow">Next step</p>
+        <h2 id="offerT">You held time with one click a bar. Try a silent bar next.</h2>
+        <p class="hint" id="offerTx"></p>
+        <div class="ofig" id="offerFig" aria-hidden="true"></div>
+        <div class="btns"><button class="btn" id="offerTry" type="button">Try 1 silent bar</button><button class="btn link" id="offerLater" type="button">Not now</button></div>
+      </section>   <!-- straight under the result, so a reward is seen on a phone without scrolling -->
       <section class="panel" id="scoreBox" hidden aria-label="Score breakdown">
         <h3>Score breakdown</h3>
         <div class="stats">
@@ -3558,7 +3576,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.201';                           /* shown beside the title */
+const VERSION='1.5.202';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3614,6 +3632,7 @@ S.game=S.game===true;   /* scores, the streak meter, high scores and medals: off
 S.palette=S.palette==='cb'?'cb':'std';
 S.layout=S.layout==='phone'||S.layout==='desktop'?S.layout:'auto';
 S.resultHelp=S.resultHelp===true;
+S.gapLater=typeof S.gapLater==='string'?S.gapLater.slice(0,10):'';   /* the day Not now was pressed on the offer of a silent bar */
 S.clockLog=Array.isArray(S.clockLog)?S.clockLog.filter(d=>d&&typeof d==='object').slice(0,10):[];   /* audio timing of the last runs, on this device */               /* the note on reading a result has been shown on this device */
 if(typeof S.libId!=='string')S.libId='';
 /* When each library routine was last opened, on this device, newest first: the picker lists the latest ones at the top. */
@@ -6137,6 +6156,37 @@ function renderAdvice(){
   if(!L.saved)body+=' Your browser would not save the records.';
   if(L.practice)body='Your time still counts today. '+body;
   coachNote($('advHead'),fix);$('advBody').textContent=body;
+  renderOffer(L,!!due&&adv.cleared);
+}
+/* Next step: a cleared run on Master, the last level with a click, and no silent bars set, gets the offer of one silent bar.
+   Try sets it for the next run; Not now hides the offer for the rest of the day. */
+const OFFER_GB='10';
+function offerFor(L,cleared){
+  return cleared&&!L.practice&&!L.offerOff&&!!L.run&&L.run.lv==='bar'&&!gapNorm(L.run.gb||'')&&S.click==='bar'&&!gapNorm(S.bars)&&S.gapLater!==dayKey(Date.now());
+}
+function renderOffer(L,cleared){
+  const box=$('advOffer'),on=offerFor(L,cleared);
+  box.hidden=!on;if(!on)return;
+  $('offerTx').textContent='The click plays bar 1, then drops out for bar 2. Keep counting; it comes back on beat 1. Silent bars score more: points \u00d7'+gapMult(OFFER_GB)+'.';
+  const sg=view&&view.plan&&view.plan.segs[0],n=clamp(sg&&sg.gbB||4,1,12),fig=$('offerFig');
+  fig.textContent='';
+  [['Click',''],['Silent',' sil']].forEach(([k,c])=>{
+    const l=document.createElement('span');l.className='lbl';l.textContent=k;
+    const b=document.createElement('span');b.className='bt'+c;
+    for(let i=1;i<=n;i++){const x=document.createElement('span');x.textContent=String(i);if(!c&&i===1)x.className='ck';b.appendChild(x);}
+    fig.append(l,b);
+  });
+}
+function takeOffer(yes){
+  const L=lastRun;if(!L||(run&&!run.ended))return;
+  L.offerOff=true;$('advOffer').hidden=true;
+  if(yes){
+    S.bars=OFFER_GB;save();if(S.mode==='routine')buildExerciseList();
+    if(document.body.dataset.state==='idle')previewRows();
+    syncInfo();
+    setStatus('Silent bars on: the click plays 1 bar, then leaves 1 bar out. Press Again to play it.');
+  }else{S.gapLater=dayKey(Date.now());save();}
+  $('advAgain').focus();
 }
 /* Discard takes the run out of your records and goes back to the start, as Done does: a discarded run has nothing
    left to review. Undo in the status line puts the run, and a routine saved with it, back and shows the result again. */
@@ -8745,6 +8795,8 @@ function wire(){
   $('score').addEventListener('change',e=>{scoreOn=e.target.value==='1';syncInfo();});
   /* the ticks under the notes follow the click, before a run */
   $('ckHear').addEventListener('click',()=>{if(hear)stopHear();else startHear();});
+  $('offerTry').addEventListener('click',()=>takeOffer(true));
+  $('offerLater').addEventListener('click',()=>takeOffer(false));
   const clickShown=()=>{if(document.body.dataset.state==='idle')previewRows();syncInfo();};
   $('clickSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.click=b.dataset.v;save();if(S.mode==='routine')buildExerciseList();clickShown();});
   const dyChanged=()=>{save();pushDet();refreshPreview();};

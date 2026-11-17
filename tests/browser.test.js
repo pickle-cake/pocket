@@ -767,6 +767,48 @@ async function runOnce(settings, practice, init) {
   return out;
 }
 
+audioTest('Next step: a cleared run on Master with no silent bars offers one; Try sets it, Not now hides it for the day, and other levels get no offer', async () => {
+  const play = async settings => {
+    const p = await open(Object.assign({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 2, seeded: true, click: 'bar' }, settings), { width: 390, height: 844 });
+    await press(p, /^Start/);
+    await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+    await p.evaluate(() => {
+      const T = window.__T, r = T.run(), pl = r.plan;
+      pl.slots.forEach(s => T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } }));
+    });
+    await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+    await p.waitForTimeout(300);
+    return p;
+  };
+  let p = await play({});
+  assert.ok(await p.isVisible('#advOffer'), 'offered after a cleared run on Master');
+  assert.equal(await p.textContent('#offerT'), 'You held time with one click a bar. Try a silent bar next.');
+  assert.equal(await p.textContent('#offerTx'), 'The click plays bar 1, then drops out for bar 2. Keep counting; it comes back on beat 1. Silent bars score more: points ×1.25.');
+  const fig = await p.evaluate(() => [...document.querySelectorAll('#offerFig .bt')].map(b => b.className + ':' + b.textContent + ':' + b.querySelectorAll('.ck').length));
+  assert.deepEqual(fig, ['bt:1234:1', 'bt sil:1234:0'], 'the count of a bar with the click, a tick on 1, then a silent bar');
+  const t = await p.evaluate(() => ['offerTry', 'offerLater'].map(id => { const r = document.getElementById(id).getBoundingClientRect(); return Math.min(r.width, r.height); }));
+  assert.ok(t.every(x => x >= 44), '44px targets: ' + t);
+  await p.click('#offerTry');
+  assert.equal(await p.isVisible('#advOffer'), false);
+  assert.equal(await p.evaluate(() => window.__T.S().bars), '10');
+  assert.match(await p.textContent('#status'), /^Silent bars on: the click plays 1 bar, then leaves 1 bar out\. Press Again to play it\./);
+  assert.deepEqual(p.errors, []);
+  p = await play({});
+  await p.click('#offerLater');
+  assert.equal(await p.isVisible('#advOffer'), false);
+  assert.equal(await p.evaluate(() => window.__T.S().bars), '', 'Not now changes nothing');
+  await p.click('#advAgain');
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && !window.__T.run().ended, null, { timeout: 8000 });
+  await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } })); });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  assert.equal(await p.isVisible('#advOffer'), false, 'not again the same day');
+  assert.deepEqual(p.errors, []);
+  p = await play({ click: 'beat' });
+  assert.equal(await p.isVisible('#advOffer'), false, 'Hard has the levels above it to try first');
+  assert.deepEqual(p.errors, []);
+});
+
 audioTest('Restart sits after Stop and needs a second tap, so a stray tap keeps the run', async () => {
   const p = await open({ input: 'kb', bpm: 60, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 4, seeded: true });
   await press(p, /^Start/);
