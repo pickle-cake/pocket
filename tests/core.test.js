@@ -476,7 +476,7 @@ test('each level has its own high-score ladder, scaled by points per on-time str
   assert.deepEqual(h('hnone')[9], 380000);
   assert.deepEqual(h('hstrokes')[9], 56000);
   assert.deepEqual(h('hhalf')[9], 190000);
-  ['hstrokes', 'hbeat', 'hhalf', 'hbar', 'hnone'].forEach(id => h(id).forEach((n, i, a) => { if (i) assert.ok(n > a[i - 1], id + ' climbs'); }));
+  ['hstrokes', 'hguide', 'hbeat', 'hhalf', 'hbar', 'hnone'].forEach(id => h(id).forEach((n, i, a) => { if (i) assert.ok(n > a[i - 1], id + ' climbs'); }));
 });
 
 test('maxPoints equals a flawless run, across exercises of different speed', () => {
@@ -870,6 +870,32 @@ test('click cover: clicks per stroke after the count-in', () => {
   assert.equal(c.clickCover(plan(r, { clickMode: 'none' }).plan), 0);
 });
 
+test('Medium clicks the beat and the half beat, or the last note of an odd grid, rests included', () => {
+  /* where the clicks fall after the count-in, in beats from the start */
+  const at = (text) => { const pl = plan(text, { clickMode: 'guide' }).plan, s = pl.segs[0]; return plain(c.playClicks(pl).map(k => +((k.t - s.t0) / s.beat).toFixed(3))); };
+  const acc = (text) => plain(c.playClicks(plan(text, { clickMode: 'guide' }).plan).map(k => k.a));
+  assert.deepEqual(at('RLRR LRLL RLRR LRLL'), [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]);
+  assert.deepEqual(acc('RLRR LRLL RLRR LRLL'), [2, 0, 0, 0, 0, 0, 0, 0], 'beat 1 is strong');
+  /* rests still click: a stroke could land there */
+  assert.deepEqual(at('R_R_ L_L_ R___ L___'), [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]);
+  /* triplets: the first and the third */
+  assert.deepEqual(at('3:4 RLRLRLRLRLRL'), [0, 0.667, 1, 1.667, 2, 2.667, 3, 3.667]);
+  /* quintuplets: the first and the fifth */
+  assert.deepEqual(at('5:4 RLRLRLRLRLRLRLRLRLRL'), [0, 0.8, 1, 1.8, 2, 2.8, 3, 3.8]);
+  /* sextuplets: the first and the fourth, which is the half beat */
+  assert.deepEqual(at('6:4 RLRLRLRLRLRLRLRLRLRLRLRL'), [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]);
+  /* straight eighths with no rests: the same clicks as Easy */
+  const e = plan('8 RLRLRLRL', { clickMode: 'guide' }).plan, ez = plan('8 RLRLRLRL').plan;
+  assert.deepEqual(plain(c.playClicks(e).map(k => k.t)), plain(c.playClicks(ez).map(k => k.t)));
+  /* a mixed beat: an eighth and two sixteenths has a half beat; two in the time of three sixteenths and a sixteenth does not */
+  assert.deepEqual(at('8 R 16 LR 2:3 RL 16 R'), [0, 0.5, 1]);
+  /* sixteenths in 6/8: the eighth is the beat, so every eighth and the sixteenth after it */
+  const s = plan('time: 6/8\n16 RLRLRLRLRLRL', { clickMode: 'guide' }).plan;
+  assert.equal(c.playClicks(s).length, 12);
+  /* the count-in is the same as on every other level */
+  assert.deepEqual(plain(plan('RLRL', { clickMode: 'guide' }).plan.clicks.slice(0, 4).map(k => k.a)), plain(plan('RLRL', { clickMode: 'beat' }).plan.clicks.slice(0, 4).map(k => k.a)));
+});
+
 test('click rush: strokes that get earlier between clicks and snap back on the click are found', () => {
   const g = gauss(rng(7));
   const sixteenths = (lv, off, passes = 30) => {
@@ -880,7 +906,7 @@ test('click rush: strokes that get earlier between clicks and snap back on the c
     pl.slots.forEach((s, i) => res.set(i, { ms: Math.round(off(s, i)) }));
     return { pl, res, f: c.clickRush(pl, res, 20) };
   };
-  /* Medium: every beat a click; the fourth sixteenth of each beat is 30 ms early, the click is on time */
+  /* Hard: every beat a click; the fourth sixteenth of each beat is 30 ms early, the click is on time */
   const inBeat = s => s.pos % 4;
   let r = sixteenths('beat', s => -10 * inBeat(s) + g() * 6);
   assert.ok(r.f, 'found');
@@ -897,7 +923,7 @@ test('click rush: strokes that get earlier between clicks and snap back on the c
   r = sixteenths('half', s => 4 * (s.pos % 8) + g() * 6);
   assert.equal(r.f && r.f.dir, 'late');
   assert.match(c.rushText(r.f), /^You drag between the clicks/);
-  /* Easy has a click on every stroke, and Master none, so there is no gap to rush */
+  /* Easy has a click on every stroke, and Solo none, so there is no gap to rush */
   assert.equal(sixteenths('strokes', s => -10 * inBeat(s)).f, null);
   assert.equal(sixteenths('none', s => -10 * inBeat(s)).f, null);
   /* a steady offset, or one odd stroke in the middle of the beat, is not a rush */

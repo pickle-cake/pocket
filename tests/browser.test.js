@@ -905,7 +905,7 @@ audioTest('the first result explains itself once', async () => {
   assert.deepEqual(p.errors, []);
 });
 
-audioTest('Master (count-in only) is scored and saved', async () => {
+audioTest('Solo (count-in only) is scored and saved', async () => {
   const o = await runOnce({ click: 'none' }, false);
   assert.deepEqual(o.saved, ['none']);
   assert.ok(o.discard);
@@ -1022,9 +1022,9 @@ test('every badge has one medal, with a written step name, on the Achievements p
   await p.evaluate(() => document.getElementById('pvBtnAch').click());
   await p.waitForTimeout(200);
   const r = await p.evaluate(() => ({ n: document.querySelectorAll('#badges .medal').length, bad: [...document.querySelectorAll('#badges .medal')].filter(m => /undefined|NaN/.test(m.title) || !m.title).length, off: document.querySelectorAll('#badges .medal.off').length }));
-  assert.equal(r.n, 22);
+  assert.equal(r.n, 24);
   assert.equal(r.bad, 0);
-  assert.equal(r.off, 22);
+  assert.equal(r.off, 24);
   const txt = await p.evaluate(() => document.getElementById('badges').innerText);
   assert.doesNotMatch(txt, /undefined|NaN/);
 });
@@ -1060,11 +1060,11 @@ audioTest('a scored run shows its score against the maximum, flags a new high sc
   assert.match(o.max, /^\/ [\d,]+$/);
   assert.ok(o.chip, 'the first score is a new high score');
   assert.ok(!o.solo);
-  assert.match(o.prev, /^First score on Hard at ±20 ms$/);
+  assert.match(o.prev, /^First score on Extreme at ±20 ms$/);
   assert.doesNotMatch(await p.evaluate(() => document.querySelector('#advRes .scap').innerText), /%/, 'the score is not given as a second percentage, beside on time');
   assert.equal(await p.evaluate(() => document.querySelector('#advRes .slab').textContent), 'Score');
   const bd = await p.evaluate(() => ({ shown: !document.getElementById('scoreBox').hidden, on: document.getElementById('bOn').textContent, note: document.getElementById('scoreNote').textContent, row: [...document.getElementById('advBtns1').children].filter(b => !b.hidden).map(b => b.id) }));
-  assert.ok(bd.shown); assert.match(bd.on, /^\d+$/); assert.match(bd.note, /Hard: 10 points on time/);
+  assert.ok(bd.shown); assert.match(bd.on, /^\d+$/); assert.match(bd.note, /Extreme: 10 points on time/);
   assert.deepEqual(bd.row, ['advDiscard', 'advDone', 'advAgain'], 'Discard, Done and Again share one row');
   const p0 = await runOnce({ click: 'half', game: true }, true);
   assert.doesNotMatch(p0.text, /high score/i, 'a practice run is not scored');

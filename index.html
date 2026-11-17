@@ -139,7 +139,8 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 :root[data-layout=desktop] #tempoModal .mbox{width:var(--tm-w,min(560px,100%))}
 #quickRow .dur{grid-template-columns:56px minmax(0,1fr);gap:var(--s-1)}
 #quickRow .dur select{padding-left:var(--s-2);padding-right:var(--s-1)}
-#clickSeg,#othersSeg{grid-auto-columns:minmax(0,1fr)}
+#othersSeg{grid-auto-columns:minmax(0,1fr)}
+#clickSeg{grid-auto-flow:row;grid-template-columns:repeat(3,minmax(0,1fr))}   /* six levels: two rows of three, easiest first, so every name fits a phone */
 #clickSeg button{padding:0 var(--s-1)}
 #lsInfo{flex:1}
 .err{color:var(--danger);font-size:13px;margin:0;min-height:0}
@@ -1189,9 +1190,9 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <div class="ex">
         <h4>Click levels</h4>
         <pre>RLRR LRLL RLRR LRLL</pre>
-        <div class="clk" style="--c:16"><div class="clt">4/4: one bar, sixteen strokes</div><span class="cln">Easy</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Medium</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Hard</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Each mark is one stroke. A filled mark has a click.</p>
-        <div class="clk" style="--c:6"><div class="clt">6/8: one bar, six eighths</div><span class="cln">Medium</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Hard</span><i class="on"></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Hard follows the two groups of three. Easy is every stroke, as above.</p>
-        <p>Choose the click level on the Play page. Easy clicks every stroke (none on rests), Medium every beat, Hard the strong beats (1 and 3, or the start of each group), and Extreme beat 1 of each bar. Master only clicks the count-in, so you hold the tempo yourself. Each level is scored on its own, against the same grid. Set Scoring to Practice to try something without saving it: you still see the result, but nothing is added to your records. It is back on the next time you open the app. Use headphones, or the click is heard as strokes.</p>
+        <div class="clk" style="--c:16"><div class="clt">4/4: one bar, sixteen strokes</div><span class="cln">Easy</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Medium</span><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><span class="cln">Hard</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Each mark is one stroke. A filled mark has a click.</p>
+        <div class="clk" style="--c:6"><div class="clt">6/8: one bar, six eighths</div><span class="cln">Hard</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Extreme follows the two groups of three. Easy and Medium click every eighth here, as each eighth is a beat.</p>
+        <p>Choose the click level on the Play page. Easy clicks every stroke (none on rests). Medium clicks the beat and the half beat (1 and &amp;), or the last note of a triplet, so you fill in the notes between; it clicks on rests too. Hard clicks every beat, Extreme the strong beats (1 and 3, or the start of each group), and Master beat 1 of each bar. Solo only clicks the count-in, so you hold the tempo yourself. Each level is scored on its own, against the same grid. Set Scoring to Practice to try something without saving it: you still see the result, but nothing is added to your records. It is back on the next time you open the app. Use headphones, or the click is heard as strokes.</p>
         <button class="btn" type="button" data-try="single" data-text="RLRR LRLL RLRR LRLL">Try it</button>
       </div>
     </section>
@@ -1355,7 +1356,7 @@ RLRR LRLL RLRR LRLL</pre>
       <h3>Scores, tempo and progress</h3>
       <ul>
         <li><b>On time</b> is the share of due strokes inside your on-time window. With an accent or ghost rule a stroke must also be played as written: an accent clearly louder and a ghost clearly softer than its neighbours. An exercise needs at least one full pass to be scored.</li>
-        <li><b>Score:</b> with Scores and rewards on, every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Extreme and 5 on Master). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best score, that share, is kept for each level and window. Best on time is your on-time % at a tempo. The streak carries from one exercise to the next. The total never goes below zero. Your high score in points at each click level is an achievement, and a new one is announced when the run ends.</li>
+        <li><b>Score:</b> with Scores and rewards on, every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Master and 5 on Solo). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best score, that share, is kept for each level and window. Best on time is your on-time % at a tempo. The streak carries from one exercise to the next. The total never goes below zero. Your high score in points at each click level is an achievement, and a new one is announced when the run ends.</li>
         <li><b>Scores and rewards:</b> choose On under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold. A run that clears an exercise faster than before shows its medal and the tempo of the next one.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
@@ -1445,10 +1446,11 @@ RLRR LRLL RLRR LRLL</pre>
       <div class="field"><span class="lbl" id="clickLbl">Click</span>
         <div class="seg wide" id="clickSeg" role="group" aria-labelledby="clickLbl" aria-describedby="clickHint">
           <button type="button" id="ckStrokes" data-v="strokes" aria-pressed="false">Easy</button>
-          <button type="button" id="ckBeat" data-v="beat" aria-pressed="false">Medium</button>
-          <button type="button" id="ckHalf" data-v="half" aria-pressed="false">Hard</button>
-          <button type="button" id="ckBar" data-v="bar" aria-pressed="false">Extreme</button>
-          <button type="button" id="ckNone" data-v="none" aria-pressed="false">Master</button>
+          <button type="button" id="ckGuide" data-v="guide" aria-pressed="false">Medium</button>
+          <button type="button" id="ckBeat" data-v="beat" aria-pressed="false">Hard</button>
+          <button type="button" id="ckHalf" data-v="half" aria-pressed="false">Extreme</button>
+          <button type="button" id="ckBar" data-v="bar" aria-pressed="false">Master</button>
+          <button type="button" id="ckNone" data-v="none" aria-pressed="false">Solo</button>
         </div>
         <p class="hint" id="clickHint"></p></div>
     </section>
@@ -2140,7 +2142,7 @@ function buildPlan(exercises,o){
       }
     }
     if(o.clickMode==='half'||o.clickMode==='bar'){
-      /* Extreme: the first beat of every bar. Hard: the start of each group when the bar has two or more (1 and 4 in 6/8), else 1 and 3 in a bar of even length (4/4), else just beat 1 (3/4). */
+      /* Master: the first beat of every bar. Extreme: the start of each group when the bar has two or more (1 and 4 in 6/8), else 1 and 3 in a bar of even length (4/4), else just beat 1 (3/4). */
       const B=sig?sig.n:4,nb=Math.ceil(totalBeats-1e-9),gs=sig?groupStarts(sig,sig.n):[0];
       const on=q=>o.clickMode==='bar'?q===0:(gs.length>=2?gs.indexOf(q)>=0:(B%2===0?q%2===0:q===0));
       for(let j=0;j<nb;j++){const q=j%B;if(on(q))clicks.push({t:t0+j*beat,a:q===0?2:1});}
@@ -2169,6 +2171,21 @@ function buildPlan(exercises,o){
         if(a===0&&((sb===3&&isInt(off[i]))||(sb===6&&isInt(off[i]*2))))a=1;
         clicks.push({t:st,a:a});
       }
+    }
+    if(o.clickMode==='guide'){
+      /* Medium: every beat, and inside each beat the half beat when a position falls on it (1 and 3 of four sixteenths,
+         1 and 4 of a sextuplet), else the last position of an odd grid (1 and 3 of a triplet, 1 and 5 of a quintuplet).
+         It clicks where a stroke could land, rests included. */
+      const nb=Math.ceil(totalBeats-1e-9),by={},gc=[];
+      for(let j=0;j<nb;j++){const q=rb9(j%barBeats);gc.push({t:t0+j*beat,a:q<1-1e-9?2:(isInt(q)&&gst.indexOf(Math.round(q))>=0?1:0)});}
+      for(let c=cell0;c<cells.length;c++){const u=rb9((cells[c].t-t0)/beat),j=Math.floor(u+1e-9);(by[j]=by[j]||[]).push({c:cells[c],f:rb9(u-j),sb:b.subs[cells[c].pos]});}
+      Object.keys(by).forEach(j=>{
+        const L=by[j],h=L.find(x=>Math.abs(x.f-0.5)<1e-6);
+        if(h){gc.push({t:h.c.t,a:0});return;}
+        const sb=L[0].sb;
+        if(sb>=3&&sb%2===1&&L.length===sb&&L.every(x=>x.sb===sb))gc.push({t:L[L.length-1].c.t,a:0});
+      });
+      gc.sort((x,y)=>x.t-y.t).forEach(x=>clicks.push(x));
     }
     t=t0+totalBeats*beat;gp+=b.passes;
     segs.push({idx:b.idx,src:b.src||'',notes:b.notes,groupStart:b.groupStart,subs:b.subs,defSub:b.defSub,sig:sig,cin:cin,gst:gst,bpm:b.bpm,N:N,strokes:b.notes.filter(x=>x!=='_').length,passes:b.passes,passBeats:passBeats,beat:beat,leadStart:leadStart,lead:lead,leadBeats:leadBeats,t0:t0,end:t,first:first,cell0:cell0,g0:g0});
@@ -2387,7 +2404,7 @@ function playClicks(plan){
   plan.segs.forEach((sg,si)=>plan.clicks.forEach(c=>{if(c.t>=sg.t0-1e-6&&c.t<sg.end-1e-6)out.push({t:c.t,a:c.a,seg:si});}));
   return out.sort((a,b)=>a.t-b.t);
 }
-/* Clicks per stroke after the count-in, at most 1: 1 on Easy, 0 on Master. */
+/* Clicks per stroke after the count-in, at most 1: 1 on Easy, 0 on Solo. */
 function clickCover(plan){return plan.slots.length?Math.min(1,playClicks(plan).length/plan.slots.length):1;}
 /* Rushing (or dragging) between clicks: with fewer clicks than strokes, a drummer who keeps time only with the hands gets earlier
    the further from a click, and the next click pulls them back. Each heard stroke's offset, less the average of its gap, is set
@@ -2876,7 +2893,7 @@ const showSig=sig=>sig?sig.n+'/'+sig.d+(sig.groups.join('+')===defGroups(sig.n,s
 const showPattern=(notes,gs,subs,def,sig,src)=>showSig(sig)+(src||nameMarkers(fmtPattern(notes,gs,subs,def),sig?sig.d:4));
 /* ---------- records: scores kept per exercise and tempo ---------- */
 /* Click levels. Each one is scored on its own: easy is a click on every stroke, extreme only the first beat of each bar, master only the count-in. */
-const LEVELS=[{v:'strokes',n:'Easy'},{v:'beat',n:'Medium'},{v:'half',n:'Hard'},{v:'bar',n:'Extreme'},{v:'none',n:'Master'}];   /* the click fades out; an old run saved as 'off' was count-in only and was never scored */
+const LEVELS=[{v:'strokes',n:'Easy'},{v:'guide',n:'Medium'},{v:'beat',n:'Hard'},{v:'half',n:'Extreme'},{v:'bar',n:'Master'},{v:'none',n:'Solo'}];   /* the click fades out; an old run saved as 'off' was count-in only and was never scored */
 const levelName=v=>(LEVELS.find(l=>l.v===v)||{n:''}).n;
 const TARGET=0.9;                                /* accuracy that counts as cleared at a tempo */
 /* An on-time share as a whole percentage, rounded down, so a run below the target never reads as the target. */
@@ -2989,7 +3006,7 @@ const sweepRun=run=>run.lv!=='off'&&run.ne>=2&&run.exercises.length>=run.ne&&run
 const runStrokes=run=>run.exercises.reduce((n,b)=>n+(b.due||0),0);   /* the strokes a run asked for */
 const perfectN=run=>run.lv==='off'?0:run.exercises.filter(b=>b.due>=16&&b.within>=b.due&&!(b.ex>0)).length;   /* runs from before extras were saved have none */
 /* Score. Every stroke scores by its timing at the run's click level, and strokes on time in a row build a bonus. The codes are o on time, b off time, m missed, r a rest left alone, in the order played. */
-const LV_PTS={strokes:[1,3,0],beat:[2,5,0],half:[3,10,0],bar:[4,15,-2],none:[5,20,-5]};   /* off time, on time, miss */
+const LV_PTS={strokes:[1,3,0],guide:[1,4,0],beat:[2,5,0],half:[3,10,0],bar:[4,15,-2],none:[5,20,-5]};   /* off time, on time, miss */
 const STREAK_MOD=0.25,STREAK_CAP=16,STREAK_SLIP=2;   /* each stroke on time adds a quarter to the multiplier, up to 16 (x5). An off-time stroke takes 2 steps back, and a miss all of them. */
 const streakAfter=(streak,c)=>c==='o'?Math.min(STREAK_CAP,streak+1):(c==='m'?0:Math.max(0,streak-STREAK_SLIP));
 /* Faster strokes score more: 240 strokes a minute (Gold pace, sixteenths at 60 BPM) is x1, between half and double. */
@@ -3111,7 +3128,7 @@ const LADDER=[1,5,10,25,50,100,250,500,750,1000];
 LEVELS.forEach(l=>BADGES.push({id:'l'+l.v,lv:l.v,name:l.n,unit:'exercises cleared on '+l.n,at:LADDER}));
 BADGES.push({id:'all',name:'On every level',unit:'exercises cleared on every level',at:LADDER});
 BADGES.push({id:'dyn',name:'Accents and ghosts',unit:'accent or ghost exercises cleared',one:'accent or ghost exercise cleared',at:LADDER});
-/* High scores, in points. Master's ladder is the base; each other level's is scaled by what an on-time stroke is worth there, so every level reaches its top step with the same effort. */
+/* High scores, in points. Solo's ladder is the base; each other level's is scaled by what an on-time stroke is worth there, so every level reaches its top step with the same effort. */
 const HSL=[150,750,1500,3750,7500,15000,37500,75000,150000,375000];   /* x1.5 of the old ladder, as the standard ±20 ms window now scores x1.5 */
 LEVELS.forEach(l=>BADGES.push({id:'h'+l.v,lv:l.v,hs:true,name:l.n,unit:'points',one:'point',at:HSL.map(n=>+(n*LV_PTS[l.v][1]/LV_PTS.none[1]).toPrecision(2))}));
 BADGES.push({id:'cln',name:'Longest clean run',lead:'Longest clean run',suf:' strokes',unit:'strokes, longest routine run with every exercise cleared',at:[250,500,1000,2000,3000,5000,7500]});   /* strokes, not minutes: a short routine counts, and so does a fast one */
@@ -3135,7 +3152,7 @@ const STEPNAMES={ses:['Showing up','Regular','Keeping time','Dedicated','Road-te
   med:['First gold','Golden touch','Gold standard','Gold rush','Gilded','Treasure chest','Gold mine','Bullion','Midas touch','Solid gold'],
   tgt:['Sharp','Precise','Razor','Needle','Laser','Hairline','Split second','Atomic clock','Zero gap','Dead centre'],
   evn:['Level headed','Smooth','Balanced','Even keel','Velvet','Silk','Glass','Still water','Flat line','Perfectly even']};
-const GLYPHS={lstrokes:'lv1',lbeat:'lv2',lhalf:'lv3',lbar:'lv4',lnone:'lvM',hstrokes:'lv1',hbeat:'lv2',hhalf:'lv3',hbar:'lv4',hnone:'lvM',ses:'drum',str:'cal',all:'lvA',dyn:'acc',cln:'sweep',prf:'target',tmp:'metro',min:'clock',rtn:'book',med:'medal',tgt:'tight',evn:'even'};
+const GLYPHS={lstrokes:'lv1',lguide:'lv2',lbeat:'lv3',lhalf:'lv4',lbar:'lv5',lnone:'lvM',hstrokes:'lv1',hguide:'lv2',hbeat:'lv3',hhalf:'lv4',hbar:'lv5',hnone:'lvM',ses:'drum',str:'cal',all:'lvA',dyn:'acc',cln:'sweep',prf:'target',tmp:'metro',min:'clock',rtn:'book',med:'medal',tgt:'tight',evn:'even'};
 BADGES.forEach(b=>{b.nm=STEPNAMES[b.id]||(b.hs?STEPNAMES.hs:STEPNAMES.ladder);b.gl=GLYPHS[b.id]||'tick';});
 /* Mastery of one exercise on one click level, from the fastest tempo it was cleared at, measured in strokes a minute so sixteenths count for more than eighths. Eight steps: cleared at all, then seven rates. */
 const RATE_AT=[120,180,240,320,400,480,600];
@@ -3157,8 +3174,8 @@ const fmtBadge=(b,n)=>b.lead?b.lead+' '+n.toLocaleString('en-US')+(b.suf||''):(n
 /* Badge groups: the single badges share one Milestones section, each with its own explanation (each); a ladder of levels has its own section. */
 const BGROUPS=[{name:'Milestones',each:{ses:'Runs where at least one exercise was played through once and scored.',str:'Your longest run of practice days. A day counts at 5 minutes or more. One rest day a week does not break it.',min:'All your practice time, in whole hours. Practice runs that are not scored count too.',cln:'The most strokes in one run of a routine of two or more exercises, played start to finish, with every exercise at 90% or more.',rtn:'Routines played start to finish with every exercise at 90% or more. Each routine counts once on each click level.',tmp:'The fastest pace at which you have cleared any exercise, in strokes a minute, as the medals measure it: sixteenths at 60 BPM are 240.'},ids:['ses','str','min','cln','rtn','tmp']},
   {name:'Precision',each:{prf:'An exercise of at least 16 strokes with every stroke on time and no extra hits. Each time counts, so the same exercise played perfectly again counts again.',tgt:'Exercises cleared with the on-time window at ±15 ms or ±10 ms. Each counts once on each click level and accent rule.',evn:'Exercises cleared with a loudness spread of 2 dB or less, so every stroke is close to the same level. Needs the microphone. Each counts once on each click level and accent rule.',med:'Exercises with a Gold medal or better on a click level: cleared at 240 strokes a minute or faster. Each counts once on each level.',dyn:'Exercises cleared with an accent or ghost rule: 90% or more of strokes on time and played as written. The same exercise counts again with another rule, and on another click level.'},ids:['prf','tgt','evn','med','dyn']},
-  {name:'Exercises cleared',d:'An exercise is cleared on a level when you play it at 90% or more of strokes on time at that click level. Each exercise counts once on each level, whatever the accent rule. Each level is cleared on its own. The table counts exercises by the fastest pace they were cleared at, in strokes a minute, as the medals measure it: sixteenths at 60 BPM are 240.',grid:true,ids:['lstrokes','lbeat','lhalf','lbar','lnone','all']},
-  {name:'High score',d:'Your best score in one run, at each click level. Every stroke scores by its timing: on time scores most, off time a little, a miss nothing (it costs points on Extreme and Master). Strokes on time in a row build a bonus of up to five times. Harder levels score more, and so do faster strokes: 240 strokes a minute counts once, from half to double.',ids:['hstrokes','hbeat','hhalf','hbar','hnone']}];
+  {name:'Exercises cleared',d:'An exercise is cleared on a level when you play it at 90% or more of strokes on time at that click level. Each exercise counts once on each level, whatever the accent rule. Each level is cleared on its own. The table counts exercises by the fastest pace they were cleared at, in strokes a minute, as the medals measure it: sixteenths at 60 BPM are 240.',grid:true,ids:['lstrokes','lguide','lbeat','lhalf','lbar','lnone','all']},
+  {name:'High score',d:'Your best score in one run, at each click level. Every stroke scores by its timing: on time scores most, off time a little, a miss nothing (it costs points on Master and Solo). Strokes on time in a row build a bonus of up to five times. Harder levels score more, and so do faster strokes: 240 strokes a minute counts once, from half to double.',ids:['hstrokes','hguide','hbeat','hhalf','hbar','hnone']}];
 /* Cleared exercises per level: each sticking once, at the fastest tempo it was cleared at, whatever the accent rule. */
 function clearedByLevel(st){
   const o={};LEVELS.forEach(l=>{o[l.v]=new Map();});
@@ -3453,7 +3470,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.195';                           /* shown beside the title */
+const VERSION='1.5.196';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3497,7 +3514,7 @@ S.latency=(S.latency==null||isNaN(+S.latency))?null:clamp(Math.round(+S.latency)
 if(S.input!=='kb')S.input='mic';
 if(S.click==='note')S.click='strokes';
 if(S.click==='off')S.click='none';
-if(!['beat','strokes','half','bar','none'].includes(S.click))S.click='beat';
+if(!['strokes','guide','beat','half','bar','none'].includes(S.click))S.click='beat';
 if(typeof S.routineText!=='string'||S.routineText.length>MAX_TEXT)S.routineText='RLRL RLRL RLRL RLRL';
 S.eachUnit=S.eachUnit==='pass'?'pass':'min';
 S.eachVal=S.eachUnit==='pass'?clamp(Math.round(+S.eachVal)||8,1,200):clamp(+S.eachVal||1,0.25,60);
@@ -3549,7 +3566,7 @@ function packStrokes(x){
 }
 const SPMAX=4*40000;
 function cleanRun(x){
-  if(!x||typeof x!=='object'||typeof x.id!=='string'||!Array.isArray(x.exercises)||!isFinite(+x.t)||!isFinite(+x.bpm)||!['strokes','beat','half','bar','none','off'].includes(x.lv))return null;
+  if(!x||typeof x!=='object'||typeof x.id!=='string'||!Array.isArray(x.exercises)||!isFinite(+x.t)||!isFinite(+x.bpm)||!['strokes','guide','beat','half','bar','none','off'].includes(x.lv))return null;
   const exercises=[];
   x.exercises.forEach(b=>{
     if(!b||typeof b.k!=='string'||b.k.length>400||!(+b.due>0)||!isFinite(+b.within))return;
@@ -6067,7 +6084,7 @@ function renderPractice(){
 }
 const chev=n=>{let o='<g fill="none" stroke="K" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">';for(let i=0;i<n;i++){const y=48+(i-(n-1)/2)*11;o+='<path d="M30 '+(y+6)+' L48 '+(y-6)+' L66 '+(y+6)+'"/>';}return o+'</g>';};
 const stars=n=>{let o='<g fill="K">';for(let i=0;i<n;i++){const x=48+(i-(n-1)/2)*(n>1?20:0),r=n>1?11:17;let p='';for(let k=0;k<10;k++){const q=k%2?r*.45:r,a=-Math.PI/2+k*Math.PI/5;p+=(k?'L':'M')+(x+q*Math.cos(a)).toFixed(1)+' '+(48+q*Math.sin(a)).toFixed(1);}o+='<path d="'+p+'Z"/>';}return o+'</g>';};
-const GL={lv1:chev(1),lv2:chev(2),lv3:chev(3),lv4:chev(4),lvM:stars(1),lvA:stars(3),
+const GL={lv1:chev(1),lv2:chev(2),lv3:chev(3),lv4:chev(4),lv5:chev(5),lvM:stars(1),lvA:stars(3),
   drum:'<ellipse cx="48" cy="40" rx="20" ry="7" fill="none" stroke="K" stroke-width="3"/><path d="M28 40v16c0 4 9 7 20 7s20-3 20-7V40" fill="none" stroke="K" stroke-width="3"/><path d="M34 26l12 10M62 26L50 36" stroke="K" stroke-width="3" stroke-linecap="round"/>',
   tick:'<path d="M26 34h44M26 44h44M26 54h44" stroke="K" stroke-width="2" opacity=".55"/><path d="M34 46l9 9 19-21" fill="none" stroke="K" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>',
   metro:'<path d="M38 66l-6-4 10-34h12l10 34-6 4z" fill="none" stroke="K" stroke-width="3" stroke-linejoin="round"/><path d="M48 58l8-24" stroke="K" stroke-width="3" stroke-linecap="round"/><circle cx="53" cy="44" r="3" fill="K"/>',
@@ -7876,7 +7893,7 @@ function showCachedList(){
 }
 
 /* ---------- controls ---------- */
-const LOCKED=['tol','accent','othN','othG','pulseOn','pulseOff','bpm','bpmDown','bpmUp','bpmOpen','tmDown10','tmDown','tmUp','tmUp10','tmRange','subdiv','ckStrokes','ckBeat','ckHalf','ckBar','ckNone','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','editPlay','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
+const LOCKED=['tol','accent','othN','othG','pulseOn','pulseOff','bpm','bpmDown','bpmUp','bpmOpen','tmDown10','tmDown','tmUp','tmUp10','tmRange','subdiv','ckStrokes','ckGuide','ckBeat','ckHalf','ckBar','ckNone','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','editPlay','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
 function syncRunUI(){
   const on=!!(run&&!run.ended),play=on&&run.mode==='play',paused=on&&!!run.paused;
   const b=$('startBtn');
@@ -7993,7 +8010,7 @@ function syncInfo(){
     $('setSum').textContent=$('setBox').open?'More settings':parts.join(' · ');   /* open: just the name; closed: what is inside */
   }
 }
-const CLICK_HINT={strokes:'A click on every stroke',beat:'A click on the beat',half:'A click on the strong beats',bar:'A click on 1 of each bar',none:'Count-in only'};
+const CLICK_HINT={strokes:'A click on every stroke',guide:'A click on the beat and the half beat',beat:'A click on the beat',half:'A click on the strong beats',bar:'A click on 1 of each bar',none:'Count-in only'};
 /* A segmented control's buttons carry their value in data-v; the one that matches is pressed. */
 function setPressed(id,v){$(id).querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===v)));}
 /* Other strokes only matters once an accent is set. */
