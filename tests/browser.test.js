@@ -578,7 +578,7 @@ test('a stray exercise is deleted from a run, and an unheard one is not scored',
   const text = () => p.evaluate(() => [...document.querySelectorAll('#pg')].map(x => x.innerText).join('|'));
   let t = await text();
   assert.match(t, /1 not played/);            /* nothing was heard in the last exercise */
-  assert.doesNotMatch(t, /dLfR[\s\S]*ACC/);    /* it is not scored, so it cannot be the weakest */
+  assert.doesNotMatch(t, /dLfR[\s\S]*on time/);    /* it is not scored, so it cannot be the weakest */
   await p.evaluate(() => { document.querySelector('details').open = true; document.querySelector('details .btn.icon').click(); });
   const del = () => p.evaluate(() => [...document.querySelectorAll('.menu:not([hidden]) button')].find(x => /^(Delete|Tap again to delete)$/.test(x.textContent)).click());
   await del(); await del();

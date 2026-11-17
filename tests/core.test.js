@@ -507,6 +507,17 @@ test('score breakdown separates unplayed strokes from hits on a rest', () => {
   assert.deepEqual([d.due, d.on, d.miss, d.rest], [4, 3, 1, 1]);
 });
 
+test('score breakdown splits off-time strokes into early, late and not as written from the stroke data', () => {
+  const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_', SPR = 'obmsl';
+  const st = (r, ms) => { const v = ms + 2047; return B64[SPR.indexOf(r)] + B64[v >> 6] + B64[v & 63] + B64[63]; };
+  const sp = st('o', 3) + st('b', -30) + st('b', 25) + st('b', 40) + st('s', 2);
+  const run = q => ({ id: 1, t: 1, lv: 'half', bpm: 60, exercises: [{ k: 'RLRL', bpm: 60, due: 5, within: 1, sp, q }] });
+  const d = c.scoreBreakdown(run('obbbb'));
+  assert.deepEqual([d.on, d.off, d.early, d.late, d.dyn, d.split], [1, 4, 1, 2, 1, 0]);
+  const e = c.scoreBreakdown({ id: 2, t: 1, lv: 'half', bpm: 60, exercises: [{ k: 'RLRL', bpm: 60, due: 4, within: 2, q: 'oobb' }] });
+  assert.deepEqual([e.off, e.early, e.late, e.split], [2, 0, 0, 2], 'without stroke data early and late cannot be told apart');
+});
+
 test('an off-time stroke takes the streak back two steps, and a miss resets it', () => {
   assert.equal(c.streakAfter(5, 'o'), 6);
   assert.equal(c.streakAfter(16, 'b'), 14);
