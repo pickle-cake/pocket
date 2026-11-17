@@ -297,7 +297,7 @@ body[data-run="1"] .notice{display:none}
 .cap{font-size:13px;color:var(--muted);margin:8px 0 0}
 .pads{display:none;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 body[data-input="kb"][data-run="1"] .pads{display:grid}   /* the pads only show while a run is playing, not on the result */
-.pad{min-height:84px;border-radius:var(--r-lg);border:2px solid var(--ink);background:var(--surface);color:var(--ink);font:800 var(--t-display) var(--font-display);cursor:pointer;touch-action:manipulation}
+.pad{min-height:84px;border-radius:var(--r-lg);border:2px solid var(--ink);background:var(--surface);color:var(--ink);font:800 var(--t-display) var(--font-display);cursor:pointer;touch-action:none}   /* a tap that slides does not drag the page */
 .pad[data-hand=R]{background:var(--ink);color:var(--bg)}
 body[data-input="kb"] .mic-only{display:none}
 body[data-input="mic"] .kb-only{display:none}
@@ -394,7 +394,6 @@ body[data-run="1"] .sub,body[data-run="1"] #playSummary{display:none}
 :root[data-layout=desktop] body[data-run="1"] #lockNote{display:block}   /* the settings stay in view on a desktop, dimmed, so they say why */
 /* Playing: hide the page controls too, so only the strokes and Stop remain. */
 body[data-run="1"][data-rm="play"] header,body[data-run="1"][data-rm="play"] .tabs{display:none}
-body[data-run="1"][data-rm="play"]{padding-top:max(20px,calc(env(safe-area-inset-top,0px) + var(--s-4)))}   /* with the header gone the score card is the top of the page; on an iPhone it clears the status bar, whose edge fades what sits right under it */
 .pcol{display:contents}   /* the Play page groups its controls and its view; on a phone the groups add nothing */
 .page{display:grid;gap:22px}
 .page>*{min-width:0}
@@ -3403,7 +3402,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.188';                           /* shown beside the title */
+const VERSION='1.5.189';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -7842,8 +7841,11 @@ function setRunning(on){
   if(on)setReview(false);
   syncRunUI();
   /* While a pattern or routine is playing, hide the settings so the strokes sit under the transport. */
+  const wasPlay=document.body.dataset.rm==='play';
   document.body.dataset.run=on?'1':'0';
   document.body.dataset.rm=on&&run?run.mode:'';
+  /* the header goes when a run starts and comes back when it stops: start each at the top, or the page is left a few pixels down and an iPhone fades its top under the status bar */
+  if((on&&run&&run.mode==='play')||(!on&&wasPlay))window.scrollTo(0,0);
   LOCKED.forEach(id=>{$(id).disabled=on;});
   document.querySelectorAll('.pctl .panel.cfg').forEach(e=>{e.inert=!!on;});
   renderLibrary();
