@@ -218,6 +218,29 @@ test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 
   assert.deepEqual(p.errors, []);
 });
 
+test('Bars with a click: a choice under the click levels, kept, and off on Solo with the reason', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat' }, { width: 390, height: 844 });
+  assert.equal(await p.getAttribute('#gbAll', 'aria-pressed'), 'true', 'every bar to start with');
+  assert.equal(await p.textContent('#barsHint'), 'The click plays in every bar.');
+  await p.click('#gb13');
+  assert.equal(await p.evaluate(() => window.__T.S().bars), '1-3');
+  assert.equal(await p.getAttribute('#gb13', 'aria-pressed'), 'true');
+  assert.match(await p.textContent('#barsHint'), /^The click plays 1 bar on, 3 off, from the first bar of each exercise\. Silent bars are still scored\. Points ×1\.75\.$/);
+  const w = await p.evaluate(() => ({ page: document.documentElement.scrollWidth, btn: [...document.querySelectorAll('#barsSeg button')].map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }), over: [...document.querySelectorAll('#barsSeg button')].some(b => b.scrollWidth > b.clientWidth) }));
+  assert.ok(w.btn.every(x => x >= 44), '44px targets: ' + w.btn);
+  assert.ok(!w.over, 'the labels fit their buttons');
+  assert.ok(w.page <= 390, 'no sideways scroll');
+  await p.click('#ckNone');
+  assert.ok(await p.isDisabled('#gb11'), 'off on Solo');
+  assert.equal(await p.textContent('#barsHint'), 'Off on Solo: it has no click after the count-in.');
+  await p.click('#ckBeat');
+  assert.ok(!(await p.isDisabled('#gb11')));
+  assert.equal(await p.getAttribute('#gb13', 'aria-pressed'), 'true', 'the choice comes back after Solo');
+  await p.reload();
+  assert.equal(await p.evaluate(() => window.__T.S().bars), '1-3', 'kept');
+  assert.deepEqual(p.errors, []);
+});
+
 test('a newer version on the server shows the update notice, asked at an address no cache can answer', async () => {
   /* WebKit lets a page's requests pass a route once a service worker is installed, so this one has none and routes before the page loads. */
   const ctx = await browser.newContext({ ...contextFor({ width: 390, height: 900 }), serviceWorkers: 'block' });

@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['minus', 'parseStrokes', 'nameMarkers', 'fmtPattern', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'leadSlot', 'envOnsets', 'matchStrokes', 'graceMain', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
+  'graceSlot', 'leadSlot', 'envOnsets', 'matchStrokes', 'graceMain', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict', 'GAPS', 'gapFit', 'gapText', 'shareKey', 'gapMult']);
 
 test('negative numbers are shown with a true minus sign', () => {
   assert.equal(c.minus(-30), '−30');
@@ -932,4 +932,70 @@ test('click rush: strokes that get earlier between clicks and snap back on the c
   let hits = 0;
   for (let k = 0; k < 200; k++) if (sixteenths('beat', () => g() * 20, 8).f) hits++;
   assert.ok(hits <= 4, hits + ' of 200 noise runs rush');
+});
+
+test('bars with a click: the click drops out of the silent bars, from the first bar of each exercise', () => {
+  const p = c.parseRoutine('RLRL RLRL RLRL RLRL');
+  const ex = c.resolveExercises(p.exercises, { unit: 'pass', v: 4 }, { bpm: 60, subdiv: 4 });
+  const at = (lv, bars) => c.buildPlan(ex, { gapBeats: 0, clickMode: lv, dyn: null, bars }).clicks.map(x => x.t).join(',');
+  const cin = '0,1,2,3';
+  assert.equal(at('beat', ''), cin + ',4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19', 'every bar');
+  assert.equal(at('beat', '1-1'), cin + ',4,5,6,7,12,13,14,15', '1 on, 1 off');
+  assert.equal(at('beat', '2-2'), cin + ',4,5,6,7,8,9,10,11', '2 on, 2 off');
+  assert.equal(at('beat', '1-3'), cin + ',4,5,6,7', '1 on, 3 off');
+  assert.equal(at('beat', 'x'), at('beat', ''), 'an unknown setting clicks every bar');
+  assert.equal(at('none', '1-1'), at('none', ''), 'Solo is untouched');
+  /* each exercise starts again with a click bar */
+  const two = c.resolveExercises(c.parseRoutine('RLRL RLRL RLRL RLRL\nLRLR LRLR LRLR LRLR').exercises, { unit: 'pass', v: 1 }, { bpm: 60, subdiv: 4 });
+  const pl = c.buildPlan(two, { gapBeats: 0, clickMode: 'beat', dyn: null, bars: '1-1' });
+  pl.segs.forEach(sg => assert.ok(pl.clicks.some(x => Math.abs(x.t - sg.t0) < 1e-6), 'a click on the first beat of exercise at ' + sg.t0));
+  assert.equal(pl.segs[0].gb, c.GAPS['1-1']);
+});
+
+test('bars with a click: silent bars multiply the points and the maximum alike, and bests are kept apart', () => {
+  const run = gb => ({ id: 'g' + gb, t: 1, lv: 'beat', bpm: 60, tol: 20, gb, exercises: [{ k: 'e', due: 8, within: 8, q: 'oooooooo' }] });
+  const std = c.runScore(run(undefined));
+  assert.ok(Math.abs(c.runScore(run('1-1')) - std * 1.25) <= 1, 'x1.25 with 1 bar on, 1 off');
+  assert.ok(Math.abs(c.runScore(run('1-3')) - std * 1.75) <= 1, 'x1.75 with 1 bar on, 3 off');
+  for (const gb of ['1-1', '2-2', '1-3']) assert.equal(c.runMax(run(gb)), c.runScore(run(gb)), 'a flawless run with ' + gb + ' is 100%');
+  assert.equal(c.gapMult(undefined), 1);
+  assert.equal(c.shareKey('beat', 20, ''), 'beat|20');
+  assert.equal(c.shareKey('beat', 20, '2-2'), 'beat|20|2-2');
+  assert.equal(c.shareKey('beat', 20, 'bad'), 'beat|20');
+  const b = c.bestShares([run('1-1')], c.newSum());
+  assert.equal(b['beat|20|1-1'], 1);
+  assert.equal(b['beat|20'], undefined, 'a best with silent bars is not a best with the click in every bar');
+});
+
+test('bars with a click: rushing, wandering and the first stroke back are found by comparing the silent bars with the click bars', () => {
+  const g = gauss(rng(11));
+  const runOf = (bars, off, passes = 24) => {
+    const ex = c.resolveExercises(c.parseRoutine('RLRL RLRL RLRL RLRL').exercises, { unit: 'pass', v: passes }, { bpm: 60, subdiv: 4 });
+    const pl = c.buildPlan(ex, { gapBeats: 0, clickMode: 'beat', dyn: null, bars });
+    const sg = pl.segs[0], L = sg.beat * sg.gbB;
+    const res = new Map();
+    pl.slots.forEach((s, i) => { const n = Math.floor((s.t - sg.t0) / L + 1e-6), silent = sg.gb && n % (sg.gb[0] + sg.gb[1]) >= sg.gb[0]; res.set(i, { ms: Math.round(off(s, i, silent, n)) }); });
+    return c.gapFit(pl, res, 20);
+  };
+  let f = runOf('1-1', (s, i, silent) => (silent ? -20 : 0) + g() * 6);
+  assert.equal(f && f.what, 'gap');
+  assert.equal(f.dir, 'early');
+  assert.ok(f.ms >= 15 && f.ms <= 25, String(f.ms));
+  assert.match(c.gapText(f), /^In the silent bars you are \d+ ms earlier on average than in the bars with a click: without the click you rush\. Count the silent bars out loud/);
+  f = runOf('2-2', (s, i, silent) => (silent ? 18 : 0) + g() * 6);
+  assert.equal(f && f.dir, 'late');
+  assert.match(c.gapText(f), /you drag\./);
+  f = runOf('1-1', (s, i, silent) => g() * (silent ? 25 : 5));
+  assert.equal(f && f.what, 'gapsd');
+  assert.match(c.gapText(f), /^In the silent bars your strokes spread \d+ ms, against \d+ ms with the click/);
+  /* the first stroke of a click bar after a silent bar is late */
+  f = runOf('1-1', (s, i, silent, n) => (!silent && n > 0 && s.pos === 0 ? 25 : 0) + g() * 5);
+  assert.equal(f && f.what, 'gapback');
+  assert.equal(f.dir, 'late');
+  assert.match(c.gapText(f), /^When the click comes back, your first stroke is /);
+  /* no silent bars, or noise alone, is no finding */
+  assert.equal(runOf('', (s, i, silent) => (silent ? -20 : 0) + g() * 6), null);
+  let hits = 0;
+  for (let k = 0; k < 200; k++) if (runOf('1-1', () => g() * 15, 8)) hits++;
+  assert.ok(hits <= 4, hits + ' of 200 noise runs found');
 });
