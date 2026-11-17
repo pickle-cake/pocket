@@ -656,8 +656,6 @@ body[data-edit=type] .buildonly{display:none}
 .bkey.R,.bkey.L{grid-column:span 2;min-height:64px;font:800 var(--t-display) var(--font-display)}
 .bkey[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}   /* selected like a .seg item: a heavier ink edge, not brass */
 .bkey:disabled{opacity:.35;cursor:not-allowed}
-.estate{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
-#edDiscard{min-height:0;padding:0;font-size:13px}
 .bkey,.bcode{background:color-mix(in srgb,var(--ink) 6%,var(--surface));border-color:color-mix(in srgb,var(--ink) 18%,var(--surface))}   /* keys a touch lighter than the panel */
 .bcode[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}   /* the selected note value: solid ink, like a switch that is on; brass is kept for the primary action */
 .bkey:active,.bcode:active{filter:brightness(.92)}
@@ -966,11 +964,11 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     <div class="editor cfg" id="builder" role="group" aria-label="Editor">
       <div class="etop">
         <button class="btn" id="edBack" type="button">&larr; Back</button>
-        <div class="etitle"><b id="edName"></b><span class="hint estate"><span id="edState"></span><button class="btn link" id="edDiscard" type="button" hidden>Discard</button></span></div>
+        <div class="etitle"><b id="edName"></b><span class="hint" id="edState"></span></div>
         <button class="btn" id="saveBtn" type="button">Save</button>
-        <button class="btn icon dots" id="saveMore" type="button" aria-label="More ways to save" title="More ways to save" aria-haspopup="menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button>
+        <button class="btn icon dots" id="saveMore" type="button" aria-label="More actions" title="More actions" aria-haspopup="menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button>
       </div>
-      <div class="card menu" id="saveMenu" role="menu" hidden><button id="saveNew" type="button" role="menuitem">Save as new</button><button id="saveFile" type="button" role="menuitem">Download file</button></div>
+      <div class="card menu" id="saveMenu" role="menu" hidden><button id="saveNew" type="button" role="menuitem">Save as new</button><button id="saveFile" type="button" role="menuitem">Download file</button><button class="danger" id="edDiscard" type="button" role="menuitem" hidden>Discard changes</button></div>
       <div class="bmain">
         <section class="panel" aria-label="Editor mode">
           <div class="seg wide" role="group" aria-label="How to enter the strokes">
@@ -1049,14 +1047,14 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
           <div class="bkeys" role="group" aria-label="Strokes">
             <button class="bkey R" type="button" data-k="R" aria-label="Right">R</button>
             <button class="bkey L" type="button" data-k="L" aria-label="Left">L</button>
-            <button class="bkey sm" type="button" data-k="flam" aria-pressed="false" aria-label="Flam: the next R or L gets a grace note before it">flam</button>
-            <button class="bkey sm" type="button" data-k="drag" aria-pressed="false" aria-label="Drag: the next R or L gets two grace notes before it">drag</button>
-            <button class="bkey sm" type="button" data-k="buzz" aria-pressed="false" aria-label="Buzz: the next R or L becomes a buzz stroke">buzz</button>
-            <button class="bkey sm" type="button" data-k="_" aria-label="Rest">rest _</button>
-            <button class="bkey sm" type="button" data-k="group" aria-label="New group">space</button>
-            <button class="bkey sm" type="button" data-k="back" aria-label="Delete the last stroke">&#9003;</button>
-            <button class="bkey sm" type="button" data-k="swap" aria-label="Swap left and right">L&#8644;R</button>
-            <button class="bkey sm" type="button" data-k="clear" aria-label="Clear the strokes of this exercise">clear</button>
+            <button class="bkey sm" type="button" data-k="flam" aria-pressed="false" aria-label="Flam: the next R or L gets a grace note before it">Flam</button>
+            <button class="bkey sm" type="button" data-k="drag" aria-pressed="false" aria-label="Drag: the next R or L gets two grace notes before it">Drag</button>
+            <button class="bkey sm" type="button" data-k="buzz" aria-pressed="false" aria-label="Buzz: the next R or L becomes a buzz stroke">Buzz</button>
+            <button class="bkey sm" type="button" data-k="_" aria-label="Rest">Rest _</button>
+            <button class="bkey sm" type="button" data-k="group" aria-label="Space: start a new group">Space</button>
+            <button class="bkey sm" type="button" data-k="back" aria-label="Delete the last stroke" title="Delete the last stroke">&#9003;</button>
+            <button class="bkey sm" type="button" data-k="swap" aria-label="Swap hands" title="Swap hands">L&#8644;R</button>
+            <button class="bkey sm" type="button" data-k="clear" aria-label="Clear the strokes of this exercise">Clear</button>
           </div>
         </div>
         </section>
@@ -3404,7 +3402,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.178';                           /* shown beside the title */
+const VERSION='1.5.179';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -8286,7 +8284,7 @@ function wireBuilder(){
   document.querySelectorAll('.bkey').forEach(k=>k.addEventListener('click',()=>bEdit(k.dataset.k)));
   [['bTop','top'],['bUp','up'],['bDown','down'],['bBottom','bottom']].forEach(x=>$(x[0]).addEventListener('click',()=>bMoveEx(x[1])));
   $('exMenu').addEventListener('click',e=>{if(e.target.closest('button'))closeRowMenu();});
-  arm($('edDiscard'),()=>{const e=currentEntry();if(e)loadEntry(e);});   /* back to the saved routine */
+  arm($('edDiscard'),()=>{closeRowMenu();const e=currentEntry();if(e)loadEntry(e);},'Discard');   /* back to the saved routine; in the ⋮ menu, as the bar has no room for it on a phone */
   $('saveMore').addEventListener('click',()=>openMenu($('saveMenu'),$('saveMore')));
   $('saveMenu').addEventListener('click',e=>{if(e.target.closest('button'))closeRowMenu();});
   openRowMenu=idx=>{   /* picking the row redraws the list, so the menu remembers its row rather than its button */

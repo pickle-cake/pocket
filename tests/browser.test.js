@@ -536,9 +536,12 @@ test('editor: Discard puts a saved routine back', async () => {
   await p.click('.bkey[data-k="flam"]');
   await p.click('.bkey[data-k="R"]');
   assert.equal(await p.textContent('#edState'), 'Unsaved');
+  await p.click('#saveMore');
   await p.click('#edDiscard');
   assert.equal(await p.textContent('#edDiscard'), 'Tap again to discard');
+  assert.equal(await p.isVisible('#saveMenu'), true, 'the first tap keeps the menu open');
   await p.click('#edDiscard');
+  assert.equal(await p.isVisible('#saveMenu'), false);
   assert.equal(await p.inputValue('#routineText'), 'title: Mine\n8 RLRL RLRL');
   assert.equal(await p.textContent('#edState'), 'Saved');
 });
