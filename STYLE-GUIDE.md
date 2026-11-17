@@ -45,12 +45,10 @@ Keep the existing palette and add the roles that are missing. **Component CSS ne
   --warn:var(--accent);  /* NEW: warnings get their own role; may diverge later */
   --danger:var(--late);  /* NEW: destructive actions */
   --on-danger:#fff;
-  --heat:#E5322B;        /* NEW: streak heat, replaced in the cb palette */
-  --heat-low:#fff;       /* NEW: the streak meter at the first stroke, mixed towards --heat */
 }
 ```
 
-The dark theme and the `cb` palette must define every token above. Add `--line-strong:#66726C` for dark (3.7:1 on `--bg`, 3.4:1 on `--surface`) and `--heat:#FF8A3D` for `cb`. Dark sets `--on-danger:#0F1311`, because white on the light dark-theme `--late` is below 4.5:1, and a stronger `--shadow-pop` (.35).
+The dark theme and the `cb` palette must define every token above. Add `--line-strong:#66726C` for dark (3.7:1 on `--bg`, 3.4:1 on `--surface`). Dark sets `--on-danger:#0F1311`, because white on the light dark-theme `--late` is below 4.5:1, and a stronger `--shadow-pop` (.35).
 
 **Rules for the brass accent**
 
