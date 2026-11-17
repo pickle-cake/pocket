@@ -394,6 +394,7 @@ body[data-run="1"] .sub,body[data-run="1"] #playSummary{display:none}
 :root[data-layout=desktop] body[data-run="1"] #lockNote{display:block}   /* the settings stay in view on a desktop, dimmed, so they say why */
 /* Playing: hide the page controls too, so only the strokes and Stop remain. */
 body[data-run="1"][data-rm="play"] header,body[data-run="1"][data-rm="play"] .tabs{display:none}
+body[data-run="1"][data-rm="play"]{padding-top:max(20px,calc(env(safe-area-inset-top,0px) + var(--s-4)))}   /* with the header gone the score card is the top of the page; on an iPhone it clears the status bar, whose edge fades what sits right under it */
 .pcol{display:contents}   /* the Play page groups its controls and its view; on a phone the groups add nothing */
 .page{display:grid;gap:22px}
 .page>*{min-width:0}
@@ -3402,7 +3403,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.187';                           /* shown beside the title */
+const VERSION='1.5.188';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
