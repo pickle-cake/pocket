@@ -100,19 +100,6 @@ header .headbtns{grid-area:btns} header .sub{grid-area:sub} header .tabs{grid-ar
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 .field{display:grid;gap:var(--s-2);min-width:0}
 /* A switch row: the title and meta on the left, the state as a word and a track on the right. The word is the second cue. */
-.toggle{display:flex;align-items:center;gap:var(--s-3);width:100%;min-height:var(--hit);padding:var(--s-3) 0;background:none;border:0;border-top:1px solid var(--line);color:var(--ink);text-align:left;cursor:pointer}
-.toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.toggle-text{display:grid;gap:var(--s-1);flex:1;min-width:0}
-.toggle-title{font:600 var(--t-body) var(--font-body)}
-.toggle-meta{font:400 var(--t-caption) var(--font-body);color:var(--muted)}
-.toggle-state{font:600 var(--t-small) var(--font-body);color:var(--muted);min-width:2em;text-align:right}
-.toggle-state::before{content:"Off"}
-.toggle[aria-checked=true] .toggle-state{color:var(--ink)} .toggle[aria-checked=true] .toggle-state::before{content:"On"}
-.toggle-track{flex:none;position:relative;width:var(--hit);height:calc(var(--hit) / 2 + var(--s-1));border-radius:var(--r-full);background:var(--surface-2);border:1px solid var(--line-strong)}
-.toggle-track::after{content:"";position:absolute;top:var(--s-1);left:var(--s-1);width:calc(var(--hit) / 2 - var(--s-1) - 2px);aspect-ratio:1;border-radius:var(--r-full);background:var(--line-strong)}
-.toggle[aria-checked=true] .toggle-track{background:var(--ink);border-color:var(--ink)}
-.toggle[aria-checked=true] .toggle-track::after{background:var(--surface);transform:translateX(calc(var(--hit) / 2 - var(--s-1)))}
-@media (prefers-reduced-motion:no-preference){.toggle-track,.toggle-track::after{transition:background var(--dur-1) var(--ease),transform var(--dur-1) var(--ease)}}
 .field output{color:var(--ink);font-family:var(--font-data);letter-spacing:0;text-transform:none;margin-left:6px}
 input[type=text],input[type=number],select{font:500 16px var(--font-body);color:var(--ink);background:var(--bg);border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;min-height:44px;width:100%}
 input[type=range]{width:100%;min-height:var(--hit);margin:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer}   /* a 44px target around a 4px track */
@@ -841,14 +828,23 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
             <option value="40">± 40 ms · relaxed, points ×1.1</option>
             <option value="50">± 50 ms · relaxed</option>
           </select></div>
-        <div class="field"><label for="pulse">Visual pulse</label>
-          <select id="pulse"><option value="on">On</option><option value="off">Off</option></select></div>
+        <div class="field"><span class="lbl" id="pulseLbl">Visual pulse</span>
+          <div class="seg wide" id="pulse" role="group" aria-labelledby="pulseLbl">
+            <button type="button" id="pulseOn" data-v="on" aria-pressed="true">On</button>
+            <button type="button" id="pulseOff" data-v="off" aria-pressed="false">Off</button>
+          </div></div>
       </div>
       <div class="field"><label for="vol">Click volume <output id="volOut"></output></label><input type="range" id="vol" min="0" max="100" step="1"></div>
       <p class="hint mic-only">Use headphones for the click. A click from the speakers is picked up by the microphone and counted as a stroke.</p>
     </section>
     <section class="panel" aria-label="Appearance">
       <h3>Appearance</h3>
+      <div class="field"><span class="lbl" id="viewLbl">View while playing</span>
+        <div class="seg wide" id="view" role="group" aria-labelledby="viewLbl" aria-describedby="viewHint">
+          <button type="button" id="viewStaff" data-v="staff" aria-pressed="true">Staff</button>
+          <button type="button" id="viewHwy" data-v="hwy" aria-pressed="false">Highway</button>
+        </div>
+        <p class="hint" id="viewHint">Highway shows the strokes coming towards you in two lanes, L and R, in place of the staff while a run plays.</p></div>
       <div class="field"><label for="palette">Colours</label>
         <select id="palette"><option value="std">Standard</option><option value="cb">Colour-blind safe</option></select></div>
       <div class="field"><label for="layout">Layout</label>
@@ -857,14 +853,12 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     </section>
     <section class="panel" aria-label="Game">
       <h3>Game</h3>
-      <button class="toggle" id="game" type="button" role="switch" aria-checked="false" aria-labelledby="gameLbl" aria-describedby="gameHint">
-        <span class="toggle-text"><span class="toggle-title" id="gameLbl">Scores and rewards</span><span class="toggle-meta" id="gameHint">Adds a live score and streak meter while you play, a score on each result, high scores, medals and achievements</span></span>
-        <span class="toggle-state" aria-hidden="true"></span><span class="toggle-track" aria-hidden="true"></span>
-      </button>
-      <button class="toggle" id="view" type="button" role="switch" aria-checked="false" aria-labelledby="viewLbl" aria-describedby="viewHint">
-        <span class="toggle-text"><span class="toggle-title" id="viewLbl">Visualisation</span><span class="toggle-meta" id="viewHint">Highway, L and R lanes: the strokes come towards you in place of the staff while you play</span></span>
-        <span class="toggle-state" aria-hidden="true"></span><span class="toggle-track" aria-hidden="true"></span>
-      </button>
+      <div class="field"><span class="lbl" id="gameLbl">Scores and rewards</span>
+        <div class="seg wide" id="game" role="group" aria-labelledby="gameLbl" aria-describedby="gameHint">
+          <button type="button" id="gameOn" data-v="on" aria-pressed="false">On</button>
+          <button type="button" id="gameOff" data-v="off" aria-pressed="true">Off</button>
+        </div>
+        <p class="hint" id="gameHint">Adds a live score and streak meter while you play, a score on each result, high scores, medals and achievements.</p></div>
     </section>
 
     </div>
@@ -1171,7 +1165,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>Library:</b> your saved routines, each with Play, and Edit, Download and Delete under More actions (⋮). A row shows the fastest tempo an exercise has cleared at your click level, with its medal when rewards are on. <b>New</b> starts a routine, <b>Import</b> adds one from a file or a link, and <b>Export</b> saves the whole library as one file that Import reads back (it can also be hosted as a library). A title such as "Rudiment: Single stroke roll" groups the routine under Rudiment. Routines with no group go under Other. The ⋮ on a routine has Download and Delete. Delete asks for a second tap, and Undo follows. The chevron opens a routine to show its exercises.</li>
         <li><b>An unsaved routine</b> is what you are working on. It is kept as you type, but a saved routine changes only when you press Save. The app asks before you open another routine and lose unsaved work. The editor opens full screen from Edit, and Back returns you.</li>
         <li><b>Progress:</b> <b>History</b> lists your runs by exercise or routine, with Play. <b>Scores</b> shows each exercise (sorted by accuracy) and each routine: tempo, accuracy, trend, early or late, and evenness. <b>Achievements</b> shows your practice days for the last four weeks, a streak that forgives one rest day a week, and badges.</li>
-        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours, and under Game the Scores and rewards and Visualisation switches), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
+        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours, view while playing, and under Game, scores and rewards), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
       </ul>
     </section>
 
@@ -1181,7 +1175,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>Each row is one pass</b> of an exercise. The top row is playing and the next passes sit beneath it. Rows slide up as each pass ends.</li>
         <li><b>The moving line</b> reaches each note exactly when it is due. Strike as it arrives.</li>
         <li><b>A note's timing</b> shows a moment after you play it, once the note's on-time window has closed and a later hit can no longer be the better match: then the letter takes the colour of early, on time or late.</li>
-        <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket lights up for a moment and the word heard shows under its lane. A moment later, once the note's window has closed, the stroke is judged: it takes the colour of its timing and the verdict replaces heard.</li>
+        <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; View while playing) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket lights up for a moment and the word heard shows under its lane. A moment later, once the note's window has closed, the stroke is judged: it takes the colour of its timing and the verdict replaces heard.</li>
         <li><b>Letters</b> show each note's timing: on time, early (slanted) or late (underlined), each in its own colour, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as on time.</li>
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
         <li><b>The gauge</b> shows how early or late you played on average over the whole run, once it ends. Left is early, right is late.</li>
@@ -1362,7 +1356,7 @@ RLRR LRLL RLRR LRLL</pre>
       <ul>
         <li><b>On time</b> is the share of due strokes inside your on-time window. With an accent or ghost rule a stroke must also be played as written: an accent clearly louder and a ghost clearly softer than its neighbours. An exercise needs at least one full pass to be scored.</li>
         <li><b>Score:</b> with Scores and rewards on, every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Extreme and 5 on Master). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best score, that share, is kept for each level and window. Best on time is your on-time % at a tempo. The streak carries from one exercise to the next. The total never goes below zero. Your high score in points at each click level is an achievement, and a new one is announced when the run ends.</li>
-        <li><b>Scores and rewards:</b> turn them on under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
+        <li><b>Scores and rewards:</b> choose On under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold. A run that clears an exercise faster than before shows its medal and the tempo of the next one.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run a note says what to play next time: stay at that tempo until every exercise reaches 90%, or, once cleared, try 5 BPM faster. Play shows it again, with your last result, when you next open that exercise or routine. On time is rounded down, so 89.6% reads 89%. Any tempo is always allowed.</li>
@@ -3402,7 +3396,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.193';                           /* shown beside the title */
+const VERSION='1.5.194';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -7822,7 +7816,7 @@ function showCachedList(){
 }
 
 /* ---------- controls ---------- */
-const LOCKED=['tol','accent','othN','othG','pulse','bpm','bpmDown','bpmUp','bpmOpen','tmDown10','tmDown','tmUp','tmUp10','tmRange','subdiv','ckStrokes','ckBeat','ckHalf','ckBar','ckNone','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','editPlay','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
+const LOCKED=['tol','accent','othN','othG','pulseOn','pulseOff','bpm','bpmDown','bpmUp','bpmOpen','tmDown10','tmDown','tmUp','tmUp10','tmRange','subdiv','ckStrokes','ckBeat','ckHalf','ckBar','ckNone','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','editPlay','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
 function syncRunUI(){
   const on=!!(run&&!run.ended),play=on&&run.mode==='play',paused=on&&!!run.paused;
   const b=$('startBtn');
@@ -8465,10 +8459,10 @@ function closeTempo(){
   m.hidden=true;$('bpmOpen').focus({preventScroll:true});
 }
 function applyView(){document.documentElement.dataset.view=S.view;}
-function syncView(){$('view').setAttribute('aria-checked',String(S.view==='hwy'));}
+function syncView(){setPressed('view',S.view);}
 /* Scores and rewards: the switch, the Achievements tab and the points on each window. */
 function syncGame(){
-  $('game').setAttribute('aria-checked',String(S.game));
+  setPressed('game',S.game?'on':'off');
   $('pvBtnAch').hidden=!S.game;
   [...$('tol').options].forEach(o=>{if(!o.dataset.t)o.dataset.t=o.textContent;o.textContent=S.game?o.dataset.t:o.dataset.t.replace(/, points .*$/,'');});
 }
@@ -8553,9 +8547,9 @@ function wire(){
   $('palette').addEventListener('change',e=>{S.palette=e.target.value;applyTheme();save();});
   $('layout').addEventListener('change',e=>{S.layout=e.target.value;save();syncLayout();});
   if(wideMQ)wideMQ.addEventListener('change',syncLayout);
-  $('game').addEventListener('click',()=>{S.game=!S.game;syncGame();save();if(!S.game&&!$('pvAch').hidden)setPview('hist');renderAll();});
-  $('view').addEventListener('click',()=>{S.view=S.view==='hwy'?'staff':'hwy';syncView();applyView();save();if(run&&!run.ended)drawHwy(run);});
-  $('pulse').addEventListener('change',e=>{S.pulse=e.target.value==='on';save();if(!S.pulse)clearPulse();});
+  $('game').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||(b.dataset.v==='on')===S.game)return;S.game=b.dataset.v==='on';syncGame();save();if(!S.game&&!$('pvAch').hidden)setPview('hist');renderAll();});
+  $('view').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.v===S.view)return;S.view=b.dataset.v;syncView();applyView();save();if(run&&!run.ended)drawHwy(run);});
+  $('pulse').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.pulse=b.dataset.v==='on';setPressed('pulse',b.dataset.v);save();if(!S.pulse)clearPulse();});
   $('csvBtn').addEventListener('click',downloadCsv);
   document.querySelectorAll('[data-help]').forEach(b=>b.addEventListener('click',()=>{
     openHelp(b.dataset.help);
@@ -8739,7 +8733,7 @@ function init(){
   $('accent').value=S.accent;
   $('tol').value=String(S.tol);
   $('gap').value=String(S.gap);
-  $('pulse').value=S.pulse?'on':'off';syncView();syncGame();$('palette').value=S.palette;$('layout').value=S.layout;
+  setPressed('pulse',S.pulse?'on':'off');syncView();syncGame();$('palette').value=S.palette;$('layout').value=S.layout;
   syncEach();
   $('ver').textContent='v'+VERSION;
   renderLibrary();
