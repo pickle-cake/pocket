@@ -190,6 +190,9 @@ test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 
   assert.equal(await p.inputValue('#bpm'), '220');
   await p.click('#bpmOpen'); await p.fill('#bpm', ''); await p.press('#bpm', 'Enter');
   assert.equal(await p.inputValue('#bpm'), '220', 'an empty box goes back to the tempo');
+  await p.click('#bpmOpen'); await p.click('#bpm'); await p.keyboard.type('90');
+  assert.equal(await p.inputValue('#bpm'), '90', 'clicking the box selects its value, so typing replaces it');
+  await p.fill('#bpm', '220'); await p.press('#bpm', 'Enter');
   assert.match(await p.textContent('#playSummary'), /^220 BPM/);
   const chips = await p.$$eval('#tmChips .tmchip', b => b.map(x => x.textContent));
   assert.ok(chips.length >= 1 && chips.every(c => /^\d+ BPM(Last time|Cleared|Recent)$/.test(c)), 'the sheet offers the tempos played: ' + chips);
