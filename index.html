@@ -390,6 +390,8 @@ body[data-run="1"] .sub,body[data-run="1"] #playSummary{display:none}
 /* Desktop keeps the settings in view while playing, but dimmed and out of reach. */
 :root[data-layout=desktop] body[data-run="1"] .panel.cfg{opacity:.45;pointer-events:none;user-select:none}
 :root[data-layout=desktop] body[data-run="1"] .cfg:not(.panel){display:none}
+#lockNote{display:none}
+:root[data-layout=desktop] body[data-run="1"] #lockNote{display:block}   /* the settings stay in view on a desktop, dimmed, so they say why */
 /* Playing: hide the page controls too, so only the strokes and Stop remain. */
 body[data-run="1"][data-rm="play"] header,body[data-run="1"][data-rm="play"] .tabs{display:none}
 .pcol{display:contents}   /* the Play page groups its controls and its view; on a phone the groups add nothing */
@@ -1506,6 +1508,7 @@ RLRR LRLL RLRR LRLL</pre>
         <button class="btn" id="stopBtn" type="button">Stop</button>
         <button class="btn link" id="restartBtn" type="button">Restart</button>
       </div>
+      <p class="hint" id="lockNote">Stop the run to change the settings below.</p>
       <div id="advBar"></div>
     </div>
     </div>
@@ -3390,7 +3393,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.173';                           /* shown beside the title */
+const VERSION='1.5.174';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -7800,7 +7803,7 @@ function showCachedList(){
 }
 
 /* ---------- controls ---------- */
-const LOCKED=['tol','accent','othN','othG','pulse','bpm','bpmDown','bpmUp','bpmOpen','tmDown10','tmDown','tmUp','tmUp10','tmRange','subdiv','ckStrokes','ckBeat','ckHalf','ckBar','ckNone','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
+const LOCKED=['tol','accent','othN','othG','pulse','bpm','bpmDown','bpmUp','bpmOpen','tmDown10','tmDown','tmUp','tmUp10','tmRange','subdiv','ckStrokes','ckBeat','ckHalf','ckBar','ckNone','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','editPlay','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
 function syncRunUI(){
   const on=!!(run&&!run.ended),play=on&&run.mode==='play',paused=on&&!!run.paused;
   const b=$('startBtn');
