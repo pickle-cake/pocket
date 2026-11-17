@@ -425,6 +425,8 @@ details.how{border:0;border-top:1px solid var(--line);border-radius:0;background
 details.how>summary{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);min-height:var(--hit);padding:var(--s-2) 0;font:600 var(--t-body) var(--font-body);letter-spacing:normal;text-transform:none}
 details.how>summary::after{float:none;flex:none;margin:0 4px 4px 0}
 details.how[open]>summary::after{margin:4px 4px 0 0}
+.hear{display:flex;align-items:center;gap:var(--s-3)}
+.hear .btn{display:inline-flex;align-items:center;gap:var(--s-2);flex:none}
 #barsBox>summary span{margin-left:auto;font-weight:400;color:var(--muted)}   /* what is set, beside the chevron */
 #barsBox .sbody{gap:var(--s-3);padding-bottom:var(--s-3)}
 #barsBox .tempo{max-width:220px}
@@ -1205,7 +1207,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <div class="clk" style="--c:16"><div class="clt">4/4: one bar, sixteen strokes</div><span class="cln">Easy</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Medium</span><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><span class="cln">Hard</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Each mark is one stroke. A filled mark has a click.</p>
         <div class="clk" style="--c:6"><div class="clt">6/8: one bar, six eighths</div><span class="cln">Hard</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Extreme follows the two groups of three. Easy and Medium click every eighth here, as each eighth is a beat.</p>
         <p>Choose the click level on the Play page. Easy clicks every stroke (none on rests). Medium clicks the beat and the half beat (1 and &amp;), or the last note of a triplet, so you fill in the notes between; it clicks on rests too. Hard clicks every beat, Extreme the strong beats (1 and 3, or the start of each group), and Master beat 1 of each bar. Solo only clicks the count-in, so you hold the tempo yourself. Each level is scored on its own, against the same grid.</p>
-        <p>Before you start, a tick under a note marks each click, so you can see what a level leaves out. Harder: silent bars, under the click level, lets the click drop out: after each bar with the click come up to 4 silent bars, each with a dashed line under its notes. Keep playing and counting, and the click comes back on beat 1. The cycle starts again with each exercise, so its first bar always clicks. The strokes in silent bars are still scored, and each stroke is worth more: a quarter more for each silent bar, up to double, so 1 silent bar is 1.25 times and 3 in a row are 1.75 times. A clear counts at its click level. The coaching says when your time moves in the silent bars, and how your first stroke lands when the click comes back. It is off on Solo, which has no click to leave out.</p>
+        <p>Before you start, a tick under a note marks each click, so you can see what a level leaves out. Listen, under the levels, plays the count-in and the click twice through, with the cursor moving along the notes, so you can hear it before you play. Harder: silent bars, under the click level, lets the click drop out: after each bar with the click come up to 4 silent bars, each with a dashed line under its notes. Keep playing and counting, and the click comes back on beat 1. The cycle starts again with each exercise, so its first bar always clicks. The strokes in silent bars are still scored, and each stroke is worth more: a quarter more for each silent bar, up to double, so 1 silent bar is 1.25 times and 3 in a row are 1.75 times. A clear counts at its click level. The coaching says when your time moves in the silent bars, and how your first stroke lands when the click comes back. It is off on Solo, which has no click to leave out.</p>
         <p> Set Scoring to Practice to try something without saving it: you still see the result, but nothing is added to your records. It is back on the next time you open the app. Use headphones, or the click is heard as strokes.</p>
         <button class="btn" type="button" data-try="single" data-text="RLRR LRLL RLRR LRLL">Try it</button>
       </div>
@@ -1465,7 +1467,8 @@ RLRR LRLL RLRR LRLL</pre>
           <button type="button" id="ckBar" data-v="bar" aria-pressed="false">Master</button>
           <button type="button" id="ckNone" data-v="none" aria-pressed="false">Solo</button>
         </div>
-        <p class="hint" id="clickHint"></p></div>
+        <p class="hint" id="clickHint"></p>
+        <div class="hear"><button class="btn" id="ckHear" type="button" aria-describedby="ckHearNote"></button><p class="hint" id="ckHearNote"></p></div></div>
       <details id="barsBox" class="how">
         <summary>Harder: silent bars<span id="barsSum"></span></summary>
         <div class="sbody">
@@ -3555,7 +3558,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.200';                           /* shown beside the title */
+const VERSION='1.5.201';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4140,7 +4143,7 @@ function currentExercises(){
 
 /* ---------- session engine ---------- */
 function beginRun(mode){
-  closeListen();
+  closeListen();endHear();
   const lat=mode==='lat';
   const latNotes='RLRLRLRLRLRLRLRL'.split('');
   const exercises=lat?[{idx:1,notes:latNotes,groupStart:latNotes.map((_,i)=>i%4===0),subs:latNotes.map(()=>2),defSub:2,bpm:75,passBeats:8,passes:LAT.rounds,secs:6.4*LAT.rounds,passSecs:6.4,own:true}]:currentExercises();
@@ -4598,7 +4601,7 @@ function loopClick(T){
   return s;
 }
 async function startLoop(){
-  closeListen();
+  closeListen();endHear();
   if(loop){endLoop('Auto calibrate cancelled.');return;}
   if(chk||(run&&!run.ended)||S.input!=='mic')return;
   if(!(await ensureAudio(true)))return;
@@ -5519,6 +5522,7 @@ function staffSection(page,r){
   });
 }
 function previewRows(animate){
+  endHear();
   if(S.mode==='routine'){
     /* Before a run each row is one exercise, so you can scroll to any exercise and start there. */
     prevPlan=routinePlan();
@@ -5533,6 +5537,61 @@ function previewRows(animate){
     setRows(prevPlan,0,false);
   }
   paintRows(null,null);
+}
+/* Listen on Play plays the click as a run would, with the count-in, the click level and the silent bars, but no strokes, while
+   the cursor moves along the rows. With silent bars it goes twice round the bars with the click and the silent bars; otherwise
+   it plays 2 passes. It plays the first exercise of a run from here. Nothing is heard from the mic or scored. Start, a change to
+   the rows or leaving the page stops it. */
+let hear=null;
+const ICON_PLAY='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M7 4.5 19.5 12 7 19.5Z" fill="currentColor"/></svg>',ICON_HALT='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
+function hearPlan(){
+  const b=currentExercises()[0];if(!b)return null;
+  const one=previewPlan([withPasses(b,1)]),sg=one.segs[0],g=sg.gb;
+  const n=g?Math.max(1,Math.ceil(2*g.length*sg.beat*sg.gbB/(sg.end-sg.t0)-1e-6)):2;
+  return {one:one,plan:previewPlan([withPasses(b,n)]),bpm:b.bpm,g:g};
+}
+function syncHear(){
+  const b=$('ckHear');if(!b)return;
+  const busy=!!(run&&!run.ended)||!!loop||!!chk,h=busy||hear?null:hearPlan();
+  b.innerHTML=(hear?ICON_HALT:ICON_PLAY)+'<span>'+(hear?'Stop':'Listen')+'</span>';
+  b.disabled=!hear&&!h;
+  $('ckHearNote').textContent=hear?$('ckHearNote').textContent:busy?'Listen waits until the run ends.':!h?'Add an exercise to listen to its click.'
+    :S.click==='none'?'Plays the count-in, then 2 passes with no click, at '+h.bpm+' BPM.'
+    :h.g?'Plays the click at '+h.bpm+' BPM, twice round the bars with the click and the silent bars.'
+    :'Plays the click for 2 passes at '+h.bpm+' BPM.';
+}
+function endHear(){
+  if(!hear)return false;
+  clearTimeout(hear.timer);cancelAnimationFrame(hear.raf);hear=null;silenceTones();clearPulse();movePlayhead(null);
+  syncHear();return true;
+}
+function stopHear(){if(endHear()&&document.body.dataset.state==='idle')previewRows();}
+async function startHear(){
+  if(hear||document.body.dataset.state!=='idle'||(run&&!run.ended)||loop||chk)return;
+  const h=hearPlan();if(!h)return;
+  if(!(await ensureAudio(false))||hear||(run&&!run.ended))return;
+  closeListen();
+  const plan=h.plan,t0=ctx.currentTime+0.15;
+  plan.clicks.forEach(c=>{if(c.t<plan.end-1e-6)click(t0+c.t,c.a);});
+  applyLayout(h.one);rowsShown=ROWS;labelsOn=true;labelMode='routine';setRows(plan,0,false);
+  hear={plan:plan,t0:t0,cur:-1,showG:0,pulseIdx:-1,res:new Map(),mode:'hear',tol:S.tol,raf:0,timer:setTimeout(stopHear,(0.15+plan.end+0.3)*1000)};
+  hear.raf=requestAnimationFrame(hearFrame);
+  syncHear();
+}
+function hearFrame(){
+  const r=hear;if(!r)return;
+  if(curTab!=='play'||document.body.dataset.state!=='idle'){stopHear();return;}
+  r.raf=requestAnimationFrame(hearFrame);
+  const plan=r.plan,cells=plan.cells,heard=heardNow()-r.t0;
+  while(r.cur+1<cells.length&&cells[r.cur+1].t<=heard)r.cur++;
+  /* the rows move on as a run's do: a moment after the first note of the next pass */
+  const total=totalPasses(plan);
+  let g=r.showG;
+  while(g+1<total){const pa=passAt(plan,g+1),sg=plan.segs[pa.si],c=cells[sg.cell0+pa.p*sg.N];if(heard<c.t+Math.min(0.6*c.d,0.15))break;g++;}
+  if(g!==r.showG){r.showG=g;setRows(plan,g,true);}
+  const c=r.cur>=0&&heard>=cells[r.cur].t?cells[r.cur]:null;
+  paintRows(r,c?{g:c.g,i:c.pos}:null,heard);
+  pulseOnClick(r,heard);
 }
 /* Move the start exercise (routine mode, before a run). */
 function goExercise(i,animate){
@@ -5564,7 +5623,7 @@ function showTab(t){
   curTab=t;
   if(t!=='setup'&&micTest){micTest=false;syncMicBtn();}
   closePages();
-  closeListen();
+  closeListen();if(t!=='play')stopHear();
   $('pagePattern').hidden=t!=='pattern';
   TABS.forEach(n=>{
     $('page'+n[0].toUpperCase()+n.slice(1)).hidden=n!==t;
@@ -8076,7 +8135,7 @@ const setupWatch=new MutationObserver(()=>syncSetup());
 function paintRange(el){el.style.setProperty('--pct',((el.value-el.min)/(el.max-el.min)*100).toFixed(1)+'%');}
 const paintRanges=()=>document.querySelectorAll('input[type=range]').forEach(paintRange);
 function syncInfo(){
-  syncSetup();latUse();paintRanges();syncPlayName();syncEditorBar();
+  syncHear();syncSetup();latUse();paintRanges();syncPlayName();syncEditorBar();
   const exercises=currentExercises();
   let ok;   /* there is something to play */
   if(S.mode==='single'){
@@ -8685,6 +8744,7 @@ function wire(){
   dismissable($('tempoModal'),closeTempo);
   $('score').addEventListener('change',e=>{scoreOn=e.target.value==='1';syncInfo();});
   /* the ticks under the notes follow the click, before a run */
+  $('ckHear').addEventListener('click',()=>{if(hear)stopHear();else startHear();});
   const clickShown=()=>{if(document.body.dataset.state==='idle')previewRows();syncInfo();};
   $('clickSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.click=b.dataset.v;save();if(S.mode==='routine')buildExerciseList();clickShown();});
   const dyChanged=()=>{save();pushDet();refreshPreview();};

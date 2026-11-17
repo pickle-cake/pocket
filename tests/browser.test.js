@@ -260,6 +260,34 @@ test('Harder: silent bars: ticks under the clicked notes, one stepper in a close
   assert.deepEqual(p.errors, []);
 });
 
+audioTest('Listen plays the click with the cursor moving, says what it plays, and stops on a setting change or a tab change', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat', bpm: 120 }, { width: 390, height: 844 });
+  assert.equal((await p.textContent('#ckHear')).trim(), 'Listen');
+  assert.equal(await p.textContent('#ckHearNote'), 'Plays the click for 2 passes at 120 BPM.');
+  const r = await p.evaluate(() => { const b = document.getElementById('ckHear').getBoundingClientRect(); return Math.min(b.width, b.height); });
+  assert.ok(r >= 44, '44px target: ' + r);
+  await p.click('#barsBox>summary');
+  await p.click('#barsOffUp');
+  assert.equal(await p.textContent('#ckHearNote'), 'Plays the click at 120 BPM, twice round the bars with the click and the silent bars.');
+  await p.click('#ckNone');
+  assert.equal(await p.textContent('#ckHearNote'), 'Plays the count-in, then 2 passes with no click, at 120 BPM.');
+  await p.click('#ckBeat');
+  await p.click('#ckHear');
+  await p.waitForFunction(() => document.getElementById('ckHear').textContent.trim() === 'Stop');
+  await p.click('#ckHear');
+  assert.equal((await p.textContent('#ckHear')).trim(), 'Listen', 'Stop stops it');
+  await p.click('#ckHear');
+  await p.waitForFunction(() => document.getElementById('ckHear').textContent.trim() === 'Stop');
+  await p.click('#ckStrokes');
+  assert.equal((await p.textContent('#ckHear')).trim(), 'Listen', 'a setting change stops it');
+  await p.click('#ckHear');
+  await p.waitForFunction(() => document.getElementById('ckHear').textContent.trim() === 'Stop');
+  await p.click('#tabLibrary');
+  await p.click('#tabPlay');
+  assert.equal((await p.textContent('#ckHear')).trim(), 'Listen', 'leaving Play stops it');
+  assert.deepEqual(p.errors, []);
+});
+
 test('a newer version on the server shows the update notice, asked at an address no cache can answer', async () => {
   /* WebKit lets a page's requests pass a route once a service worker is installed, so this one has none and routes before the page loads. */
   const ctx = await browser.newContext({ ...contextFor({ width: 390, height: 900 }), serviceWorkers: 'block' });
