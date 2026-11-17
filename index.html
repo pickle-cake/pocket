@@ -3402,7 +3402,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.189';                           /* shown beside the title */
+const VERSION='1.5.190';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4224,11 +4224,11 @@ function restartRun(){
   $('bigCount').hidden=true;
   beginRun('play');
 }
-/* At Start on a phone the page scrolls so the score box is at the top of the window, with the staff and the run controls under it. On desktop, where there is room, or without a score box, it goes to the top of the page. It returns whether the page was scrolled.
+/* At Start on a phone the page scrolls so the score box is at the top of the window, with the staff and the run controls under it. On desktop, where there is room, without a score box, or in a play run, where the header is hidden and the score box is already first, it goes to the top of the page: scrolled to the box itself, an iPhone fades its top under the status bar. It returns whether the page was scrolled.
    The run layout hides most of the page, and phone browsers then pull the scroll position back on their own and cancel a smooth scroll, so this jumps and jumps again once the page has settled, measuring each time. */
 function revealStaff(){
   const live=$('live');
-  const target=()=>live.hidden||document.documentElement.dataset.layout==='desktop'?0:Math.max(0,Math.round(live.getBoundingClientRect().top+scrollY));
+  const target=()=>live.hidden||document.documentElement.dataset.layout==='desktop'||document.body.dataset.rm==='play'?0:Math.max(0,Math.round(live.getBoundingClientRect().top+scrollY));
   if(Math.abs(scrollY-target())<2)return false;
   const go=()=>{const y=target();document.documentElement.scrollTop=y;document.body.scrollTop=y;scrollTo(0,y);};
   go();requestAnimationFrame(()=>{go();requestAnimationFrame(go);});setTimeout(go,120);setTimeout(go,400);
