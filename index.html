@@ -1166,7 +1166,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <h3>The four pages and the editor</h3>
       <ul>
         <li><b>Play:</b> tempo, click level, Start, Pause, Restart and Stop, the notation, the early/late gauge and your results.</li>
-        <li><b>Library:</b> your saved routines, each with Edit and Play. <b>New</b> starts a routine, <b>Import</b> adds one from a file or a link, and <b>Export</b> saves the whole library as one file that Import reads back (it can also be hosted as a library). A title such as "Rudiment: Single stroke roll" groups the routine under Rudiment. Routines with no group go under Other. The ⋮ on a routine has Download and Delete. Delete asks for a second tap, and Undo follows. The chevron opens a routine to show its exercises.</li>
+        <li><b>Library:</b> your saved routines, each with Play, and Edit, Download and Delete under More actions (⋮). A row shows the fastest tempo an exercise has cleared at your click level, with its medal when rewards are on. <b>New</b> starts a routine, <b>Import</b> adds one from a file or a link, and <b>Export</b> saves the whole library as one file that Import reads back (it can also be hosted as a library). A title such as "Rudiment: Single stroke roll" groups the routine under Rudiment. Routines with no group go under Other. The ⋮ on a routine has Download and Delete. Delete asks for a second tap, and Undo follows. The chevron opens a routine to show its exercises.</li>
         <li><b>An unsaved routine</b> is what you are working on. It is kept as you type, but a saved routine changes only when you press Save. The app asks before you open another routine and lose unsaved work. The editor opens full screen from Edit, and Back returns you.</li>
         <li><b>Progress:</b> <b>History</b> lists your runs by exercise or routine, with Play. <b>Scores</b> shows each exercise (sorted by accuracy) and each routine: tempo, accuracy, trend, early or late, and evenness. <b>Achievements</b> shows your practice days for the last four weeks, a streak that forgives one rest day a week, and badges.</li>
         <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours, and under Game the Scores and rewards and Visualisation switches), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
@@ -3390,7 +3390,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.171';                           /* shown beside the title */
+const VERSION='1.5.172';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -7469,7 +7469,7 @@ function kebab(label,items){
     closeRowMenu();
     const m=newMenu();
     items.forEach(it=>{
-      const x=menuBtn(it.t);if(it.danger)x.className='danger';
+      const x=menuBtn(it.t);if(it.danger)x.className='danger';if(it.off){x.disabled=true;x.title=it.off;}
       if(it.arm)arm(x,()=>{closeRowMenu();it.fn();});else x.addEventListener('click',()=>{closeRowMenu();it.fn();});
       m.appendChild(x);
     });
@@ -7568,18 +7568,24 @@ function renderLibraryPage(){
     const n=document.createElement('span');n.className='rt'+(!recs.names[k]&&!isRoutineKey(k)?' seq':'');n.textContent=label;   /* mono when the title is the sticking */
     const c=exerciseCount(e.x),hs=document.createElement('span');hs.className='rm';
     const latest=mine.reduce((m,r)=>Math.max(m,r.t),0);
-    hs.textContent=c+(c===1?' exercise':' exercises')+' · '+mine.length+(mine.length===1?' run':' runs')+(latest?' · latest '+dayWord(latest):'')+(e.id===S.libId?(st==='dirty'?' · open, unsaved changes':' · open'):'');
+    /* only what tells rows apart: the count of a routine, the runs once there are any, and an exercise's fastest clear at the current click level, with its medal when rewards are on */
+    const bits=[],clr=c===1&&!isRoutineKey(k)?clearedBefore(recs.runs,k,S.click,recs.sum,''):0;
+    if(c>1)bits.push(c+' exercises');
+    if(clr)bits.push((S.game?MTIER[masteryTier(k,clr)]+' · c':'C')+'leared at '+clr+' BPM');
+    if(mine.length)bits.push(mine.length+(mine.length===1?' run':' runs')+' · latest '+dayWord(latest));
+    if(e.id===S.libId)bits.push(st==='dirty'?'open, unsaved changes':'open');
+    hs.textContent=bits.join(' · ');hs.hidden=!bits.length;
     const ac=document.createElement('span');ac.className='ra';
-    const ed=iconBtn('edit','Edit',()=>editEntry(e)),pl=iconBtn('play','Play',()=>playEntry(e));
-    ed.disabled=pl.disabled=locked;
-    const km=kebab('More actions',[{t:'Download',fn:()=>downloadEntry(e)},{t:'Delete',fn:()=>deleteEntry(e),arm:true,danger:true}]);
+    const pl=iconBtn('play','Play',()=>playEntry(e));
+    pl.disabled=locked;
+    const km=kebab('More actions',[{t:'Edit',fn:()=>editEntry(e),off:locked?'Stop the run to edit':''},{t:'Download',fn:()=>downloadEntry(e)},{t:'Delete',fn:()=>deleteEntry(e),arm:true,danger:true}]);
     /* The chevron shows when opening the row reveals something the row does not already say: more than one exercise, or an exercise behind a title. */
     const more=exerciseCount(e.x)>1||!!recs.names[libKey(e)];
     const body=document.createElement('div');body.className='hb';body.hidden=true;
     const setOpen=o=>{det.classList.toggle('open',o);body.hidden=!o;ex.setAttribute('aria-expanded',String(o));};
     const ex=more?iconBtn('down','Show exercises',()=>setOpen(body.hidden)):document.createElement('span');
     if(more){ex.setAttribute('aria-expanded','false');sm.addEventListener('click',ev=>{if(!ev.target.closest('button'))setOpen(body.hidden);});sm.classList.add('tog');}else ex.className='btn icon gap';
-    ac.append(ed,pl,km,ex);
+    ac.append(pl,km,ex);
     sm.append(n,hs,ac);det.appendChild(sm);
     const exl=exerciseListEl(e.x);if(exl)body.appendChild(exl);
     det.appendChild(body);

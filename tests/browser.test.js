@@ -1328,3 +1328,30 @@ test('changing the on-time window updates the routine\'s Max score at once', asy
   assert.ok(at20 > 0);
   assert.ok(Math.abs(at50 - at20 / 1.5) <= 1, '±50 ms is x1 against x1.5 at ±20: ' + at20 + ' then ' + at50);
 });
+
+test('a library row keeps Play beside More actions, which holds Edit, and says only what tells rows apart: the fastest clear and its medal', async () => {
+  const seed = lib => () => {
+    if (localStorage.getItem('stick-timing-trainer.records.v2')) return;
+    const run = (i, b, w) => ({ id: 'r' + i, t: Date.now() - 86400000 * (3 - i), mode: 'single', rk: null, lv: 'beat', dy: '', ne: 1, bpm: b, tol: 20, sec: 60,
+      exercises: [{ k: '/4 RLRL', bpm: b, due: 16, within: w, heard: 16, avg: 0, sd: 3, miss: 0, i: 1 }] });
+    localStorage.setItem('stick-timing-trainer.records.v2', JSON.stringify({ v: 1, names: {}, nu: 3, runs: [run(0, 80, 16), run(1, 90, 15), run(2, 100, 8)],
+      lib: [{ id: 'a', x: 'RLRL', t: 1 }, { id: 'b', x: 'RRLL', t: 2 }] }));
+  };
+  const rows = async p => { await p.click('#tabLibrary'); await p.waitForTimeout(200);
+    return p.evaluate(() => [...document.querySelectorAll('#libPage .hrow')].map(r => ({ name: r.querySelector('.rt').textContent, meta: r.querySelector('.rm').hidden ? '' : r.querySelector('.rm').textContent,
+      btns: [...r.querySelector('.ra').querySelectorAll('button')].map(b => b.getAttribute('aria-label')) }))); };
+  const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat', game: true }, null, seed());
+  const r = await rows(p);
+  const a = r.find(x => x.name === 'RLRL'), b = r.find(x => x.name === 'RRLL');
+  assert.match(a.meta, /^\w+ · cleared at 90 BPM · 3 runs · latest /, a.meta);
+  assert.equal(b.meta, '', 'an unplayed exercise says nothing');
+  assert.deepEqual(a.btns, ['Play', 'More actions']);
+  await p.evaluate(() => document.querySelectorAll('.glib').forEach(d => { d.open = true; }));
+  await p.locator('#libPage .hrow').first().locator('[aria-label="More actions"]').click();
+  assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll('[role=menuitem]')].filter(e => e.offsetParent).map(e => e.textContent)), ['Edit', 'Download', 'Delete']);
+  const q = await open({ seeded: true, noise: -50, latCal: true, click: 'beat', game: false }, null, seed());
+  assert.match((await rows(q)).find(x => x.name === 'RLRL').meta, /^Cleared at 90 BPM · /, 'no medal with rewards off');
+  const e = await open({ seeded: true, noise: -50, latCal: true, click: 'strokes', game: true }, null, seed());
+  assert.match((await rows(e)).find(x => x.name === 'RLRL').meta, /^3 runs/, 'a clear on another click level is not this one');
+  assert.deepEqual(p.errors, []);
+});
