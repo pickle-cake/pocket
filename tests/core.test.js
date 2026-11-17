@@ -853,3 +853,57 @@ test('wander: strokes that drift off the click and back together are found, acro
   const res = new Map([[0, { miss: true }]]);
   assert.equal(c.wander([{ t: 0 }], res, 20), null);
 });
+
+test('wander: the advice follows the click, listen on Easy, count on a sparse click, count out loud with none', () => {
+  const w = { early: -30, late: 20, sd: 15, scatter: 5 };
+  assert.match(c.wanderText(w, 1), /listen for the click under your strokes\.$/);
+  assert.match(c.wanderText(w, 0.25), /^Your timing wanders off the click and back: .* so it is the pulse that moves: keep a count going between the clicks, out loud if it helps\.$/);
+  assert.match(c.wanderText(w, 0), /^Your timing wanders off the tempo and back: .* count out loud as you play\.$/);
+  assert.match(c.wanderText({ early: -30, late: 0, sd: 5, scatter: 15 }, 0.25), /up to 30 ms early\. Keep a count going between the clicks, out loud if it helps\.$/);
+});
+
+test('click cover: clicks per stroke after the count-in', () => {
+  const r = 'RLRL RLRL RLRL RLRL';
+  assert.equal(c.clickCover(plan(r).plan), 1);
+  assert.equal(c.clickCover(plan(r, { clickMode: 'beat' }).plan), 0.25);
+  assert.equal(c.clickCover(plan(r, { clickMode: 'bar' }).plan), 1 / 16);
+  assert.equal(c.clickCover(plan(r, { clickMode: 'none' }).plan), 0);
+});
+
+test('click rush: strokes that get earlier between clicks and snap back on the click are found', () => {
+  const g = gauss(rng(7));
+  const sixteenths = (lv, off, passes = 30) => {
+    const p = c.parseRoutine('RLRL RLRL RLRL RLRL');
+    const ex = c.resolveExercises(p.exercises, { unit: 'pass', v: passes }, { bpm: 60, subdiv: 4 });
+    const pl = c.buildPlan(ex, { gapBeats: 0, clickMode: lv, dyn: null });
+    const res = new Map();
+    pl.slots.forEach((s, i) => res.set(i, { ms: Math.round(off(s, i)) }));
+    return { pl, res, f: c.clickRush(pl, res, 20) };
+  };
+  /* Medium: every beat a click; the fourth sixteenth of each beat is 30 ms early, the click is on time */
+  const inBeat = s => s.pos % 4;
+  let r = sixteenths('beat', s => -10 * inBeat(s) + g() * 6);
+  assert.ok(r.f, 'found');
+  assert.equal(r.f.ref, 'click');
+  assert.equal(r.f.dir, 'early');
+  assert.ok(r.f.ms >= 25 && r.f.ms <= 35, JSON.stringify(r.f.ms));
+  assert.ok(r.f.slots.length > 0);
+  assert.match(c.rushText(r.f), /^You rush between the clicks: by the last stroke before a click you are \d+ ms earlier than on the click, and the click pulls you back\. .*Count every note out loud \(1 e & a for sixteenths\) while you play, or practise at this click level 10 BPM slower\.$/);
+  /* rushing through the whole bar and caught on beat 1, past the clicks on beats 2 to 4 */
+  r = sixteenths('beat', s => -3 * s.pos + g() * 6);
+  assert.equal(r.f && r.f.ref, 'bar');
+  assert.match(c.rushText(r.f), /^You rush through each bar: by the last stroke before beat 1 /);
+  /* dragging */
+  r = sixteenths('half', s => 4 * (s.pos % 8) + g() * 6);
+  assert.equal(r.f && r.f.dir, 'late');
+  assert.match(c.rushText(r.f), /^You drag between the clicks/);
+  /* Easy has a click on every stroke, and Master none, so there is no gap to rush */
+  assert.equal(sixteenths('strokes', s => -10 * inBeat(s)).f, null);
+  assert.equal(sixteenths('none', s => -10 * inBeat(s)).f, null);
+  /* a steady offset, or one odd stroke in the middle of the beat, is not a rush */
+  assert.equal(sixteenths('beat', () => -25 + g() * 6).f, null);
+  assert.equal(sixteenths('beat', s => (inBeat(s) === 1 ? -30 : 0) + g() * 6).f, null);
+  let hits = 0;
+  for (let k = 0; k < 200; k++) if (sixteenths('beat', () => g() * 20, 8).f) hits++;
+  assert.ok(hits <= 4, hits + ' of 200 noise runs rush');
+});

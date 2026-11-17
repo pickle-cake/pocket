@@ -2372,11 +2372,68 @@ function wander(slots,res,tol){
   return {what:'wander',kind:'run',sd:Math.round(w),scatter:Math.round(sc),early:Math.round(q(0.05)),late:Math.round(q(0.95)),secs:T,
     n:sm.length,slots:sm.filter(p=>Math.abs(p.s)>tol).map(p=>p.i),pos:[],ks:[]};
 }
-function wanderText(w){
+/* The wander in words. cv is the run's clicks per stroke (clickCover): with a click under every stroke the advice is to listen
+   for it, with fewer it is to keep a count going between them, and with none (the count-in only) to count out loud. */
+function wanderText(w,cv=1){
   const e=w.early<0?Math.abs(w.early)+' ms early':'',l=w.late>0?w.late+' ms late':'';
-  let t='Your timing wanders off the click and back: a few beats at a time you drift '+(e&&l?'up to '+e+' and up to '+l:'up to '+(e||l))+'.';
-  t+=w.scatter<w.sd?' Your strokes stay even with each other, so it is the pulse that moves: listen for the click under your strokes.':' Listen for the click under your strokes.';
+  let t='Your timing wanders off the '+(cv>0?'click':'tempo')+' and back: a few beats at a time you drift '+(e&&l?'up to '+e+' and up to '+l:'up to '+(e||l))+'.';
+  const tip=cv>=1?'listen for the click under your strokes.':(cv>0?'keep a count going between the clicks, out loud if it helps.':'count out loud as you play.');
+  t+=w.scatter<w.sd?' Your strokes stay even with each other, so it is the pulse that moves: '+tip:' '+tip[0].toUpperCase()+tip.slice(1);
   return t;
+}
+/* The clicks of a run after the count-in, each with its exercise, in time order. */
+function playClicks(plan){
+  const out=[];
+  plan.segs.forEach((sg,si)=>plan.clicks.forEach(c=>{if(c.t>=sg.t0-1e-6&&c.t<sg.end-1e-6)out.push({t:c.t,a:c.a,seg:si});}));
+  return out.sort((a,b)=>a.t-b.t);
+}
+/* Clicks per stroke after the count-in, at most 1: 1 on Easy, 0 on Master. */
+function clickCover(plan){return plan.slots.length?Math.min(1,playClicks(plan).length/plan.slots.length):1;}
+/* Rushing (or dragging) between clicks: with fewer clicks than strokes, a drummer who keeps time only with the hands gets earlier
+   the further from a click, and the next click pulls them back. Each heard stroke's offset, less the average of its gap, is set
+   against how far through the gap between two clicks of the same exercise it falls: 0 on a click, nearly 1 just before the next.
+   The gaps are taken between all the clicks ('click') and between the first beats of the bars ('bar'), and the one that moves
+   more is kept. It needs FIND.minN gaps of two heard strokes or more, a change from the first quarter of the gap to the last of at
+   least RUSH.ms, a slope sure by FIND.se standard errors, and no quarter of the gap more than FIND.ms the other way from the quarter
+   before it, so one odd stroke in the pattern is not taken for a rush. */
+const RUSH={ms:12};
+function rushFit(slots,res,ck,tol){
+  const pts=[];let gaps=0,j=0;
+  for(let g=0;g+1<ck.length;g++){
+    const a=ck[g],b=ck[g+1];if(a.seg!==b.seg)continue;
+    const L=b.t-a.t;if(!(L>0))continue;
+    while(j<slots.length&&slots[j].t<a.t-1e-6)j++;
+    const inG=[];
+    for(let k=j;k<slots.length&&slots[k].t<b.t-1e-6;k++){const v=res.get(k);if(v&&!v.miss&&typeof v.ms==='number')inG.push({i:k,u:(slots[k].t-a.t)/L,ms:v.ms});}
+    if(inG.length<2)continue;
+    const m=mean(inG.map(p=>p.ms));
+    inG.forEach(p=>pts.push({i:p.i,u:p.u,ms:p.ms,y:p.ms-m}));gaps++;
+  }
+  if(gaps<FIND.minN||pts.length<FIND.minN*4)return null;
+  const v=slope(pts.map(p=>p.u),pts.map(p=>p.y));
+  if(!v||Math.abs(v.b)<FIND.se*v.se)return null;
+  const bins=[0,1,2,3].map(q=>pts.filter(p=>Math.min(3,Math.floor(p.u*4))===q).map(p=>p.y)).filter(a=>a.length>=FIND.minN).map(mean);
+  if(bins.length<2)return null;
+  const d=bins[bins.length-1]-bins[0],sg=Math.sign(v.b);
+  if(Math.abs(d)<RUSH.ms||Math.sign(d)!==sg)return null;
+  for(let q=1;q<bins.length;q++)if((bins[q]-bins[q-1])*sg<-FIND.ms)return null;
+  const off=pts.filter(p=>p.u>=0.5&&p.ms*sg>tol).map(p=>p.i);
+  return {d:d,gaps:gaps,n:pts.length,slots:off.length?off:pts.filter(p=>p.u>=0.75).map(p=>p.i)};
+}
+function clickRush(plan,res,tol){
+  const ck=playClicks(plan);
+  if(!ck.length||ck.length>=plan.slots.length)return null;
+  const bar=ck.filter(c=>c.a===2);
+  const fits=[['click',rushFit(plan.slots,res,ck,tol)]];
+  if(bar.length<ck.length)fits.push(['bar',rushFit(plan.slots,res,bar,tol)]);
+  const best=fits.filter(f=>f[1]).sort((a,b)=>Math.abs(b[1].d)-Math.abs(a[1].d))[0];
+  if(!best)return null;
+  const f=best[1];
+  return {what:'rush',kind:'run',ref:best[0],dir:f.d<0?'early':'late',ms:Math.round(Math.abs(f.d)),gaps:f.gaps,n:f.n,slots:f.slots,pos:[],ks:[]};
+}
+function rushText(f){
+  const early=f.dir==='early',bar=f.ref==='bar';
+  return 'You '+(early?'rush':'drag')+(bar?' through each bar':' between the clicks')+': by the last stroke before '+(bar?'beat 1':'a click')+' you are '+f.ms+' ms '+(early?'earlier':'later')+' than on '+(bar?'it':'the click')+', and '+(bar?'beat 1':'the click')+' pulls you back. Your hands are keeping the time without a count. Count every note out loud (1 e & a for sixteenths) while you play, or practise at this click level '+DRILL.slower+' BPM slower.';
 }
 /* The flams and drags of a run as sentences, one each. */
 function graceNotes(st){
@@ -3396,7 +3453,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.194';                           /* shown beside the title */
+const VERSION='1.5.195';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5463,8 +5520,11 @@ function coachItems(r){
   }
   /* the costliest places in the music where the strokes go wrong, in any exercise of the run: up to four, or only the first
      in a short run, where the rest are mostly chance */
-  const wd=r.res?wander(r.plan.slots,r.res,r.tol||S.tol):null;
-  if(wd)parts.push({t:wanderText(wd),f:wd});
+  /* rushing between clicks is the closer reading of a wander on a sparse click, so it is said instead */
+  const ru=r.res?clickRush(r.plan,r.res,r.tol||S.tol):null;
+  if(ru)parts.push({t:rushText(ru),f:ru});
+  const wd=r.res&&!ru?wander(r.plan.slots,r.res,r.tol||S.tol):null;
+  if(wd)parts.push({t:wanderText(wd,clickCover(r.plan)),f:wd});
   if(r.seg)findings(r.plan,r.seg,S.tol).filter(f=>!wd||f.what!=='drift').slice(0,r.errs.length>=FIND.more?4:1).forEach(f=>parts.push({t:findingText(f,r.plan),f:f}));
   /* an exercise played fewer than FIND.minPasses times is too short to say which of its strokes go wrong, so say so */
   if(r.seg&&r.errs.length>=FIND.more){
