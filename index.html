@@ -896,18 +896,20 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <input type="range" id="settle" min="20" max="120" step="5">
         <p class="hint">How long the app ignores the pad after a hit. Raise it if one stroke counts twice.</p>
       </div>
-      <div class="btns"><button class="btn" id="testMic" type="button">Test microphone</button><button class="btn" id="micCheck" type="button">Mic check</button><span class="heard" id="heard" aria-live="off"></span></div>
+      <div class="btns"><button class="btn" id="micCheck" type="button">Mic check</button><button class="btn" id="testMic" type="button">Show level</button><span class="heard" id="heard" aria-live="off"></span></div>
       <p class="err" id="micMsg" role="alert"></p>
       <p class="chkmsg" id="chkMsg" aria-live="polite"></p>
       <ul class="chkout" id="chkOut"></ul>
-      <p class="hint">Mic check listens to the room, then to twelve strokes, and sets the trigger line and settle time for you.</p>
+      <p class="hint"><b>Mic check:</b> listens to the room for two seconds, then to twelve strokes, and sets the trigger line and settle time for you.</p>
+      <p class="hint"><b>Show level:</b> shows the level bar while you hit the pad, so you can check the trigger line by hand.</p>
     </section>
 
     <section class="panel mic-only" aria-label="Latency">
       <h3>Latency</h3>
       <div class="field"><label for="latency">Compensation (ms)</label><input type="number" id="latency" min="0" max="400" step="1" inputmode="numeric" placeholder="auto"></div>
+      <p class="hint" id="latUse" aria-live="polite"></p>
       <div class="btns even"><button class="btn" id="calLoop" type="button">Auto calibrate</button><button class="btn" id="calLatency" type="button">Calibrate by playing</button></div>
-      <p class="hint"><b>Auto calibrate (recommended):</b> times 12 clicks through the speakers, so keep the room quiet and don't play.</p>
+      <p class="hint"><b>Auto calibrate (recommended):</b> plays 12 clicks through the speakers, about 12 seconds, and times when the microphone hears them. Keep the room quiet and don't play.</p>
       <p class="hint"><b>Calibrate by playing:</b> hit the pad on each click until the number settles. Use it to fine-tune, or with headphones.</p>
       <p class="hint" id="latMsg">Sound reaches the page late, and the click reaches your ears late. This number removes that delay. The result of a calibration appears here.</p>
     </section>
@@ -1157,7 +1159,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     <section class="panel" id="help-start">
       <h3>Quick start</h3>
       <ol>
-        <li><b>Settings:</b> use headphones for the click, tap Test microphone and hit the pad. The level bar should cross the trigger line on every stroke.</li>
+        <li><b>Settings:</b> use headphones for the click, tap Show level and hit the pad. The level bar should cross the trigger line on every stroke.</li>
         <li><b>Library:</b> press <b>New</b> to write a routine or <b>Import</b> to bring one in. One exercise plays on its own. Two or more make a routine, played in order.</li>
         <li><b>Play:</b> set the tempo, click level and how long each exercise plays, then press Start. Hold − or + to keep going, or tap the tempo for steps of 10, a slider and the tempos you play most. After the count-in, play each stroke as the line reaches it (or, with the highway, as it reaches the line), and press Stop when you are done. Your result appears first, with <b>Again</b> and <b>Done</b>. The staff keeps its colours and numbers so you can see which strokes were off. Done brings the controls back.</li>
       </ol>
@@ -3393,7 +3395,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.174';                           /* shown beside the title */
+const VERSION='1.5.175';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3458,7 +3460,12 @@ S.expSel=(S.expSel&&typeof S.expSel==='object')?{hist:S.expSel.hist!==false,lib:
 if(!isFinite(+S.lastExport))S.lastExport=0;
 if(!isFinite(+S.expRuns))S.expRuns=0;
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({settings:S}));}catch(e){}};
-function setLatency(v){S.latency=v;$('latency').value=v;save();}
+function setLatency(v){S.latency=v;$('latency').value=v;save();latUse();}
+/* The latency in use, in words, under the box: the 40 ms default, the device's own estimate, or a calibrated or typed number. */
+function latUse(){
+  $('latUse').textContent=S.latency==null?'In use: 40 ms, until the microphone opens and the device gives its own estimate.'
+    :'In use: '+S.latency+' ms, '+(S.latCal?'from a calibration or typed in. Clear the box to go back to the device estimate.':'estimated by the device. Calibrate to measure it.');
+}
 /* A calibration has been done, so the reminder at the top goes away. */
 function markCal(){S.latCal=true;save();syncInfo();}
 /* Scores live under their own key so clearing them never touches your settings or calibration. */
@@ -3735,7 +3742,7 @@ function setMicUI(on){
   const p=$('micPill');
   p.hidden=!on;
   if(!on)$('micDot').style.opacity='';
-  $('testMic').textContent=micTest?'Stop test':'Test microphone';
+  $('testMic').textContent=micTest?'Hide level':'Show level';
   if(!on){$('mFill').style.width='0%';$('heard').textContent='';}
   syncInfo();
 }
@@ -3771,7 +3778,7 @@ function syncMicBtn(){
   $('testMic').disabled=busy||S.input==='kb'||!!chk;
   $('micCheck').disabled=busy||S.input==='kb'||!!loop;
   $('micCheck').textContent=chk?'Cancel check':'Mic check';
-  $('testMic').textContent=micTest?'Stop test':'Test microphone';
+  $('testMic').textContent=micTest?'Hide level':'Show level';
   syncInfo();idleMic();
 }
 /* ---------- mic check ---------- */
@@ -7848,7 +7855,7 @@ function syncSetup(){
   if(!welcome)return;
   const steps=[
     {done:S.noise!==null,ok:'Mic check done',name:'Mic check.',label:'Your browser asks to use the microphone. Then stay quiet for two seconds and hit the pad twelve times, so Pocket learns how loud your room and your strokes are.',go:toggleCheck,btn:chk?'Cancel check':'Mic check',msg:()=>$('micMsg').textContent||$('chkMsg').textContent},
-    {done:S.latCal,ok:'Latency set',name:'Latency.',label:'Your device hears sound a little late. Pocket plays clicks through the speakers for about 20 seconds and times when the microphone hears them, so keep quiet and do not play.',go:startLoop,btn:loop?'Cancel':'Auto calibrate',skip:loop?null:()=>{loop&&endLoop('');markCal();setStatus('Latency calibration skipped. Set it by hand in Settings, under Device, if clicks and hits seem off.');},msg:()=>$('latMsg').textContent}
+    {done:S.latCal,ok:'Latency set',name:'Latency.',label:'Your device hears sound a little late. Pocket plays 12 clicks through the speakers, about 12 seconds, and times when the microphone hears them, so keep quiet and do not play.',go:startLoop,btn:loop?'Cancel':'Auto calibrate',skip:loop?null:()=>{loop&&endLoop('');markCal();setStatus('Latency calibration skipped. Set it by hand in Settings, under Device, if clicks and hits seem off.');},msg:()=>$('latMsg').textContent}
   ];
   const list=$('setSteps');list.textContent='';
   let cur=-1;
@@ -7877,7 +7884,7 @@ const setupWatch=new MutationObserver(()=>syncSetup());
 function paintRange(el){el.style.setProperty('--pct',((el.value-el.min)/(el.max-el.min)*100).toFixed(1)+'%');}
 const paintRanges=()=>document.querySelectorAll('input[type=range]').forEach(paintRange);
 function syncInfo(){
-  syncSetup();paintRanges();syncPlayName();syncEditorBar();
+  syncSetup();latUse();paintRanges();syncPlayName();syncEditorBar();
   const exercises=currentExercises();
   let ok;   /* there is something to play */
   if(S.mode==='single'){
