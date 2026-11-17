@@ -1441,7 +1441,6 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="field"><label for="eachVal"><span class="routine-only">Each exercise</span><span class="single-only">Length</span></label>
           <div class="dur"><input type="number" id="eachVal" min="1" max="200" step="1" inputmode="decimal"><select id="eachUnit" aria-label="Measured in"><option value="min">min</option><option value="pass">passes</option></select></div></div>
       </div>
-      <p class="hint" id="lastNote" hidden></p>
       <p class="hint" id="eachNote" hidden></p>
       <div class="field"><span class="lbl" id="clickLbl">Click</span>
         <div class="seg wide" id="clickSeg" role="group" aria-labelledby="clickLbl" aria-describedby="clickHint">
@@ -1453,6 +1452,7 @@ RLRR LRLL RLRR LRLL</pre>
           <button type="button" id="ckNone" data-v="none" aria-pressed="false">Solo</button>
         </div>
         <p class="hint" id="clickHint"></p></div>
+      <p class="hint" id="lastNote" hidden></p>   <!-- under the click: it changes with the level, so the level buttons stay put -->
     </section>
     <details id="setBox" class="setbox">
       <summary id="setSum"></summary>
@@ -3470,7 +3470,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.196';                           /* shown beside the title */
+const VERSION='1.5.197';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
