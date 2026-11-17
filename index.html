@@ -295,7 +295,7 @@ body[data-run="1"] .notice{display:none}
 [data-view=hwy] body[data-state="run"] #hwy{display:block}   /* only while playing: before a run the staff is where you pick the exercise to start on, and after it the staff is the review */
 .cap{font-size:13px;color:var(--muted);margin:8px 0 0}
 .pads{display:none;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-body[data-input="kb"] .pads{display:grid}
+body[data-input="kb"][data-run="1"] .pads{display:grid}   /* the pads only show while a run is playing, not on the result */
 .pad{min-height:84px;border-radius:var(--r-lg);border:2px solid var(--ink);background:var(--surface);color:var(--ink);font:800 var(--t-display) var(--font-display);cursor:pointer;touch-action:manipulation}
 .pad[data-hand=R]{background:var(--ink);color:var(--bg)}
 body[data-input="kb"] .mic-only{display:none}
@@ -3401,7 +3401,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.183';                           /* shown beside the title */
+const VERSION='1.5.184';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
