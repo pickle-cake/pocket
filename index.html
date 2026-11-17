@@ -100,19 +100,6 @@ header .headbtns{grid-area:btns} header .sub{grid-area:sub} header .tabs{grid-ar
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 .field{display:grid;gap:var(--s-2);min-width:0}
 /* A switch row: the title and meta on the left, the state as a word and a track on the right. The word is the second cue. */
-.toggle{display:flex;align-items:center;gap:var(--s-3);width:100%;min-height:var(--hit);padding:var(--s-3) 0;background:none;border:0;border-top:1px solid var(--line);color:var(--ink);text-align:left;cursor:pointer}
-.toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.toggle-text{display:grid;gap:var(--s-1);flex:1;min-width:0}
-.toggle-title{font:600 var(--t-body) var(--font-body)}
-.toggle-meta{font:400 var(--t-caption) var(--font-body);color:var(--muted)}
-.toggle-state{font:600 var(--t-small) var(--font-body);color:var(--muted);min-width:2em;text-align:right}
-.toggle-state::before{content:"Off"}
-.toggle[aria-checked=true] .toggle-state{color:var(--ink)} .toggle[aria-checked=true] .toggle-state::before{content:"On"}
-.toggle-track{flex:none;position:relative;width:var(--hit);height:calc(var(--hit) / 2 + var(--s-1));border-radius:var(--r-full);background:var(--surface-2);border:1px solid var(--line-strong)}
-.toggle-track::after{content:"";position:absolute;top:var(--s-1);left:var(--s-1);width:calc(var(--hit) / 2 - var(--s-1) - 2px);aspect-ratio:1;border-radius:var(--r-full);background:var(--line-strong)}
-.toggle[aria-checked=true] .toggle-track{background:var(--ink);border-color:var(--ink)}
-.toggle[aria-checked=true] .toggle-track::after{background:var(--surface);transform:translateX(calc(var(--hit) / 2 - var(--s-1)))}
-@media (prefers-reduced-motion:no-preference){.toggle-track,.toggle-track::after{transition:background var(--dur-1) var(--ease),transform var(--dur-1) var(--ease)}}
 .field output{color:var(--ink);font-family:var(--font-data);letter-spacing:0;text-transform:none;margin-left:6px}
 input[type=text],input[type=number],select{font:500 16px var(--font-body);color:var(--ink);background:var(--bg);border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;min-height:44px;width:100%}
 input[type=range]{width:100%;min-height:var(--hit);margin:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer}   /* a 44px target around a 4px track */
@@ -152,8 +139,16 @@ input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 :root[data-layout=desktop] #tempoModal .mbox{width:var(--tm-w,min(560px,100%))}
 #quickRow .dur{grid-template-columns:56px minmax(0,1fr);gap:var(--s-1)}
 #quickRow .dur select{padding-left:var(--s-2);padding-right:var(--s-1)}
-#clickSeg,#othersSeg{grid-auto-columns:minmax(0,1fr)}
+#othersSeg{grid-auto-columns:minmax(0,1fr)}
+#clickSeg{grid-auto-flow:row;grid-template-columns:repeat(3,minmax(0,1fr))}   /* six levels: two rows of three, easiest first, so every name fits a phone */
 #clickSeg button{padding:0 var(--s-1)}
+/* Silent bars: one stepper in a disclosure under the click level, and a row of dots that shows the cycle. */
+.stepval{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:var(--hit)}
+.stepval b{font:800 var(--t-title) var(--font-display);font-variant-numeric:tabular-nums}
+.stepval span{font:var(--t-eyebrow) var(--font-data);color:var(--muted)}
+.gapdots{display:inline-flex;gap:var(--s-1);margin-left:var(--s-2);vertical-align:middle}
+.gapdots i{width:var(--s-2);height:var(--s-2);border-radius:var(--r-full);border:1px solid var(--ink);background:var(--ink)}
+.gapdots i.off{background:none;border-color:var(--muted)}
 #lsInfo{flex:1}
 .err{color:var(--danger);font-size:13px;margin:0;min-height:0}
 .panel>p:empty,.panel>ul:empty{display:none}   /* empty message slots would add a grid gap each */
@@ -174,7 +169,6 @@ body[data-run="1"] .notice{display:none}
 :root[data-layout=desktop] #pagePlay>.pcol{display:grid;gap:22px;align-content:start;min-width:0}
 :root[data-layout=desktop] #pagePlay>.pctl{grid-column:1;position:sticky;top:16px}
 :root[data-layout=desktop] #pagePlay>.pview{grid-column:2}
-:root[data-layout=desktop] .pctl .transport{order:-1}   /* Start stays at the top of the controls, in view */
 .htools{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 12px}
 .htools .seg{margin:0}
 /* Desktop: Library, Scores, Achievements and Settings use the width; History and Help stay one column */
@@ -276,6 +270,8 @@ body[data-run="1"] .notice{display:none}
 .cd.early .lt{font-style:italic}      /* a second cue beside colour: early leans, late is underlined */
 .cd.late .lt{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .cd.miss .lt{fill:var(--muted);opacity:.4}
+.cd.ck .lt{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}   /* before a run, a note with a click is underlined */
+.cd.sb .lt{fill:var(--muted)}   /* and a note in a silent bar is faded */
 .staff .mks{fill:var(--ink);display:none}
 .cd.mk .mks.h,.cd.mk.mkL .mks.l,.cd.mk.mkR .mks.r{display:block}   /* a finding's strokes: a bracket under the timing, round one stroke or a run of them. Shape, not colour, so it reads beside the timing colours. */
 .rows.mking .cd:not(.mk){opacity:.5}   /* and the strokes it does not mean step back */
@@ -428,6 +424,12 @@ details.how{border:0;border-top:1px solid var(--line);border-radius:0;background
 details.how>summary{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);min-height:var(--hit);padding:var(--s-2) 0;font:600 var(--t-body) var(--font-body);letter-spacing:normal;text-transform:none}
 details.how>summary::after{float:none;flex:none;margin:0 4px 4px 0}
 details.how[open]>summary::after{margin:4px 4px 0 0}
+.hear{display:flex;align-items:center;gap:var(--s-3)}
+.hear .btn{flex:none;margin-left:calc((24px - var(--hit))/2)}   /* the 24px speaker lines up with the key above it */
+body:not([data-state=idle]) #hearRow{display:none}   /* Listen is for before a run */
+#barsBox>summary span{margin-left:auto;font-weight:400;color:var(--muted)}   /* what is set, beside the chevron */
+#barsBox .sbody{gap:var(--s-3);padding-bottom:var(--s-3)}
+#barsBox .tempo{max-width:220px}
 .how dl{margin:0 0 var(--s-3);display:grid;gap:var(--s-1) 0}
 .how dt{font:600 var(--t-small) var(--font-body);margin-top:var(--s-2)}
 .how dd{margin:0;font:var(--t-small) var(--font-body);color:var(--muted)}
@@ -561,6 +563,16 @@ html.pgopen{overflow:hidden}
 #advBadge .sent{font:var(--t-small) var(--font-body);color:var(--muted)}
 #advBadge .bnx{grid-column:1/-1;border-top:1px solid var(--line);padding-top:var(--s-2);margin-top:var(--s-1);display:grid;gap:var(--s-1)}
 #advBadge .bnx b{font:600 var(--t-small) var(--font-body)}
+/* Next step: after a cleared run on Master with no silent bars, an offer of one, with the count of a bar with the click and a silent bar. */
+.offer{display:grid;gap:var(--s-3);margin:var(--s-3) 0}
+.offer .eyebrow,.offer h2{margin:0}
+.offer h2{font:600 var(--t-title) var(--font-body)}
+.ofig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s-2) var(--s-3);align-items:baseline;max-width:calc(var(--s-7)*8)}
+.ofig .lbl{margin:0}
+.ofig .bt{display:flex}
+.ofig .bt span{flex:1;text-align:center;font:800 var(--t-nav) var(--font-display)}
+.ofig .bt .ck{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}   /* underlined where the click plays, as on the staff */
+.ofig .bt.sb{color:var(--muted)}   /* and faded in a silent bar */
 #advBadge .bnx i{display:block;height:6px;border-radius:999px;background:var(--line);overflow:hidden}
 #advBadge .bnx i b{display:block;height:100%;background:var(--fill)}
 @media (prefers-reduced-motion:no-preference){#advBadge.pop{animation:winpop var(--dur-3) var(--ease) both}}   /* once, never looping */
@@ -783,6 +795,10 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .key .k.ok{color:var(--ok)}.key .k.early{color:var(--early);font-style:italic}
 .key .k.late{color:var(--late);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .key .k.miss{color:var(--muted);opacity:.4}
+.key .k.ck,.key .k.nc,.key .k.sb{font:800 var(--t-nav) var(--font-display)}   /* the click key: the staff's letters, underlined, plain and faded */
+.key .k.ck,.key .k.nc{color:var(--ink)}   /* click and no-click letters are ink, as on the staff; only a silent bar is faded */
+.key .k.ck{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}.key .k.sb{color:var(--muted)}
+body:not([data-state=idle]) #ckKey,body[data-state=idle] #tmKey{display:none}   /* before a run the key says where the click plays; from the start of a run, what the timing colours mean */
 .key .k.box{padding:2px var(--s-1);background:linear-gradient(var(--ink),var(--ink)) bottom/100% 2px,linear-gradient(var(--ink),var(--ink)) bottom left/2px 5px,linear-gradient(var(--ink),var(--ink)) bottom right/2px 5px;background-repeat:no-repeat}   /* like a marked stroke on the staff: a bracket under it */
 @media (max-width:359px){.tabs button{font-size:13px;letter-spacing:0}}   /* four tab names fit the narrowest phones */
 .dur{display:grid;grid-template-columns:minmax(70px,1fr) minmax(110px,1.4fr);gap:8px}
@@ -841,14 +857,23 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
             <option value="40">± 40 ms · relaxed, points ×1.1</option>
             <option value="50">± 50 ms · relaxed</option>
           </select></div>
-        <div class="field"><label for="pulse">Visual pulse</label>
-          <select id="pulse"><option value="on">On</option><option value="off">Off</option></select></div>
+        <div class="field"><span class="lbl" id="pulseLbl">Visual pulse</span>
+          <div class="seg wide" id="pulse" role="group" aria-labelledby="pulseLbl">
+            <button type="button" id="pulseOn" data-v="on" aria-pressed="true">On</button>
+            <button type="button" id="pulseOff" data-v="off" aria-pressed="false">Off</button>
+          </div></div>
       </div>
       <div class="field"><label for="vol">Click volume <output id="volOut"></output></label><input type="range" id="vol" min="0" max="100" step="1"></div>
       <p class="hint mic-only">Use headphones for the click. A click from the speakers is picked up by the microphone and counted as a stroke.</p>
     </section>
     <section class="panel" aria-label="Appearance">
       <h3>Appearance</h3>
+      <div class="field"><span class="lbl" id="viewLbl">View while playing</span>
+        <div class="seg wide" id="view" role="group" aria-labelledby="viewLbl" aria-describedby="viewHint">
+          <button type="button" id="viewStaff" data-v="staff" aria-pressed="true">Staff</button>
+          <button type="button" id="viewHwy" data-v="hwy" aria-pressed="false">Highway</button>
+        </div>
+        <p class="hint" id="viewHint">Highway shows the strokes coming towards you in two lanes, L and R, in place of the staff while a run plays.</p></div>
       <div class="field"><label for="palette">Colours</label>
         <select id="palette"><option value="std">Standard</option><option value="cb">Colour-blind safe</option></select></div>
       <div class="field"><label for="layout">Layout</label>
@@ -857,14 +882,12 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     </section>
     <section class="panel" aria-label="Game">
       <h3>Game</h3>
-      <button class="toggle" id="game" type="button" role="switch" aria-checked="false" aria-labelledby="gameLbl" aria-describedby="gameHint">
-        <span class="toggle-text"><span class="toggle-title" id="gameLbl">Scores and rewards</span><span class="toggle-meta" id="gameHint">Adds a live score and streak meter while you play, a score on each result, high scores, medals and achievements</span></span>
-        <span class="toggle-state" aria-hidden="true"></span><span class="toggle-track" aria-hidden="true"></span>
-      </button>
-      <button class="toggle" id="view" type="button" role="switch" aria-checked="false" aria-labelledby="viewLbl" aria-describedby="viewHint">
-        <span class="toggle-text"><span class="toggle-title" id="viewLbl">Visualisation</span><span class="toggle-meta" id="viewHint">Highway, L and R lanes: the strokes come towards you in place of the staff while you play</span></span>
-        <span class="toggle-state" aria-hidden="true"></span><span class="toggle-track" aria-hidden="true"></span>
-      </button>
+      <div class="field"><span class="lbl" id="gameLbl">Scores and rewards</span>
+        <div class="seg wide" id="game" role="group" aria-labelledby="gameLbl" aria-describedby="gameHint">
+          <button type="button" id="gameOn" data-v="on" aria-pressed="false">On</button>
+          <button type="button" id="gameOff" data-v="off" aria-pressed="true">Off</button>
+        </div>
+        <p class="hint" id="gameHint">Adds a live score and streak meter while you play, a score on each result, high scores, medals and achievements.</p></div>
     </section>
 
     </div>
@@ -1171,7 +1194,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>Library:</b> your saved routines, each with Play, and Edit, Download and Delete under More actions (⋮). A row shows the fastest tempo an exercise has cleared at your click level, with its medal when rewards are on. <b>New</b> starts a routine, <b>Import</b> adds one from a file or a link, and <b>Export</b> saves the whole library as one file that Import reads back (it can also be hosted as a library). A title such as "Rudiment: Single stroke roll" groups the routine under Rudiment. Routines with no group go under Other. The ⋮ on a routine has Download and Delete. Delete asks for a second tap, and Undo follows. The chevron opens a routine to show its exercises.</li>
         <li><b>An unsaved routine</b> is what you are working on. It is kept as you type, but a saved routine changes only when you press Save. The app asks before you open another routine and lose unsaved work. The editor opens full screen from Edit, and Back returns you.</li>
         <li><b>Progress:</b> <b>History</b> lists your runs by exercise or routine, with Play. <b>Scores</b> shows each exercise (sorted by accuracy) and each routine: tempo, accuracy, trend, early or late, and evenness. <b>Achievements</b> shows your practice days for the last four weeks, a streak that forgives one rest day a week, and badges.</li>
-        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours, and under Game the Scores and rewards and Visualisation switches), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
+        <li><b>Settings:</b> <b>Preferences</b> (on-time window, visual pulse, click volume, colours, view while playing, and under Game, scores and rewards), <b>Device</b> (input, microphone level, latency) and <b>Data</b> (export, import, clear, storage, library links).</li>
       </ul>
     </section>
 
@@ -1181,7 +1204,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <li><b>Each row is one pass</b> of an exercise. The top row is playing and the next passes sit beneath it. Rows slide up as each pass ends.</li>
         <li><b>The moving line</b> reaches each note exactly when it is due. Strike as it arrives.</li>
         <li><b>A note's timing</b> shows a moment after you play it, once the note's on-time window has closed and a later hit can no longer be the better match: then the letter takes the colour of early, on time or late.</li>
-        <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; Visualisation) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket lights up for a moment and the word heard shows under its lane. A moment later, once the note's window has closed, the stroke is judged: it takes the colour of its timing and the verdict replaces heard.</li>
+        <li><b>The highway</b> (Settings &rsaquo; Preferences &rsaquo; View while playing) takes the staff's place while you play, and shows the strokes coming towards you in two lanes, left and right. Each one reaches the line exactly when it is due: strike as it arrives. Each hand has its own colour. Every stroke is the same note, a box with a frame and coloured glass: play as it drops into the wire socket at the end of its lane. An accent's glass flares, a ghost note's glass is empty, and the grace stroke of a flam or drag comes just before, narrower, in the other lane. A buzz stroke trails its bounces behind it, narrower and empty. A note is dim in the distance and solid as it comes near. When you play, the socket lights up for a moment and the word heard shows under its lane. A moment later, once the note's window has closed, the stroke is judged: it takes the colour of its timing and the verdict replaces heard.</li>
         <li><b>Letters</b> show each note's timing: on time, early (slanted) or late (underlined), each in its own colour, and a faded letter means no hit was heard. The on-time window in Settings sets how close counts as on time.</li>
         <li><b>An arrow tag</b> such as &rarr;R means the stroke was due on the other hand but you pressed the R key. It appears with keyboard input only.</li>
         <li><b>The gauge</b> shows how early or late you played on average over the whole run, once it ends. Left is early, right is late.</li>
@@ -1195,9 +1218,11 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <div class="ex">
         <h4>Click levels</h4>
         <pre>RLRR LRLL RLRR LRLL</pre>
-        <div class="clk" style="--c:16"><div class="clt">4/4: one bar, sixteen strokes</div><span class="cln">Easy</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Medium</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Hard</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Each mark is one stroke. A filled mark has a click.</p>
-        <div class="clk" style="--c:6"><div class="clt">6/8: one bar, six eighths</div><span class="cln">Medium</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Hard</span><i class="on"></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Hard follows the two groups of three. Easy is every stroke, as above.</p>
-        <p>Choose the click level on the Play page. Easy clicks every stroke (none on rests), Medium every beat, Hard the strong beats (1 and 3, or the start of each group), and Extreme beat 1 of each bar. Master only clicks the count-in, so you hold the tempo yourself. Each level is scored on its own, against the same grid. Set Scoring to Practice to try something without saving it: you still see the result, but nothing is added to your records. It is back on the next time you open the app. Use headphones, or the click is heard as strokes.</p>
+        <div class="clk" style="--c:16"><div class="clt">4/4: one bar, sixteen strokes</div><span class="cln">Easy</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Medium</span><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><span class="cln">Hard</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Each mark is one stroke. A filled mark has a click.</p>
+        <div class="clk" style="--c:6"><div class="clt">6/8: one bar, six eighths</div><span class="cln">Hard</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Extreme follows the two groups of three. Easy and Medium click every eighth here, as each eighth is a beat.</p>
+        <p>Choose the click level on the Play page. Easy clicks every stroke (none on rests). Medium clicks the beat and the half beat (1 and &amp;), or the last note of a triplet, so you fill in the notes between; it clicks on rests too. Hard clicks every beat, Extreme the strong beats (1 and 3, or the start of each group), and Master beat 1 of each bar. Solo only clicks the count-in, so you hold the tempo yourself. Each level is scored on its own, against the same grid.</p>
+        <p>Before you start, the notes show where the click plays: underlined notes get a click and plain ones do not, so you can see what a level leaves out. The key under the staff says so. The speaker button under the staff plays the click twice through, without the count-in, with the cursor moving along the notes, so you can hear it before you play. Harder: silent bars, under the click level, lets the click drop out: after each bar with the click come up to 4 silent bars, their notes faded. Keep playing and counting, and the click comes back on beat 1. The cycle starts again with each exercise, so its first bar always clicks. The strokes in silent bars are still scored, and each stroke is worth more: a quarter more for each silent bar, up to double, so 1 silent bar is 1.25 times and 3 in a row are 1.75 times. A clear counts at its click level. The coaching says when your time moves in the silent bars, and how your first stroke lands when the click comes back. It is off on Solo, which has no click to leave out. When a run on Master clears the target with no silent bars, Next step under the result offers one: Try sets it for the next run, and Not now hides the offer until tomorrow.</p>
+        <p> Set Scoring to Practice to try something without saving it: you still see the result, but nothing is added to your records. It is back on the next time you open the app. Use headphones, or the click is heard as strokes.</p>
         <button class="btn" type="button" data-try="single" data-text="RLRR LRLL RLRR LRLL">Try it</button>
       </div>
     </section>
@@ -1361,8 +1386,8 @@ RLRR LRLL RLRR LRLL</pre>
       <h3>Scores, tempo and progress</h3>
       <ul>
         <li><b>On time</b> is the share of due strokes inside your on-time window. With an accent or ghost rule a stroke must also be played as written: an accent clearly louder and a ghost clearly softer than its neighbours. An exercise needs at least one full pass to be scored.</li>
-        <li><b>Score:</b> with Scores and rewards on, every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Extreme and 5 on Master). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best score, that share, is kept for each level and window. Best on time is your on-time % at a tempo. The streak carries from one exercise to the next. The total never goes below zero. Your high score in points at each click level is an achievement, and a new one is announced when the run ends.</li>
-        <li><b>Scores and rewards:</b> turn them on under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
+        <li><b>Score:</b> with Scores and rewards on, every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Master and 5 on Solo). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. Silent bars earn a bonus too (see Click levels). The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best score, that share, is kept for each level, window and bars with a click setting. Best on time is your on-time % at a tempo. The streak carries from one exercise to the next. The total never goes below zero. Your high score in points at each click level is an achievement, and a new one is announced when the run ends.</li>
+        <li><b>Scores and rewards:</b> choose On under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold. A run that clears an exercise faster than before shows its medal and the tempo of the next one.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run a note says what to play next time: stay at that tempo until every exercise reaches 90%, or, once cleared, try 5 BPM faster. Play shows it again, with your last result, when you next open that exercise or routine. On time is rounded down, so 89.6% reads 89%. Any tempo is always allowed.</li>
@@ -1434,6 +1459,16 @@ RLRR LRLL RLRR LRLL</pre>
       </details>
       <p class="maxline routine-only" id="maxLine"></p>
     </section>
+    <div class="transport">
+      <button class="btn primary" id="startBtn" type="button" aria-describedby="playSummary">Start</button>
+      <p class="hint cfg" id="playSummary"></p>
+      <div class="btns" id="runBtns" hidden>
+        <button class="btn" id="stopBtn" type="button">Stop</button>
+        <button class="btn link" id="restartBtn" type="button">Restart</button>
+      </div>
+      <p class="hint" id="lockNote">Stop the run to change the settings below.</p>
+      <div id="advBar"></div>
+    </div>
 
     <section class="panel cfg" id="quickRow" aria-label="Tempo, length and click">
       <div class="qgrid">
@@ -1446,17 +1481,31 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="field"><label for="eachVal"><span class="routine-only">Each exercise</span><span class="single-only">Length</span></label>
           <div class="dur"><input type="number" id="eachVal" min="1" max="200" step="1" inputmode="decimal"><select id="eachUnit" aria-label="Measured in"><option value="min">min</option><option value="pass">passes</option></select></div></div>
       </div>
-      <p class="hint" id="lastNote" hidden></p>
       <p class="hint" id="eachNote" hidden></p>
       <div class="field"><span class="lbl" id="clickLbl">Click</span>
         <div class="seg wide" id="clickSeg" role="group" aria-labelledby="clickLbl" aria-describedby="clickHint">
           <button type="button" id="ckStrokes" data-v="strokes" aria-pressed="false">Easy</button>
-          <button type="button" id="ckBeat" data-v="beat" aria-pressed="false">Medium</button>
-          <button type="button" id="ckHalf" data-v="half" aria-pressed="false">Hard</button>
-          <button type="button" id="ckBar" data-v="bar" aria-pressed="false">Extreme</button>
-          <button type="button" id="ckNone" data-v="none" aria-pressed="false">Master</button>
+          <button type="button" id="ckGuide" data-v="guide" aria-pressed="false">Medium</button>
+          <button type="button" id="ckBeat" data-v="beat" aria-pressed="false">Hard</button>
+          <button type="button" id="ckHalf" data-v="half" aria-pressed="false">Extreme</button>
+          <button type="button" id="ckBar" data-v="bar" aria-pressed="false">Master</button>
+          <button type="button" id="ckNone" data-v="none" aria-pressed="false">Solo</button>
         </div>
         <p class="hint" id="clickHint"></p></div>
+      <details id="barsBox" class="how">
+        <summary>Harder: silent bars<span id="barsSum"></span></summary>
+        <div class="sbody">
+          <p class="hint">After each bar with the click, the click drops out. Keep playing and counting; the click comes back on beat 1.</p>
+          <div class="field"><span class="lbl" id="barsLbl">Silent bars<span class="gapdots" id="barsDots" aria-hidden="true"></span></span>
+            <div class="tempo" role="group" aria-labelledby="barsLbl" aria-describedby="barsHint">
+              <button class="btn" id="barsOffDown" type="button" aria-label="One silent bar fewer">&#8722;</button>
+              <output class="stepval" id="barsOffN"><b>0</b><span>silent</span></output>
+              <button class="btn" id="barsOffUp" type="button" aria-label="One silent bar more">+</button>
+            </div>
+            <p class="hint" id="barsHint"></p></div>
+        </div>
+      </details>
+      <p class="hint" id="lastNote" hidden></p>   <!-- under the click: it changes with the level, so the level buttons stay put -->
     </section>
     <details id="setBox" class="setbox">
       <summary id="setSum"></summary>
@@ -1501,16 +1550,6 @@ RLRR LRLL RLRR LRLL</pre>
     </section>
       </div>
     </details>
-    <div class="transport">
-      <button class="btn primary" id="startBtn" type="button" aria-describedby="playSummary">Start</button>
-      <p class="hint cfg" id="playSummary"></p>
-      <div class="btns" id="runBtns" hidden>
-        <button class="btn" id="stopBtn" type="button">Stop</button>
-        <button class="btn link" id="restartBtn" type="button">Restart</button>
-      </div>
-      <p class="hint" id="lockNote">Stop the run to change the settings below.</p>
-      <div id="advBar"></div>
-    </div>
     </div>
 
     <div class="pcol pview">
@@ -1547,7 +1586,14 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="sacc"><b id="advPct"></b><span>on time<small><span id="advStat"></span><span id="advSubW"> &middot; <span id="advSub"></span></span></small></span></div>
         <p class="snext" id="advNext" hidden></p>
       </div>
-      <div id="advBadge" hidden></div>   <!-- straight under the result, so a reward is seen on a phone without scrolling -->
+      <div id="advBadge" hidden></div>
+      <section class="card offer" id="advOffer" hidden aria-labelledby="offerT">
+        <p class="eyebrow">Next step</p>
+        <h2 id="offerT">You held time with one click a bar. Try a silent bar next.</h2>
+        <p class="hint" id="offerTx"></p>
+        <div class="ofig" id="offerFig" aria-hidden="true"></div>
+        <div class="btns"><button class="btn" id="offerTry" type="button">Try 1 silent bar</button><button class="btn link" id="offerLater" type="button">Not now</button></div>
+      </section>   <!-- straight under the result, so a reward is seen on a phone without scrolling -->
       <section class="panel" id="scoreBox" hidden aria-label="Score breakdown">
         <h3>Score breakdown</h3>
         <div class="stats">
@@ -1574,7 +1620,9 @@ RLRR LRLL RLRR LRLL</pre>
       <p class="hint" id="rowEnd" hidden></p>
       <p class="hint" id="rowsMore" hidden></p>
       </div>
-      <p class="cap key"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other hand<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
+      <p class="cap key" id="ckKey"><span class="k ck">R</span> click · <span class="k nc">R</span> no click<span id="ckKeySb" hidden> · <span class="k sb">R</span> silent bar</span></p>
+      <div class="hear" id="hearRow"><button class="btn icon play" id="ckHear" type="button" aria-describedby="ckHearNote"></button><p class="hint" id="ckHearNote"></p></div>
+      <p class="cap key" id="tmKey"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other hand<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
       <div class="pads kb-only">
         <button class="pad" type="button" data-hand="L" aria-label="Left hand pad">L</button>
         <button class="pad" type="button" data-hand="R" aria-label="Right hand pad">R</button>
@@ -2123,6 +2171,16 @@ function resolveExercises(exercises,def,o){
 }
 /* Lays out every click and every stroke slot of a session in seconds from the start of the first count-in. */
 function isInt(x){return Math.abs(x-Math.round(x))<1e-6;}
+/* Which bars have a click: 1 to 4 bars with the click, then 1 to 4 silent bars, over and over from the first bar of each exercise.
+   Kept as a pattern, '1000' for 1 bar on and 3 off; gapNorm gives it, or '' for every bar. The presets of 1.5.198 are read too. */
+const GAP_OLD={'1-1':'10','2-2':'1100','1-3':'1000'},GAP_MAX=4;
+const gapNorm=gb=>{gb=GAP_OLD[gb]||gb;return typeof gb==='string'&&/^1{1,4}0{1,4}$/.test(gb)?gb:'';};
+const gapBar=(t0,barSec,t)=>Math.floor((t-t0)/barSec+1e-6);
+const gapSilent=(gb,n)=>gb[n%gb.length]==='0';
+const gapOn=gb=>(gb.match(/1/g)||[]).length,gapOff=gb=>(gb.match(/0/g)||[]).length;
+const gapRun=gb=>gapOff(gapNorm(gb));   /* the silent bars, all in a row */
+/* "1 bar on, 3 off" */
+const gapTxt=gb=>{const g=gapNorm(gb);return g?gapOn(g)+(gapOn(g)>1?' bars':' bar')+' on, '+gapOff(g)+' off':'';};
 function buildPlan(exercises,o){
   const slots=[],cells=[],clicks=[],segs=[],gap=o.gapBeats||0;
   let t=0,gp=0;
@@ -2136,7 +2194,7 @@ function buildPlan(exercises,o){
     const sig=b.sig||null,gst=sig?groupStarts(sig,sig.n):[],barBeats=sig?sig.n:passBeats;
     const cin=sig?sig.n:4,leadBeats=si===0?cin:gap,leadStart=t,lead=leadBeats*beat;
     for(let j=0;j<leadBeats;j++)clicks.push({t:t+j*beat,a:j===0?2:(gst.indexOf(j)>=0?1:0)});
-    const t0=t+lead,first=slots.length,cell0=cells.length,g0=gp;
+    const t0=t+lead,first=slots.length,cell0=cells.length,g0=gp,ck0=clicks.length;
     const dyo=o.dyn||null;let ord=0;   /* dynamics: A accent, g ghost, n normal. The stroke count carries on across passes. */
     if(o.clickMode==='beat'){
       const nb=Math.ceil(totalBeats-1e-9);
@@ -2146,7 +2204,7 @@ function buildPlan(exercises,o){
       }
     }
     if(o.clickMode==='half'||o.clickMode==='bar'){
-      /* Extreme: the first beat of every bar. Hard: the start of each group when the bar has two or more (1 and 4 in 6/8), else 1 and 3 in a bar of even length (4/4), else just beat 1 (3/4). */
+      /* Master: the first beat of every bar. Extreme: the start of each group when the bar has two or more (1 and 4 in 6/8), else 1 and 3 in a bar of even length (4/4), else just beat 1 (3/4). */
       const B=sig?sig.n:4,nb=Math.ceil(totalBeats-1e-9),gs=sig?groupStarts(sig,sig.n):[0];
       const on=q=>o.clickMode==='bar'?q===0:(gs.length>=2?gs.indexOf(q)>=0:(B%2===0?q%2===0:q===0));
       for(let j=0;j<nb;j++){const q=j%B;if(on(q))clicks.push({t:t0+j*beat,a:q===0?2:1});}
@@ -2176,8 +2234,31 @@ function buildPlan(exercises,o){
         clicks.push({t:st,a:a});
       }
     }
+    if(o.clickMode==='guide'){
+      /* Medium: every beat, and inside each beat the half beat when a position falls on it (1 and 3 of four sixteenths,
+         1 and 4 of a sextuplet), else the last position of an odd grid (1 and 3 of a triplet, 1 and 5 of a quintuplet).
+         It clicks where a stroke could land, rests included. */
+      const nb=Math.ceil(totalBeats-1e-9),by={},gc=[];
+      for(let j=0;j<nb;j++){const q=rb9(j%barBeats);gc.push({t:t0+j*beat,a:q<1-1e-9?2:(isInt(q)&&gst.indexOf(Math.round(q))>=0?1:0)});}
+      for(let c=cell0;c<cells.length;c++){const u=rb9((cells[c].t-t0)/beat),j=Math.floor(u+1e-9);(by[j]=by[j]||[]).push({c:cells[c],f:rb9(u-j),sb:b.subs[cells[c].pos]});}
+      Object.keys(by).forEach(j=>{
+        const L=by[j],h=L.find(x=>Math.abs(x.f-0.5)<1e-6);
+        if(h){gc.push({t:h.c.t,a:0});return;}
+        const sb=L[0].sb;
+        if(sb>=3&&sb%2===1&&L.length===sb&&L.every(x=>x.sb===sb))gc.push({t:L[L.length-1].c.t,a:0});
+      });
+      gc.sort((x,y)=>x.t-y.t).forEach(x=>clicks.push(x));
+    }
+    /* Which bars: the click plays in some bars and is silent in the rest, counted from the exercise's first bar, which always
+       clicks. A bar is the time signature's, else 4 beats (as on Master). The count-in is not touched, and there is nothing to
+       leave out on Solo. */
+    const gb=o.clickMode!=='note'&&o.clickMode!=='none'&&o.clickMode!=='off'&&gapNorm(o.bars)||null,gbB=sig?sig.n:4;
+    if(gb){
+      const e=t0+totalBeats*beat;
+      for(let c=clicks.length-1;c>=ck0;c--){const x=clicks[c];if(x.t>=t0-1e-6&&x.t<e-1e-6&&gapSilent(gb,gapBar(t0,beat*gbB,x.t)))clicks.splice(c,1);}
+    }
     t=t0+totalBeats*beat;gp+=b.passes;
-    segs.push({idx:b.idx,src:b.src||'',notes:b.notes,groupStart:b.groupStart,subs:b.subs,defSub:b.defSub,sig:sig,cin:cin,gst:gst,bpm:b.bpm,N:N,strokes:b.notes.filter(x=>x!=='_').length,passes:b.passes,passBeats:passBeats,beat:beat,leadStart:leadStart,lead:lead,leadBeats:leadBeats,t0:t0,end:t,first:first,cell0:cell0,g0:g0});
+    segs.push({gb:gb,gbB:gbB,idx:b.idx,src:b.src||'',notes:b.notes,groupStart:b.groupStart,subs:b.subs,defSub:b.defSub,sig:sig,cin:cin,gst:gst,bpm:b.bpm,N:N,strokes:b.notes.filter(x=>x!=='_').length,passes:b.passes,passBeats:passBeats,beat:beat,leadStart:leadStart,lead:lead,leadBeats:leadBeats,t0:t0,end:t,first:first,cell0:cell0,g0:g0});
   });
   /* Strokes closer than 60 ms cannot be told apart by level, so they are not judged for dynamics. */
   slots.forEach((q,i)=>{const a=slots[i-1],c=slots[i+1];q.tight=Math.min(a&&a.seg===q.seg?q.t-a.t:9,c&&c.seg===q.seg?c.t-q.t:9)<0.06;});
@@ -2378,11 +2459,106 @@ function wander(slots,res,tol){
   return {what:'wander',kind:'run',sd:Math.round(w),scatter:Math.round(sc),early:Math.round(q(0.05)),late:Math.round(q(0.95)),secs:T,
     n:sm.length,slots:sm.filter(p=>Math.abs(p.s)>tol).map(p=>p.i),pos:[],ks:[]};
 }
-function wanderText(w){
+/* The wander in words. cv is the run's clicks per stroke (clickCover): with a click under every stroke the advice is to listen
+   for it, with fewer it is to keep a count going between them, and with none (the count-in only) to count out loud. */
+function wanderText(w,cv=1){
   const e=w.early<0?Math.abs(w.early)+' ms early':'',l=w.late>0?w.late+' ms late':'';
-  let t='Your timing wanders off the click and back: a few beats at a time you drift '+(e&&l?'up to '+e+' and up to '+l:'up to '+(e||l))+'.';
-  t+=w.scatter<w.sd?' Your strokes stay even with each other, so it is the pulse that moves: listen for the click under your strokes.':' Listen for the click under your strokes.';
+  let t='Your timing wanders off the '+(cv>0?'click':'tempo')+' and back: a few beats at a time you drift '+(e&&l?'up to '+e+' and up to '+l:'up to '+(e||l))+'.';
+  const tip=cv>=1?'listen for the click under your strokes.':(cv>0?'keep a count going between the clicks, out loud if it helps.':'count out loud as you play.');
+  t+=w.scatter<w.sd?' Your strokes stay even with each other, so it is the pulse that moves: '+tip:' '+tip[0].toUpperCase()+tip.slice(1);
   return t;
+}
+/* The clicks of a run after the count-in, each with its exercise, in time order. */
+function playClicks(plan){
+  const out=[];
+  plan.segs.forEach((sg,si)=>plan.clicks.forEach(c=>{if(c.t>=sg.t0-1e-6&&c.t<sg.end-1e-6)out.push({t:c.t,a:c.a,seg:si});}));
+  return out.sort((a,b)=>a.t-b.t);
+}
+/* Clicks per stroke after the count-in, at most 1: 1 on Easy, 0 on Solo. */
+function clickCover(plan){return plan.slots.length?Math.min(1,playClicks(plan).length/plan.slots.length):1;}
+/* Rushing (or dragging) between clicks: with fewer clicks than strokes, a drummer who keeps time only with the hands gets earlier
+   the further from a click, and the next click pulls them back. Each heard stroke's offset, less the average of its gap, is set
+   against how far through the gap between two clicks of the same exercise it falls: 0 on a click, nearly 1 just before the next.
+   The gaps are taken between all the clicks ('click') and between the first beats of the bars ('bar'), and the one that moves
+   more is kept. It needs FIND.minN gaps of two heard strokes or more, a change from the first quarter of the gap to the last of at
+   least RUSH.ms, a slope sure by FIND.se standard errors, and no quarter of the gap more than FIND.ms the other way from the quarter
+   before it, so one odd stroke in the pattern is not taken for a rush. */
+const RUSH={ms:12};
+function rushFit(slots,res,ck,tol){
+  const pts=[];let gaps=0,j=0;
+  for(let g=0;g+1<ck.length;g++){
+    const a=ck[g],b=ck[g+1];if(a.seg!==b.seg)continue;
+    const L=b.t-a.t;if(!(L>0))continue;
+    while(j<slots.length&&slots[j].t<a.t-1e-6)j++;
+    const inG=[];
+    for(let k=j;k<slots.length&&slots[k].t<b.t-1e-6;k++){const v=res.get(k);if(v&&!v.miss&&typeof v.ms==='number')inG.push({i:k,u:(slots[k].t-a.t)/L,ms:v.ms});}
+    if(inG.length<2)continue;
+    const m=mean(inG.map(p=>p.ms));
+    inG.forEach(p=>pts.push({i:p.i,u:p.u,ms:p.ms,y:p.ms-m}));gaps++;
+  }
+  if(gaps<FIND.minN||pts.length<FIND.minN*4)return null;
+  const v=slope(pts.map(p=>p.u),pts.map(p=>p.y));
+  if(!v||Math.abs(v.b)<FIND.se*v.se)return null;
+  const bins=[0,1,2,3].map(q=>pts.filter(p=>Math.min(3,Math.floor(p.u*4))===q).map(p=>p.y)).filter(a=>a.length>=FIND.minN).map(mean);
+  if(bins.length<2)return null;
+  const d=bins[bins.length-1]-bins[0],sg=Math.sign(v.b);
+  if(Math.abs(d)<RUSH.ms||Math.sign(d)!==sg)return null;
+  for(let q=1;q<bins.length;q++)if((bins[q]-bins[q-1])*sg<-FIND.ms)return null;
+  const off=pts.filter(p=>p.u>=0.5&&p.ms*sg>tol).map(p=>p.i);
+  return {d:d,gaps:gaps,n:pts.length,slots:off.length?off:pts.filter(p=>p.u>=0.75).map(p=>p.i)};
+}
+function clickRush(plan,res,tol){
+  const ck=playClicks(plan);
+  if(!ck.length||ck.length>=plan.slots.length)return null;
+  const bar=ck.filter(c=>c.a===2);
+  const fits=[['click',rushFit(plan.slots,res,ck,tol)]];
+  if(bar.length<ck.length)fits.push(['bar',rushFit(plan.slots,res,bar,tol)]);
+  const best=fits.filter(f=>f[1]).sort((a,b)=>Math.abs(b[1].d)-Math.abs(a[1].d))[0];
+  if(!best)return null;
+  const f=best[1];
+  return {what:'rush',kind:'run',ref:best[0],dir:f.d<0?'early':'late',ms:Math.round(Math.abs(f.d)),gaps:f.gaps,n:f.n,slots:f.slots,pos:[],ks:[]};
+}
+/* Silent bars: the heard strokes of the bars with a click are set against those of the silent bars, and the first stroke when the
+   click comes back against the rest of the bars with a click. A gap in the average needs RUSH.ms and FIND.se standard errors;
+   a wider spread in the silent bars needs FIND.ms more and half as much again. Each side needs FIND.minN*4 strokes (FIND.minN for
+   the first strokes back), so a short run says nothing. Gives the first of: a move in the silent bars, a wider spread there, the
+   first stroke back. */
+function gapFit(plan,res,tol){
+  const on=[],off=[],back=[];
+  plan.slots.forEach((q,i)=>{
+    const sg=plan.segs[q.seg];if(!sg||!sg.gb)return;
+    const v=res.get(i);if(!v||v.miss||typeof v.ms!=='number')return;
+    const L=sg.beat*sg.gbB,n=gapBar(sg.t0,L,q.t),p=i>0?plan.slots[i-1]:null;
+    if(gapSilent(sg.gb,n)){off.push({i:i,ms:v.ms});return;}
+    const first=n>0&&gapSilent(sg.gb,n-1)&&!(p&&p.seg===q.seg&&gapBar(sg.t0,L,p.t)===n);
+    (first?back:on).push({i:i,ms:v.ms});
+  });
+  const N=FIND.minN*4;
+  if(on.length<N||off.length<N)return null;
+  const ms=a=>a.map(x=>x.ms),mOn=mean(ms(on)),mOff=mean(ms(off)),sOn=sd(ms(on)),sOff=sd(ms(off));
+  const se=(a,b)=>Math.sqrt(sd(ms(a))**2/a.length+sd(ms(b))**2/b.length)||1e-9;
+  const base={kind:'run',pos:[],ks:[],n:off.length};
+  const d=mOff-mOn;
+  if(Math.abs(d)>=RUSH.ms&&Math.abs(d)>=FIND.se*se(off,on))
+    return Object.assign(base,{what:'gap',dir:d<0?'early':'late',ms:Math.round(Math.abs(d)),slots:off.filter(x=>x.ms*Math.sign(d)>tol).map(x=>x.i)});
+  if(sOff>=sOn*1.5&&sOff-sOn>=FIND.ms)
+    return Object.assign(base,{what:'gapsd',sOn:Math.round(sOn),sOff:Math.round(sOff),slots:off.filter(x=>Math.abs(x.ms-mOn)>tol).map(x=>x.i)});
+  if(back.length>=FIND.minN){
+    const b=mean(ms(back))-mOn;
+    if(Math.abs(b)>=RUSH.ms&&Math.abs(b)>=FIND.se*se(back,on))
+      return Object.assign(base,{what:'gapback',dir:b<0?'early':'late',ms:Math.round(Math.abs(b)),n:back.length,slots:back.map(x=>x.i)});
+  }
+  return null;
+}
+function gapText(f){
+  const how=' Count the silent bars out loud (1 e & a for sixteenths) and hear the click in your head, or play with fewer silent bars until they match.';
+  if(f.what==='gap')return 'In the silent bars you are '+f.ms+' ms '+(f.dir==='early'?'earlier':'later')+' on average than in the bars with a click: without the click you '+(f.dir==='early'?'rush':'drag')+'.'+how;
+  if(f.what==='gapsd')return 'In the silent bars your strokes spread '+f.sOff+' ms, against '+f.sOn+' ms with the click: the time wanders when the click stops.'+how;
+  return 'When the click comes back, your first stroke is '+f.ms+' ms '+(f.dir==='early'?'early':'late')+' on average, against the other bars with a click: the time moved in the silent bars, and the click shows it.'+how;
+}
+function rushText(f){
+  const early=f.dir==='early',bar=f.ref==='bar';
+  return 'You '+(early?'rush':'drag')+(bar?' through each bar':' between the clicks')+': by the last stroke before '+(bar?'beat 1':'a click')+' you are '+f.ms+' ms '+(early?'earlier':'later')+' than on '+(bar?'it':'the click')+', and '+(bar?'beat 1':'the click')+' pulls you back. Your hands are keeping the time without a count. Count every note out loud (1 e & a for sixteenths) while you play, or practise at this click level '+DRILL.slower+' BPM slower.';
 }
 /* The flams and drags of a run as sentences, one each. */
 function graceNotes(st){
@@ -2824,8 +3000,8 @@ function nameMarkers(str,d){
 const showSig=sig=>sig?sig.n+'/'+sig.d+(sig.groups.join('+')===defGroups(sig.n,sig.d).join('+')?'':' ('+sig.groups.join('+')+')')+': ':'';
 const showPattern=(notes,gs,subs,def,sig,src)=>showSig(sig)+(src||nameMarkers(fmtPattern(notes,gs,subs,def),sig?sig.d:4));
 /* ---------- records: scores kept per exercise and tempo ---------- */
-/* Click levels. Each one is scored on its own: easy is a click on every stroke, extreme only the first beat of each bar, master only the count-in. */
-const LEVELS=[{v:'strokes',n:'Easy'},{v:'beat',n:'Medium'},{v:'half',n:'Hard'},{v:'bar',n:'Extreme'},{v:'none',n:'Master'}];   /* the click fades out; an old run saved as 'off' was count-in only and was never scored */
+/* Click levels. Each one is scored on its own: Easy is a click on every stroke, Master only beat 1 of each bar, Solo only the count-in. */
+const LEVELS=[{v:'strokes',n:'Easy'},{v:'guide',n:'Medium'},{v:'beat',n:'Hard'},{v:'half',n:'Extreme'},{v:'bar',n:'Master'},{v:'none',n:'Solo'}];   /* the click fades out; an old run saved as 'off' was count-in only and was never scored */
 const levelName=v=>(LEVELS.find(l=>l.v===v)||{n:''}).n;
 const TARGET=0.9;                                /* accuracy that counts as cleared at a tempo */
 /* An on-time share as a whole percentage, rounded down, so a run below the target never reads as the target. */
@@ -2938,7 +3114,7 @@ const sweepRun=run=>run.lv!=='off'&&run.ne>=2&&run.exercises.length>=run.ne&&run
 const runStrokes=run=>run.exercises.reduce((n,b)=>n+(b.due||0),0);   /* the strokes a run asked for */
 const perfectN=run=>run.lv==='off'?0:run.exercises.filter(b=>b.due>=16&&b.within>=b.due&&!(b.ex>0)).length;   /* runs from before extras were saved have none */
 /* Score. Every stroke scores by its timing at the run's click level, and strokes on time in a row build a bonus. The codes are o on time, b off time, m missed, r a rest left alone, in the order played. */
-const LV_PTS={strokes:[1,3,0],beat:[2,5,0],half:[3,10,0],bar:[4,15,-2],none:[5,20,-5]};   /* off time, on time, miss */
+const LV_PTS={strokes:[1,3,0],guide:[1,4,0],beat:[2,5,0],half:[3,10,0],bar:[4,15,-2],none:[5,20,-5]};   /* off time, on time, miss */
 const STREAK_MOD=0.25,STREAK_CAP=16,STREAK_SLIP=2;   /* each stroke on time adds a quarter to the multiplier, up to 16 (x5). An off-time stroke takes 2 steps back, and a miss all of them. */
 const streakAfter=(streak,c)=>c==='o'?Math.min(STREAK_CAP,streak+1):(c==='m'?0:Math.max(0,streak-STREAK_SLIP));
 /* Faster strokes score more: 240 strokes a minute (Gold pace, sixteenths at 60 BPM) is x1, between half and double. */
@@ -2947,7 +3123,9 @@ const tempoMult=(k,bpm)=>{const r=strokeRate(k,bpm);return r>0?Math.min(2,Math.m
 const WIN_MULT={10:2,15:1.75,20:1.5,30:1.25,40:1.1,50:1};
 const winMult=tol=>WIN_MULT[tol]||1;
 /* Every modifier on a stroke's points, in one place: each score and each maximum uses this, so they can never disagree. */
-const strokeMult=(k,bpm,tol)=>tempoMult(k,bpm)*winMult(tol);
+/* Silent bars: the longer the click is gone, the more each stroke is worth. Solo has none to leave out, so it is never set there. */
+const gapMult=gb=>Math.min(2,1+0.25*gapRun(gb));   /* each silent bar in a row is worth a quarter more, up to double */
+const strokeMult=(k,bpm,tol,gb)=>tempoMult(k,bpm)*winMult(tol)*gapMult(gb);
 /* parts: [codes, tempo multiplier] for each exercise in order, so the streak carries from one to the next. */
 function scoreParts(parts,lv){
   const p=LV_PTS[lv];if(!p)return 0;
@@ -2973,7 +3151,7 @@ function unpackStrokes(sp){
   return out;
 }
 const exCodes=b=>typeof b.q==='string'?b.q:(typeof b.sp==='string'?unpackStrokes(b.sp).map(x=>x.r==='s'||x.r==='l'?'b':x.r).join(''):'');
-const runScore=run=>scoreParts(run.exercises.map(b=>[exCodes(b),strokeMult(b.k,b.bpm||run.bpm,run.tol)]),run.lv);
+const runScore=run=>scoreParts(run.exercises.map(b=>[exCodes(b),strokeMult(b.k,b.bpm||run.bpm,run.tol,run.gb)]),run.lv);
 /* The score of a flawless run at a level: every stroke on time. segs is [strokes, tempo multiplier] for each exercise in order. */
 const maxPoints=(segs,lv)=>{
   const p=LV_PTS[lv];if(!p)return 0;const c=STREAK_CAP;
@@ -2982,11 +3160,11 @@ const maxPoints=(segs,lv)=>{
   return Math.round(p[1]*t);
 };
 /* A run's score as a share of its own flawless maximum, so runs of different length can be compared. */
-const runMax=run=>maxPoints(run.exercises.map(b=>[b.due,strokeMult(b.k,b.bpm||run.bpm,run.tol)]),run.lv);   /* the same modifiers as runScore, so a run can never pass 100% */
+const runMax=run=>maxPoints(run.exercises.map(b=>[b.due,strokeMult(b.k,b.bpm||run.bpm,run.tol,run.gb)]),run.lv);   /* the same modifiers as runScore, so a run can never pass 100% */
 const runShare=run=>{const m=runMax(run);return m>0?runScore(run)/m:0;};
 /* The best share is kept per level and window: a share at ±50 ms is not the same feat as at ±10. */
-const shareKey=(lv,tol)=>lv+'|'+(tol||20);
-function bestShares(runs,sum){const o=Object.assign({},sum&&sum.hr);runs.forEach(r=>{const k=shareKey(r.lv,r.tol),v=runShare(r);if(v>(o[k]||0))o[k]=v;});return o;}
+const shareKey=(lv,tol,gb)=>lv+'|'+(tol||20)+(gapNorm(gb)?'|'+gapNorm(gb):'');   /* a best is kept per level, window and which bars click */
+function bestShares(runs,sum){const o=Object.assign({},sum&&sum.hr);runs.forEach(r=>{const k=shareKey(r.lv,r.tol,r.gb),v=runShare(r);if(v>(o[k]||0))o[k]=v;});return o;}
 /* How a run's score came about: strokes due, on time, off time and missed, hits on a rest, the longest streak on time, and the average tempo multiplier.
    Off time is split into early, late and on time but not as written (an accent too soft or a ghost too loud) from the stroke data; an exercise saved without it adds to split, the off-time strokes that cannot be told apart. */
 function scoreBreakdown(run){
@@ -3010,7 +3188,7 @@ function highScores(runs,sum){const o=Object.assign({},sum&&sum.hs);runs.forEach
 function foldRun(sum,run){
   sum.runs++;sum.sec+=run.sec||0;
   {const v=runScore(run);sum.hs=sum.hs||{};if(v>(sum.hs[run.lv]||0))sum.hs[run.lv]=v;}
-  {const v=Math.round(runShare(run)*1e4)/1e4,k=shareKey(run.lv,run.tol);sum.hr=sum.hr||{};if(v>(sum.hr[k]||0))sum.hr[k]=v;}
+  {const v=Math.round(runShare(run)*1e4)/1e4,k=shareKey(run.lv,run.tol,run.gb);sum.hr=sum.hr||{};if(v>(sum.hr[k]||0))sum.hr[k]=v;}
   if(sweepRun(run)){sum.cr=Math.max(sum.cr||0,run.sec||0);sum.cs=Math.max(sum.cs||0,runStrokes(run));}
   sum.pf=(sum.pf||0)+perfectN(run);
   const dk=dayKey(run.t);sum.days[dk]=(sum.days[dk]||0)+(run.sec||0);
@@ -3060,7 +3238,7 @@ const LADDER=[1,5,10,25,50,100,250,500,750,1000];
 LEVELS.forEach(l=>BADGES.push({id:'l'+l.v,lv:l.v,name:l.n,unit:'exercises cleared on '+l.n,at:LADDER}));
 BADGES.push({id:'all',name:'On every level',unit:'exercises cleared on every level',at:LADDER});
 BADGES.push({id:'dyn',name:'Accents and ghosts',unit:'accent or ghost exercises cleared',one:'accent or ghost exercise cleared',at:LADDER});
-/* High scores, in points. Master's ladder is the base; each other level's is scaled by what an on-time stroke is worth there, so every level reaches its top step with the same effort. */
+/* High scores, in points. Solo's ladder is the base; each other level's is scaled by what an on-time stroke is worth there, so every level reaches its top step with the same effort. */
 const HSL=[150,750,1500,3750,7500,15000,37500,75000,150000,375000];   /* x1.5 of the old ladder, as the standard ±20 ms window now scores x1.5 */
 LEVELS.forEach(l=>BADGES.push({id:'h'+l.v,lv:l.v,hs:true,name:l.n,unit:'points',one:'point',at:HSL.map(n=>+(n*LV_PTS[l.v][1]/LV_PTS.none[1]).toPrecision(2))}));
 BADGES.push({id:'cln',name:'Longest clean run',lead:'Longest clean run',suf:' strokes',unit:'strokes, longest routine run with every exercise cleared',at:[250,500,1000,2000,3000,5000,7500]});   /* strokes, not minutes: a short routine counts, and so does a fast one */
@@ -3084,7 +3262,7 @@ const STEPNAMES={ses:['Showing up','Regular','Keeping time','Dedicated','Road-te
   med:['First gold','Golden touch','Gold standard','Gold rush','Gilded','Treasure chest','Gold mine','Bullion','Midas touch','Solid gold'],
   tgt:['Sharp','Precise','Razor','Needle','Laser','Hairline','Split second','Atomic clock','Zero gap','Dead centre'],
   evn:['Level headed','Smooth','Balanced','Even keel','Velvet','Silk','Glass','Still water','Flat line','Perfectly even']};
-const GLYPHS={lstrokes:'lv1',lbeat:'lv2',lhalf:'lv3',lbar:'lv4',lnone:'lvM',hstrokes:'lv1',hbeat:'lv2',hhalf:'lv3',hbar:'lv4',hnone:'lvM',ses:'drum',str:'cal',all:'lvA',dyn:'acc',cln:'sweep',prf:'target',tmp:'metro',min:'clock',rtn:'book',med:'medal',tgt:'tight',evn:'even'};
+const GLYPHS={lstrokes:'lv1',lguide:'lv2',lbeat:'lv3',lhalf:'lv4',lbar:'lv5',lnone:'lvM',hstrokes:'lv1',hguide:'lv2',hbeat:'lv3',hhalf:'lv4',hbar:'lv5',hnone:'lvM',ses:'drum',str:'cal',all:'lvA',dyn:'acc',cln:'sweep',prf:'target',tmp:'metro',min:'clock',rtn:'book',med:'medal',tgt:'tight',evn:'even'};
 BADGES.forEach(b=>{b.nm=STEPNAMES[b.id]||(b.hs?STEPNAMES.hs:STEPNAMES.ladder);b.gl=GLYPHS[b.id]||'tick';});
 /* Mastery of one exercise on one click level, from the fastest tempo it was cleared at, measured in strokes a minute so sixteenths count for more than eighths. Eight steps: cleared at all, then seven rates. */
 const RATE_AT=[120,180,240,320,400,480,600];
@@ -3106,8 +3284,8 @@ const fmtBadge=(b,n)=>b.lead?b.lead+' '+n.toLocaleString('en-US')+(b.suf||''):(n
 /* Badge groups: the single badges share one Milestones section, each with its own explanation (each); a ladder of levels has its own section. */
 const BGROUPS=[{name:'Milestones',each:{ses:'Runs where at least one exercise was played through once and scored.',str:'Your longest run of practice days. A day counts at 5 minutes or more. One rest day a week does not break it.',min:'All your practice time, in whole hours. Practice runs that are not scored count too.',cln:'The most strokes in one run of a routine of two or more exercises, played start to finish, with every exercise at 90% or more.',rtn:'Routines played start to finish with every exercise at 90% or more. Each routine counts once on each click level.',tmp:'The fastest pace at which you have cleared any exercise, in strokes a minute, as the medals measure it: sixteenths at 60 BPM are 240.'},ids:['ses','str','min','cln','rtn','tmp']},
   {name:'Precision',each:{prf:'An exercise of at least 16 strokes with every stroke on time and no extra hits. Each time counts, so the same exercise played perfectly again counts again.',tgt:'Exercises cleared with the on-time window at ±15 ms or ±10 ms. Each counts once on each click level and accent rule.',evn:'Exercises cleared with a loudness spread of 2 dB or less, so every stroke is close to the same level. Needs the microphone. Each counts once on each click level and accent rule.',med:'Exercises with a Gold medal or better on a click level: cleared at 240 strokes a minute or faster. Each counts once on each level.',dyn:'Exercises cleared with an accent or ghost rule: 90% or more of strokes on time and played as written. The same exercise counts again with another rule, and on another click level.'},ids:['prf','tgt','evn','med','dyn']},
-  {name:'Exercises cleared',d:'An exercise is cleared on a level when you play it at 90% or more of strokes on time at that click level. Each exercise counts once on each level, whatever the accent rule. Each level is cleared on its own. The table counts exercises by the fastest pace they were cleared at, in strokes a minute, as the medals measure it: sixteenths at 60 BPM are 240.',grid:true,ids:['lstrokes','lbeat','lhalf','lbar','lnone','all']},
-  {name:'High score',d:'Your best score in one run, at each click level. Every stroke scores by its timing: on time scores most, off time a little, a miss nothing (it costs points on Extreme and Master). Strokes on time in a row build a bonus of up to five times. Harder levels score more, and so do faster strokes: 240 strokes a minute counts once, from half to double.',ids:['hstrokes','hbeat','hhalf','hbar','hnone']}];
+  {name:'Exercises cleared',d:'An exercise is cleared on a level when you play it at 90% or more of strokes on time at that click level. Each exercise counts once on each level, whatever the accent rule. Each level is cleared on its own. The table counts exercises by the fastest pace they were cleared at, in strokes a minute, as the medals measure it: sixteenths at 60 BPM are 240.',grid:true,ids:['lstrokes','lguide','lbeat','lhalf','lbar','lnone','all']},
+  {name:'High score',d:'Your best score in one run, at each click level. Every stroke scores by its timing: on time scores most, off time a little, a miss nothing (it costs points on Master and Solo). Strokes on time in a row build a bonus of up to five times. Harder levels score more, and so do faster strokes: 240 strokes a minute counts once, from half to double.',ids:['hstrokes','hguide','hbeat','hhalf','hbar','hnone']}];
 /* Cleared exercises per level: each sticking once, at the fastest tempo it was cleared at, whatever the accent rule. */
 function clearedByLevel(st){
   const o={};LEVELS.forEach(l=>{o[l.v]=new Map();});
@@ -3402,7 +3580,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.193';                           /* shown beside the title */
+const VERSION='1.5.205';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3446,7 +3624,8 @@ S.latency=(S.latency==null||isNaN(+S.latency))?null:clamp(Math.round(+S.latency)
 if(S.input!=='kb')S.input='mic';
 if(S.click==='note')S.click='strokes';
 if(S.click==='off')S.click='none';
-if(!['beat','strokes','half','bar','none'].includes(S.click))S.click='beat';
+if(!['strokes','guide','beat','half','bar','none'].includes(S.click))S.click='beat';
+S.bars=GAP_OLD[S.bars]||S.bars;if(typeof S.bars!=='string'||!/^1{1,4}0{0,4}$/.test(S.bars))S.bars='';   /* bars on, then off, as set: no 0 is every bar */
 if(typeof S.routineText!=='string'||S.routineText.length>MAX_TEXT)S.routineText='RLRL RLRL RLRL RLRL';
 S.eachUnit=S.eachUnit==='pass'?'pass':'min';
 S.eachVal=S.eachUnit==='pass'?clamp(Math.round(+S.eachVal)||8,1,200):clamp(+S.eachVal||1,0.25,60);
@@ -3457,6 +3636,7 @@ S.game=S.game===true;   /* scores, the streak meter, high scores and medals: off
 S.palette=S.palette==='cb'?'cb':'std';
 S.layout=S.layout==='phone'||S.layout==='desktop'?S.layout:'auto';
 S.resultHelp=S.resultHelp===true;
+S.gapLater=typeof S.gapLater==='string'?S.gapLater.slice(0,10):'';   /* the day Not now was pressed on the offer of a silent bar */
 S.clockLog=Array.isArray(S.clockLog)?S.clockLog.filter(d=>d&&typeof d==='object').slice(0,10):[];   /* audio timing of the last runs, on this device */               /* the note on reading a result has been shown on this device */
 if(typeof S.libId!=='string')S.libId='';
 /* When each library routine was last opened, on this device, newest first: the picker lists the latest ones at the top. */
@@ -3498,7 +3678,7 @@ function packStrokes(x){
 }
 const SPMAX=4*40000;
 function cleanRun(x){
-  if(!x||typeof x!=='object'||typeof x.id!=='string'||!Array.isArray(x.exercises)||!isFinite(+x.t)||!isFinite(+x.bpm)||!['strokes','beat','half','bar','none','off'].includes(x.lv))return null;
+  if(!x||typeof x!=='object'||typeof x.id!=='string'||!Array.isArray(x.exercises)||!isFinite(+x.t)||!isFinite(+x.bpm)||!['strokes','guide','beat','half','bar','none','off'].includes(x.lv))return null;
   const exercises=[];
   x.exercises.forEach(b=>{
     if(!b||typeof b.k!=='string'||b.k.length>400||!(+b.due>0)||!isFinite(+b.within))return;
@@ -3513,7 +3693,7 @@ function cleanRun(x){
   });
   if(!exercises.length)return null;
   const o={id:x.id.slice(0,40),t:+x.t,mode:x.mode==='routine'?'routine':'single',rk:typeof x.rk==='string'?x.rk.slice(0,40):null,
-    lv:x.lv,dy:/^[gbm2-7RL]?s?$/.test(x.dy)?x.dy:'',ne:Math.max(1,+x.ne||exercises.length),bpm:+x.bpm,tol:+x.tol||20,sec:Math.max(0,Math.min(14400,+x.sec||0)),exercises:exercises};
+    lv:x.lv,dy:/^[gbm2-7RL]?s?$/.test(x.dy)?x.dy:'',ne:Math.max(1,+x.ne||exercises.length),bpm:+x.bpm,tol:+x.tol||20,gb:gapNorm(x.gb)&&x.lv!=='none'&&x.lv!=='off'?gapNorm(x.gb):undefined,sec:Math.max(0,Math.min(14400,+x.sec||0)),exercises:exercises};
   if(Array.isArray(x.sk)){const sk=[];x.sk.forEach(b=>{if(b&&typeof b.k==='string'&&b.k.length<=400&&+b.i>=1&&+b.i<=200)sk.push({i:Math.round(+b.i),k:b.k});});if(sk.length)o.sk=sk;}
   const q=x.rp;
   if(q&&typeof q.x==='string'&&q.x.length<=MAX_SNAP)o.rp={x:q.x,st:Math.max(1,Math.round(+q.st)||1),ev:isFinite(+q.ev)&&+q.ev>0?+q.ev:1,eu:q.eu==='pass'?'pass':'min',gp:+q.gp===4?4:0,
@@ -3550,7 +3730,7 @@ function unpackRecs(o){
   if(q&&typeof q==='object'){
     sum.runs=Math.max(0,num(q.runs));sum.sec=Math.max(0,num(q.sec));sum.cr=Math.max(0,num(q.cr));sum.cs=Math.max(0,num(q.cs))||Math.round(sum.cr*4);   /* records from before strokes were kept have only seconds: 4 strokes a second, sixteenths at 60 BPM */sum.pf=Math.max(0,num(q.pf));
     LEVELS.forEach(l=>{const v=Math.max(0,Math.round(num(q.hs&&q.hs[l.v])));if(v)sum.hs[l.v]=v;});
-    Object.keys(q.hr||{}).forEach(k=>{const m=/^([a-z]+)(?:\|(\d+))?$/.exec(k),h=Math.min(1,Math.max(0,num(q.hr[k])));if(m&&LEVELS.some(l=>l.v===m[1])&&h)sum.hr[shareKey(m[1],+m[2]||20)]=h;});   /* a best kept before windows were told apart was at ±20 ms */
+    Object.keys(q.hr||{}).forEach(k=>{const m=/^([a-z]+)(?:\|(\d+))?(?:\|([0-9-]+))?$/.exec(k),h=Math.min(1,Math.max(0,num(q.hr[k])));if(m&&LEVELS.some(l=>l.v===m[1])&&h)sum.hr[shareKey(m[1],+m[2]||20,m[3])]=h;});   /* a best kept before windows were told apart was at ±20 ms */
     Object.keys(q.days||{}).forEach(k=>{if(/^\d{4}-\d\d-\d\d$/.test(k))sum.days[k]=Math.max(0,num(q.days[k]));});
     (q.pat||[]).forEach(e=>{
       const k=items[e&&e.k];if(typeof k!=='string'||!Array.isArray(e.tr)||!e.tr.length||!LEVELS.some(l=>l.v===e.lv))return;
@@ -3986,14 +4166,14 @@ function currentExercises(){
 
 /* ---------- session engine ---------- */
 function beginRun(mode){
-  closeListen();
+  closeListen();endHear();
   const lat=mode==='lat';
   const latNotes='RLRLRLRLRLRLRLRL'.split('');
   const exercises=lat?[{idx:1,notes:latNotes,groupStart:latNotes.map((_,i)=>i%4===0),subs:latNotes.map(()=>2),defSub:2,bpm:75,passBeats:8,passes:LAT.rounds,secs:6.4*LAT.rounds,passSecs:6.4,own:true}]:currentExercises();
   if(!exercises.length)return;
-  const plan=buildPlan(exercises,{gapBeats:S.gap,clickMode:lat?'note':S.click,dyn:lat?null:dynOpt()});
+  const plan=buildPlan(exercises,{gapBeats:S.gap,clickMode:lat?'note':S.click,bars:lat?'':gapNorm(barsOn()),dyn:lat?null:dynOpt()});
   const r={
-    mode:mode,plan:plan,w0:Date.now(),t0:ctx.currentTime+0.25,kb:S.input==='kb',
+    mode:mode,plan:plan,gb:lat?'':gapNorm(barsOn()),w0:Date.now(),t0:ctx.currentTime+0.25,kb:S.input==='kb',
     nextClick:0,pulseIdx:-1,nextFin:0,pending:new Map(),cur:-1,showSeg:0,gridSeg:-1,
     errs:[],lv:[],seq:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,streak:0,best:0,checked:0,bad:0,trace:[],res:new Map(),showG:0,missRun:0,trail:[],live:'',pts:0,sk:0,hud:S.game&&scoreOn&&mode==='play'&&!!LV_PTS[S.click],tm:[],
     fin:new Set(),paused:false,ci:null,bnc:[],bzn:new Map(),lastPk:0,dyc:lat?'':dynCode(),dyl:[],
@@ -4049,18 +4229,20 @@ function tick(){
 const slotTol=sl=>slotWin(sl,S.tol);
 /* The window, as said beside a score when it is not the standard one. */
 /* The window's bonus, as its own line on a score card; none at the widest window. */
-const winNote=tol=>winMult(tol)>1?'\u00b1'+(tol||20)+' ms window: points \u00d7'+winMult(tol):'';
+/* the bonuses a run's points carry, in words: the window, then the silent bars */
+const winNote=(tol,gb)=>[winMult(tol)>1?'\u00b1'+(tol||20)+' ms window: points \u00d7'+winMult(tol)+'.':'',gapMult(gb)>1?'Click '+gapTxt(gb)+': points \u00d7'+gapMult(gb)+'.':''].filter(Boolean).join(' ');
+const gapAt=gb=>gapNorm(gb)?' with the click '+gapTxt(gb):'';
 /* Each best has its own noun: the high score is points, the best score is the share of a perfect run, best on time is the on-time %, and best tempo is the fastest clear. */
 /* A score against the best before it at its click level and window, in words: the card's one percentage is on time, so the share of a perfect run is only the bar. was is the best share before, or 0. */
-function bestLine(share,was,lv,tol){
-  const at=' on '+levelName(lv)+' at \u00b1'+(tol||20)+' ms';
+function bestLine(share,was,lv,tol,gb){
+  const at=' on '+levelName(lv)+' at \u00b1'+(tol||20)+' ms'+gapAt(gb);
   if(!(was>0))return 'First score'+at;
   return (share>was+1e-9?'New best score':share>=was-1e-9?'Equals your best score':'Below your best score')+at;
 }
 function liveScore(r,sg,c){
   if(!r.hud)return;
   const p=LV_PTS[S.click],si=r.plan.segs.indexOf(sg);
-  if(r.tm[si]===undefined)r.tm[si]=strokeMult(patKey(sg.notes,sg.groupStart,sg.subs,sg.defSub,sg.sig),sg.bpm,S.tol);
+  if(r.tm[si]===undefined)r.tm[si]=strokeMult(patKey(sg.notes,sg.groupStart,sg.subs,sg.defSub,sg.sig),sg.bpm,S.tol,r.gb);
   const m=r.tm[si];let d;
   d=m*(c==='o'?p[1]*(1+STREAK_MOD*r.sk):(c==='m'?p[2]:p[0]));
   r.sk=streakAfter(r.sk,c);
@@ -4442,7 +4624,7 @@ function loopClick(T){
   return s;
 }
 async function startLoop(){
-  closeListen();
+  closeListen();endHear();
   if(loop){endLoop('Auto calibrate cancelled.');return;}
   if(chk||(run&&!run.ended)||S.input!=='mic')return;
   if(!(await ensureAudio(true)))return;
@@ -4752,7 +4934,8 @@ function dynText(code){
 }
 /* How tall a row is and how many passes fit, from the most lines any bar needs at this width. */
 const withPasses=(b,n)=>Object.assign({},b,{passes:n});
-function previewPlan(exercises){return exercises.length?buildPlan(exercises,{gapBeats:S.gap,clickMode:'off',dyn:dynOpt()}):null;}
+/* Before a run the staff shows where the click falls, so the preview carries the clicks of the run, marked to draw them. */
+function previewPlan(exercises){if(!exercises.length)return null;const p=buildPlan(exercises,{gapBeats:S.gap,clickMode:S.click,bars:gapNorm(barsOn()),dyn:dynOpt()});p.ticks=true;return p;}
 const routinePlan=()=>previewPlan(allExercises().map(b=>withPasses(b,1)));
 function layoutPlan(plan){return S.mode==='routine'?(routinePlan()||plan):plan;}
 function applyLayout(plan){
@@ -4773,8 +4956,19 @@ function buildRow(plan,g,w){
   const dyn=[];for(let i=0;i<N;i++)dyn.push(plan.cells[sg.cell0+pa.p*N+i].dy||'');
   const st=buildStaff(sg,w,undefined,undefined,dyn),cards=st.cards;
   cards.forEach((c,i)=>{c._slot=plan.cells[sg.cell0+pa.p*N+i].slot;});
+  if(plan.ticks)clickRow(plan,sg,pa.p,cards);
   el.append(lab,st.svg);
   return {el:el,lab:lab,cards:cards,sg:sg,si:pa.si,p:pa.p};
+}
+/* Before a run, where the click plays: a note with a click (one inside a long note counts) is underlined (ck), and every note
+   of a silent bar is faded (sb). */
+function clickRow(plan,sg,p,cards){
+  const bs=sg.beat*sg.gbB,ck=plan.clicks.filter(c=>c.t>=sg.t0-1e-6&&c.t<sg.end-1e-6);
+  cards.forEach((g,i)=>{
+    const c=plan.cells[sg.cell0+p*sg.N+i];
+    if(sg.gb&&gapSilent(sg.gb,gapBar(sg.t0,bs,c.t)))g.classList.add('sb');
+    else if(ck.some(k=>k.t>=c.t-1e-6&&k.t<c.t+c.d-1e-6))g.classList.add('ck');
+  });
 }
 /* The row that will slide in next is built a moment after each shift, so building it never lands on the shift itself. */
 let preRow=null,preTimer=0;
@@ -5351,6 +5545,7 @@ function staffSection(page,r){
   });
 }
 function previewRows(animate){
+  endHear();
   if(S.mode==='routine'){
     /* Before a run each row is one exercise, so you can scroll to any exercise and start there. */
     prevPlan=routinePlan();
@@ -5365,6 +5560,60 @@ function previewRows(animate){
     setRows(prevPlan,0,false);
   }
   paintRows(null,null);
+}
+/* Listen, under the staff on Play, plays the click as a run would, without the count-in: the click level and the silent bars, but no strokes, while
+   the cursor moves along the rows. With silent bars it goes twice round the bars with the click and the silent bars; otherwise
+   it plays 2 passes. It plays the first exercise of a run from here. Nothing is heard from the mic or scored. Start, a change to
+   the rows or leaving the page stops it. */
+let hear=null;
+const ICON_SPK='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',ICON_STOP='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
+function hearPlan(){
+  const b=currentExercises()[0];if(!b)return null;
+  const one=previewPlan([withPasses(b,1)]),sg=one.segs[0],g=sg.gb;
+  const n=g?Math.max(1,Math.ceil(2*g.length*sg.beat*sg.gbB/(sg.end-sg.t0)-1e-6)):2;
+  return {one:one,plan:previewPlan([withPasses(b,n)]),bpm:b.bpm,g:g};
+}
+function syncHear(){
+  const b=$('ckHear');if(!b)return;
+  const busy=!!(run&&!run.ended)||!!loop||!!chk,h=busy||hear?null:hearPlan();
+  b.innerHTML=hear?ICON_STOP:ICON_SPK;b.setAttribute('aria-label',hear?'Stop':'Listen to the click');b.title=hear?'Stop':'Listen to the click';
+  b.disabled=!hear&&!h;
+  $('ckHearNote').textContent=hear?$('ckHearNote').textContent:busy?'Listen waits until the run ends.':!h?'Add an exercise to listen to its click.'
+    :h.g?'Hear the click at '+h.bpm+' BPM, twice round the bars with the click and the silent bars.'
+    :'Hear the click for 2 passes at '+h.bpm+' BPM.';
+}
+function endHear(){
+  if(!hear)return false;
+  clearTimeout(hear.timer);cancelAnimationFrame(hear.raf);hear=null;silenceTones();clearPulse();movePlayhead(null);
+  syncHear();return true;
+}
+function stopHear(){if(endHear()&&document.body.dataset.state==='idle')previewRows();}
+async function startHear(){
+  if(hear||document.body.dataset.state!=='idle'||(run&&!run.ended)||loop||chk)return;
+  const h=hearPlan();if(!h)return;
+  if(!(await ensureAudio(false))||hear||(run&&!run.ended))return;
+  closeListen();
+  const plan=h.plan,lead=plan.segs[0].t0,t0=ctx.currentTime+0.15-lead;   /* no count-in: the first click is on the first note */
+  plan.clicks.forEach(c=>{if(c.t>=lead-1e-6&&c.t<plan.end-1e-6)click(t0+c.t,c.a);});
+  applyLayout(h.one);rowsShown=ROWS;labelsOn=true;labelMode='routine';setRows(plan,0,false);
+  hear={plan:plan,t0:t0,cur:-1,showG:0,pulseIdx:-1,res:new Map(),mode:'hear',tol:S.tol,raf:0,timer:setTimeout(stopHear,(0.15+plan.end-lead+0.3)*1000)};
+  hear.raf=requestAnimationFrame(hearFrame);
+  syncHear();
+}
+function hearFrame(){
+  const r=hear;if(!r)return;
+  if(curTab!=='play'||document.body.dataset.state!=='idle'){stopHear();return;}
+  r.raf=requestAnimationFrame(hearFrame);
+  const plan=r.plan,cells=plan.cells,heard=heardNow()-r.t0;
+  while(r.cur+1<cells.length&&cells[r.cur+1].t<=heard)r.cur++;
+  /* the rows move on as a run's do: a moment after the first note of the next pass */
+  const total=totalPasses(plan);
+  let g=r.showG;
+  while(g+1<total){const pa=passAt(plan,g+1),sg=plan.segs[pa.si],c=cells[sg.cell0+pa.p*sg.N];if(heard<c.t+Math.min(0.6*c.d,0.15))break;g++;}
+  if(g!==r.showG){r.showG=g;setRows(plan,g,true);}
+  const c=r.cur>=0&&heard>=cells[r.cur].t?cells[r.cur]:null;
+  paintRows(r,c?{g:c.g,i:c.pos}:null,heard);
+  pulseOnClick(r,heard);
 }
 /* Move the start exercise (routine mode, before a run). */
 function goExercise(i,animate){
@@ -5396,7 +5645,7 @@ function showTab(t){
   curTab=t;
   if(t!=='setup'&&micTest){micTest=false;syncMicBtn();}
   closePages();
-  closeListen();
+  closeListen();if(t!=='play')stopHear();
   $('pagePattern').hidden=t!=='pattern';
   TABS.forEach(n=>{
     $('page'+n[0].toUpperCase()+n.slice(1)).hidden=n!==t;
@@ -5469,8 +5718,14 @@ function coachItems(r){
   }
   /* the costliest places in the music where the strokes go wrong, in any exercise of the run: up to four, or only the first
      in a short run, where the rest are mostly chance */
-  const wd=r.res?wander(r.plan.slots,r.res,r.tol||S.tol):null;
-  if(wd)parts.push({t:wanderText(wd),f:wd});
+  /* rushing between clicks is the closer reading of a wander on a sparse click, so it is said instead */
+  /* with silent bars, how the time moves without the click is the first thing to say, and it stands for a rush or a wander */
+  const gp=r.res?gapFit(r.plan,r.res,r.tol||S.tol):null;
+  if(gp)parts.push({t:gapText(gp),f:gp});
+  const ru=r.res&&!(gp&&gp.what!=='gapback')?clickRush(r.plan,r.res,r.tol||S.tol):null;
+  if(ru)parts.push({t:rushText(ru),f:ru});
+  const wd=r.res&&!ru&&!(gp&&gp.what!=='gapback')?wander(r.plan.slots,r.res,r.tol||S.tol):null;
+  if(wd)parts.push({t:wanderText(wd,clickCover(r.plan)),f:wd});
   if(r.seg)findings(r.plan,r.seg,S.tol).filter(f=>!wd||f.what!=='drift').slice(0,r.errs.length>=FIND.more?4:1).forEach(f=>parts.push({t:findingText(f,r.plan),f:f}));
   /* an exercise played fewer than FIND.minPasses times is too short to say which of its strokes go wrong, so say so */
   if(r.seg&&r.errs.length>=FIND.more){
@@ -5800,7 +6055,7 @@ function recordRun(r){
     else if(!recs.names[rk])recs.names[rk]='Untitled '+(recs.nu++);
   }
   const run={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:Date.now(),mode:S.mode,
-    rk:all?routineKeyOf(all):null,ne:all?all.length:1,bpm:S.bpm,tol:S.tol,lv:S.click,dy:r.dyc||'',rp:replaySnap(),sec:Math.max(0,Math.min(14400,Math.round((Date.now()-(r.w0||Date.now()))/1000))),
+    rk:all?routineKeyOf(all):null,ne:all?all.length:1,bpm:S.bpm,tol:S.tol,lv:S.click,gb:r.gb||undefined,dy:r.dyc||'',rp:replaySnap(),sec:Math.max(0,Math.min(14400,Math.round((Date.now()-(r.w0||Date.now()))/1000))),
     exercises:rows.map(x=>({k:x.key,bpm:x.bpm,due:x.due,within:Math.round(x.pct*x.due),heard:x.heard,
       avg:isNaN(x.avg)?null:x.avg,sd:isNaN(x.spread)?null:x.spread,miss:x.miss,i:x.idx,
       ls:x.lvl&&x.lvl.sd!==null?Math.round(x.lvl.sd*10)/10:null,ld:x.lvl&&x.lvl.diff!==null?Math.round(x.lvl.diff*10)/10:null,
@@ -5812,7 +6067,7 @@ function recordRun(r){
   const prevBest=new Map();
   rows.forEach(x=>{const b=bestBefore(recs.runs,x.key,x.bpm,S.click,r.dyc);if(b!==null)prevBest.set(x.key,b);});
   const newTempo=rows.filter(x=>x.pct>=TARGET&&x.bpm>(x.was=clearedBefore(recs.runs,x.key,S.click,recs.sum,r.dyc))&&scoreOn);   /* was: the fastest clear before, for the medal it held */
-  const bv0=badgeValues(recs.runs,recs.sum),score=runScore(run),hs0=highScores(recs.runs,recs.sum)[run.lv]||0,share0=bestShares(recs.runs,recs.sum)[shareKey(run.lv,run.tol)]||0;
+  const bv0=badgeValues(recs.runs,recs.sum),score=runScore(run),hs0=highScores(recs.runs,recs.sum)[run.lv]||0,share0=bestShares(recs.runs,recs.sum)[shareKey(run.lv,run.tol,run.gb)]||0;
   if(scoreOn)recs.runs.push(run);   /* a practice run is shown but not kept */
   let autoLib=null;   /* a kept routine goes to the library, where Delete removes it; discarding the run takes it back out */
   if(scoreOn&&rk&&run.rp&&run.rp.x&&!libFor(rk)&&recs.lib.length<MAX_LIB){autoLib={id:libId(),x:run.rp.x,t:Date.now()};recs.lib.push(autoLib);}
@@ -5879,8 +6134,8 @@ function renderAdvice(){
         $('advScore').textContent=f(L.score);$('advMax').textContent='/ '+f(mx);$('advHs').hidden=!L.hsNew;$('advHs').textContent='New high score on '+levelName(L.run.lv);
         const bar=$('advScoreBar');bar.firstChild.style.width=Math.min(100,100*L.score/mx)+'%';
         const tk=bar.lastChild,showTk=L.share0>0&&L.share0<1;tk.hidden=!showTk;if(showTk)tk.style.left=(100*L.share0)+'%';
-        $('advPrev').textContent=L.score>=mx&&!L.hsNew&&L.hs0>0?'Perfect score. High score on '+levelName(L.run.lv)+': '+f(L.hs0):bestLine(L.score/mx,L.share0,L.run.lv,L.run.tol)+(showTk&&L.score/mx<L.share0?', marked on the bar':'');   /* a perfect run below the high score was at a slower tempo or with fewer strokes */
-        $('advBonus').hidden=!winNote(L.run.tol);$('advBonus').textContent=winNote(L.run.tol);
+        $('advPrev').textContent=L.score>=mx&&!L.hsNew&&L.hs0>0?'Perfect score. High score on '+levelName(L.run.lv)+': '+f(L.hs0):bestLine(L.score/mx,L.share0,L.run.lv,L.run.tol,L.run.gb)+(showTk&&L.score/mx<L.share0?', marked on the bar':'');   /* a perfect run below the high score was at a slower tempo or with fewer strokes */
+        $('advBonus').hidden=!winNote(L.run.tol,L.run.gb);$('advBonus').textContent=winNote(L.run.tol,L.run.gb);
       }
     }
   }
@@ -5904,6 +6159,37 @@ function renderAdvice(){
   if(!L.saved)body+=' Your browser would not save the records.';
   if(L.practice)body='Your time still counts today. '+body;
   coachNote($('advHead'),fix);$('advBody').textContent=body;
+  renderOffer(L,!!due&&adv.cleared);
+}
+/* Next step: a cleared run on Master, the last level with a click, and no silent bars set, gets the offer of one silent bar.
+   Try sets it for the next run; Not now hides the offer for the rest of the day. */
+const OFFER_GB='10';
+function offerFor(L,cleared){
+  return cleared&&!L.practice&&!L.offerOff&&!!L.run&&L.run.lv==='bar'&&!gapNorm(L.run.gb||'')&&S.click==='bar'&&!gapNorm(S.bars)&&S.gapLater!==dayKey(Date.now());
+}
+function renderOffer(L,cleared){
+  const box=$('advOffer'),on=offerFor(L,cleared);
+  box.hidden=!on;if(!on)return;
+  $('offerTx').textContent='The click plays bar 1, then drops out for bar 2. Keep counting; it comes back on beat 1. Silent bars score more: points \u00d7'+gapMult(OFFER_GB)+'.';
+  const sg=view&&view.plan&&view.plan.segs[0],n=clamp(sg&&sg.gbB||4,1,12),fig=$('offerFig');
+  fig.textContent='';
+  [['Click',''],['Silent',' sb']].forEach(([k,c])=>{
+    const l=document.createElement('span');l.className='lbl';l.textContent=k;
+    const b=document.createElement('span');b.className='bt'+c;
+    for(let i=1;i<=n;i++){const x=document.createElement('span');x.textContent=String(i);if(!c&&i===1)x.className='ck';b.appendChild(x);}
+    fig.append(l,b);
+  });
+}
+function takeOffer(yes){
+  const L=lastRun;if(!L||(run&&!run.ended))return;
+  L.offerOff=true;$('advOffer').hidden=true;
+  if(yes){
+    S.bars=OFFER_GB;save();if(S.mode==='routine')buildExerciseList();
+    if(document.body.dataset.state==='idle')previewRows();
+    syncInfo();
+    setStatus('Silent bars on: the click plays 1 bar, then leaves 1 bar out. Press Again to play it.');
+  }else{S.gapLater=dayKey(Date.now());save();}
+  $('advAgain').focus();
 }
 /* Discard takes the run out of your records and goes back to the start, as Done does: a discarded run has nothing
    left to review. Undo in the status line puts the run, and a routine saved with it, back and shows the result again. */
@@ -6013,7 +6299,7 @@ function renderPractice(){
 }
 const chev=n=>{let o='<g fill="none" stroke="K" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">';for(let i=0;i<n;i++){const y=48+(i-(n-1)/2)*11;o+='<path d="M30 '+(y+6)+' L48 '+(y-6)+' L66 '+(y+6)+'"/>';}return o+'</g>';};
 const stars=n=>{let o='<g fill="K">';for(let i=0;i<n;i++){const x=48+(i-(n-1)/2)*(n>1?20:0),r=n>1?11:17;let p='';for(let k=0;k<10;k++){const q=k%2?r*.45:r,a=-Math.PI/2+k*Math.PI/5;p+=(k?'L':'M')+(x+q*Math.cos(a)).toFixed(1)+' '+(48+q*Math.sin(a)).toFixed(1);}o+='<path d="'+p+'Z"/>';}return o+'</g>';};
-const GL={lv1:chev(1),lv2:chev(2),lv3:chev(3),lv4:chev(4),lvM:stars(1),lvA:stars(3),
+const GL={lv1:chev(1),lv2:chev(2),lv3:chev(3),lv4:chev(4),lv5:chev(5),lvM:stars(1),lvA:stars(3),
   drum:'<ellipse cx="48" cy="40" rx="20" ry="7" fill="none" stroke="K" stroke-width="3"/><path d="M28 40v16c0 4 9 7 20 7s20-3 20-7V40" fill="none" stroke="K" stroke-width="3"/><path d="M34 26l12 10M62 26L50 36" stroke="K" stroke-width="3" stroke-linecap="round"/>',
   tick:'<path d="M26 34h44M26 44h44M26 54h44" stroke="K" stroke-width="2" opacity=".55"/><path d="M34 46l9 9 19-21" fill="none" stroke="K" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>',
   metro:'<path d="M38 66l-6-4 10-34h12l10 34-6 4z" fill="none" stroke="K" stroke-width="3" stroke-linejoin="round"/><path d="M48 58l8-24" stroke="K" stroke-width="3" stroke-linecap="round"/><circle cx="53" cy="44" r="3" fill="K"/>',
@@ -6536,6 +6822,7 @@ function runMeta(r,withTime,noScore){
   const bits=[];
   if(withTime)bits.push(new Date(r.t).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}));
   bits.push(r.lv==='off'?'Count-in only':levelName(r.lv));
+  if(gapNorm(r.gb))bits.push('Click '+gapTxt(r.gb));
   if(r.mode==='routine'&&r.ne>1){const n=r.exercises.length;bits.push((n<r.ne?n+' of '+r.ne:r.ne)+' exercises');}   /* a partial run says how many were played */
   bits.push(r.bpm+' BPM');
   if(r.tol&&r.tol!==20)bits.push('\u00b1'+r.tol+' ms');   /* a window other than the standard one */
@@ -6676,8 +6963,8 @@ function renderRunPage(r){
     mk('span','slab','Score');
     const hd=mk('div','shd');mk('b',null,f0(sc),hd);mk('span',null,'of '+f0(mx),hd);
     const bar=mk('div','sbar');mk('i',null,null,bar).style.width=Math.min(100,100*sc/mx)+'%';
-    const cp=mk('div','scap'),best=bestShares(recs.runs,recs.sum)[shareKey(r.lv,r.tol)]||0;mk('span',null,sc/mx>=best-1e-9?'Your best score on '+levelName(r.lv)+' at \u00b1'+(r.tol||20)+' ms':bestLine(sc/mx,best,r.lv,r.tol),cp);   /* the best includes this run */
-    if(winNote(r.tol))mk('p','swin',winNote(r.tol));
+    const cp=mk('div','scap'),best=bestShares(recs.runs,recs.sum)[shareKey(r.lv,r.tol,r.gb)]||0;mk('span',null,sc/mx>=best-1e-9?'Your best score on '+levelName(r.lv)+' at \u00b1'+(r.tol||20)+' ms'+gapAt(r.gb):bestLine(sc/mx,best,r.lv,r.tol,r.gb),cp);   /* the best includes this run */
+    if(winNote(r.tol,r.gb))mk('p','swin',winNote(r.tol,r.gb));
     const ac=mk('div','sacc'),pb=mk('b',null,a[0],ac);pb.className=a[1];
     const sp=mk('span',null,'on time',ac);
     const sm=document.createElement('small');sm.textContent=[isNaN(f.ms)?'':fmtMs(f.ms,1)+' ms',isNaN(f.db)?'':'±'+f.db.toFixed(1)+' dB'].filter(Boolean).join(' \u00b7 ');if(sm.textContent)sp.appendChild(sm);
@@ -6792,6 +7079,7 @@ const replayRun=r=>{if(!(run&&!run.ended))guard(()=>loadRun(r));};
 function loadRun(r){
   const q=r.rp;if(!q)return;
   S.click=r.lv==='off'?'none':r.lv;
+  if(S.click!=='none')S.bars=r.gb||'';   /* a Solo run keeps the bars that are set */
   applyDy(r.dy);
   S.tol=r.tol;$('tol').value=String(r.tol);
   S.bpm=clamp(Math.round(r.bpm),40,220);$('bpm').value=S.bpm;
@@ -7390,7 +7678,7 @@ function closeConfirm(go){
 function routineInfoOf(parsed){
   const ex=resolveExercises(parsed.exercises,eachDefault(parsed),{bpm:S.bpm,subdiv:S.subdiv});
   const keys=ex.map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig));
-  return {max:maxPoints(ex.map((b,i)=>[b.passes*b.notes.filter(x=>x!=='_').length,strokeMult(keys[i],b.bpm,S.tol)]),S.click),rk:routineKeyOf(keys)};   /* at the window set now */
+  return {max:maxPoints(ex.map((b,i)=>[b.passes*b.notes.filter(x=>x!=='_').length,strokeMult(keys[i],b.bpm,S.tol,barsOn())]),S.click),rk:routineKeyOf(keys)};   /* at the window set now */
 }
 const maxText=max=>'Max score: '+max.toLocaleString('en-US');
 function syncMaxScore(){
@@ -7822,7 +8110,7 @@ function showCachedList(){
 }
 
 /* ---------- controls ---------- */
-const LOCKED=['tol','accent','othN','othG','pulse','bpm','bpmDown','bpmUp','bpmOpen','tmDown10','tmDown','tmUp','tmUp10','tmRange','subdiv','ckStrokes','ckBeat','ckHalf','ckBar','ckNone','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','editPlay','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
+const LOCKED=['tol','accent','othN','othG','pulseOn','pulseOff','bpm','bpmDown','bpmUp','bpmOpen','tmDown10','tmDown','tmUp','tmUp10','tmRange','subdiv','ckStrokes','ckGuide','ckBeat','ckHalf','ckBar','ckNone','inputMode','routineText','fileBtn','openBtn','clearRoutine','playChange','editPlay','libSel','libraryUrl','libName','libGo','libAll','eachVal','eachUnit','gap'];
 function syncRunUI(){
   const on=!!(run&&!run.ended),play=on&&run.mode==='play',paused=on&&!!run.paused;
   const b=$('startBtn');
@@ -7847,6 +8135,7 @@ function setRunning(on){
   /* the header goes when a run starts and comes back when it stops: start each at the top, or the page is left a few pixels down and an iPhone fades its top under the status bar */
   if((on&&run&&run.mode==='play')||(!on&&wasPlay))window.scrollTo(0,0);
   LOCKED.forEach(id=>{$(id).disabled=on;});
+  syncBars();
   document.querySelectorAll('.pctl .panel.cfg').forEach(e=>{e.inert=!!on;});
   renderLibrary();
   ['setup','library','progress'].forEach(n=>{tabEl(n).disabled=on;});
@@ -7899,7 +8188,7 @@ const setupWatch=new MutationObserver(()=>syncSetup());
 function paintRange(el){el.style.setProperty('--pct',((el.value-el.min)/(el.max-el.min)*100).toFixed(1)+'%');}
 const paintRanges=()=>document.querySelectorAll('input[type=range]').forEach(paintRange);
 function syncInfo(){
-  syncSetup();latUse();paintRanges();syncPlayName();syncEditorBar();
+  syncHear();syncSetup();latUse();paintRanges();syncPlayName();syncEditorBar();
   const exercises=currentExercises();
   let ok;   /* there is something to play */
   if(S.mode==='single'){
@@ -7929,7 +8218,9 @@ function syncInfo(){
   $('bpmNum').textContent=S.bpm;$('bpmOpen').setAttribute('aria-label',S.bpm+' BPM, change the tempo');
   {const r=$('tmRange');r.value=S.bpm;r.setAttribute('aria-valuetext',S.bpm+' BPM');paintRange(r);}
   setPressed('clickSeg',S.click);
-  $('clickHint').textContent=CLICK_HINT[S.click]||'';
+  $('clickHint').textContent=(CLICK_HINT[S.click]||'')+(S.click==='none'?'.':'. Underlined notes get a click.');
+  $('ckKey').hidden=$('hearRow').hidden=S.click==='none';$('ckKeySb').hidden=!gapNorm(barsOn());
+  syncBars();
   syncDyCtl();
   {   /* what the closed drawer holds, so a setting that matters is never hidden */
     const ac=$('accent');
@@ -7939,7 +8230,22 @@ function syncInfo(){
     $('setSum').textContent=$('setBox').open?'More settings':parts.join(' · ');   /* open: just the name; closed: what is inside */
   }
 }
-const CLICK_HINT={strokes:'A click on every stroke',beat:'A click on the beat',half:'A click on the strong beats',bar:'A click on 1 of each bar',none:'Count-in only'};
+const CLICK_HINT={strokes:'A click on every stroke',guide:'A click on the beat and the half beat',beat:'A click on the beat',half:'A click on the strong beats',bar:'A click on 1 of each bar',none:'Count-in only'};
+/* Silent bars: −/+ for how many bars the click leaves out after each bar with it. Bar 1 always clicks, so each exercise starts
+   with the click. Solo clicks only the count-in, so there is nothing to leave out: the setting is kept but not used, and the
+   summary and hint say why it is off. It is also off while a run plays, like the click level. */
+const barsOn=()=>S.click==='none'?'':S.bars;
+function syncBars(){
+  const solo=S.click==='none',off=solo||!!(run&&!run.ended),pat=S.bars||'1',on=gapOn(pat),sil=gapOff(pat),g=gapNorm(pat);
+  $('barsOffN').firstChild.textContent=String(sil);
+  $('barsOffDown').disabled=off||!sil;$('barsOffUp').disabled=off||sil>=GAP_MAX;
+  $('barsDots').innerHTML=g?'<i></i>'.repeat(on)+'<i class="off"></i>'.repeat(sil):'';
+  $('barsSum').textContent=solo?'Off on Solo':g?sil+(sil>1?' bars':' bar'):'Off';
+  /* a pattern of 1.5.199 with more than one bar with the click is kept, and said */
+  $('barsHint').textContent=solo?'Off on Solo: it has no click after the count-in.'
+    :g?(on>1?'The click plays '+gapTxt(g)+'. ':'')+'Faded notes are a silent bar. Silent bars are still scored: points ×'+gapMult(g)+'.'
+    :'Add a silent bar with +. The exercise above shows where it goes.';
+}
 /* A segmented control's buttons carry their value in data-v; the one that matches is pressed. */
 function setPressed(id,v){$(id).querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===v)));}
 /* Other strokes only matters once an accent is set. */
@@ -8123,7 +8429,6 @@ function listenFrame(){
     if(rb.top<bb.top+2||rb.bottom>bb.bottom-2)box.scrollTop+=rb.top-bb.top-8;
   }
 }
-const ICON_SPK='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',ICON_STOP='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
 function syncListen(){
   const busy=!!(run&&!run.ended)||!!loop||!!chk;
   const b=$('bListen');
@@ -8465,10 +8770,10 @@ function closeTempo(){
   m.hidden=true;$('bpmOpen').focus({preventScroll:true});
 }
 function applyView(){document.documentElement.dataset.view=S.view;}
-function syncView(){$('view').setAttribute('aria-checked',String(S.view==='hwy'));}
+function syncView(){setPressed('view',S.view);}
 /* Scores and rewards: the switch, the Achievements tab and the points on each window. */
 function syncGame(){
-  $('game').setAttribute('aria-checked',String(S.game));
+  setPressed('game',S.game?'on':'off');
   $('pvBtnAch').hidden=!S.game;
   [...$('tol').options].forEach(o=>{if(!o.dataset.t)o.dataset.t=o.textContent;o.textContent=S.game?o.dataset.t:o.dataset.t.replace(/, points .*$/,'');});
 }
@@ -8491,9 +8796,19 @@ function wire(){
   window.addEventListener('resize',placeTempo);
   dismissable($('tempoModal'),closeTempo);
   $('score').addEventListener('change',e=>{scoreOn=e.target.value==='1';syncInfo();});
-  $('clickSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.click=b.dataset.v;save();if(S.mode==='routine')buildExerciseList();syncInfo();});
+  /* underlined, plain and faded notes follow the click, before a run */
+  $('ckHear').addEventListener('click',()=>{if(hear)stopHear();else startHear();});
+  $('offerTry').addEventListener('click',()=>takeOffer(true));
+  $('offerLater').addEventListener('click',()=>takeOffer(false));
+  const clickShown=()=>{if(document.body.dataset.state==='idle')previewRows();syncInfo();};
+  $('clickSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.click=b.dataset.v;save();if(S.mode==='routine')buildExerciseList();clickShown();});
   const dyChanged=()=>{save();pushDet();refreshPreview();};
   $('accent').addEventListener('change',e=>{S.accent=e.target.value;if(!S.accent)S.others='n';dyChanged();});   /* with no accent every stroke is normal */
+  const setBars=v=>{S.bars=v;save();if(S.mode==='routine')buildExerciseList();clickShown();};
+  const setOnOff=(on,sil)=>setBars(sil?'1'.repeat(on)+'0'.repeat(sil):'');
+  const bp=()=>{const p=S.bars||'1';return [gapOn(p),gapOff(p)];};
+  $('barsOffDown').addEventListener('click',()=>{const [on,sil]=bp();if(sil>0)setOnOff(on,sil-1);});
+  $('barsOffUp').addEventListener('click',()=>{const [on,sil]=bp();if(sil<GAP_MAX)setOnOff(on,sil+1);});
   $('othersSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.others=b.dataset.v;dyChanged();});
   $('tol').addEventListener('change',e=>{S.tol=+e.target.value;save();renderAll();syncInfo();});   /* the routine's Max score carries the window */
   $('inputMode').addEventListener('change',e=>{S.input=e.target.value;save();setInputMode();});
@@ -8553,9 +8868,9 @@ function wire(){
   $('palette').addEventListener('change',e=>{S.palette=e.target.value;applyTheme();save();});
   $('layout').addEventListener('change',e=>{S.layout=e.target.value;save();syncLayout();});
   if(wideMQ)wideMQ.addEventListener('change',syncLayout);
-  $('game').addEventListener('click',()=>{S.game=!S.game;syncGame();save();if(!S.game&&!$('pvAch').hidden)setPview('hist');renderAll();});
-  $('view').addEventListener('click',()=>{S.view=S.view==='hwy'?'staff':'hwy';syncView();applyView();save();if(run&&!run.ended)drawHwy(run);});
-  $('pulse').addEventListener('change',e=>{S.pulse=e.target.value==='on';save();if(!S.pulse)clearPulse();});
+  $('game').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||(b.dataset.v==='on')===S.game)return;S.game=b.dataset.v==='on';syncGame();save();if(!S.game&&!$('pvAch').hidden)setPview('hist');renderAll();});
+  $('view').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.v===S.view)return;S.view=b.dataset.v;syncView();applyView();save();if(run&&!run.ended)drawHwy(run);});
+  $('pulse').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.pulse=b.dataset.v==='on';setPressed('pulse',b.dataset.v);save();if(!S.pulse)clearPulse();});
   $('csvBtn').addEventListener('click',downloadCsv);
   document.querySelectorAll('[data-help]').forEach(b=>b.addEventListener('click',()=>{
     openHelp(b.dataset.help);
@@ -8739,7 +9054,7 @@ function init(){
   $('accent').value=S.accent;
   $('tol').value=String(S.tol);
   $('gap').value=String(S.gap);
-  $('pulse').value=S.pulse?'on':'off';syncView();syncGame();$('palette').value=S.palette;$('layout').value=S.layout;
+  setPressed('pulse',S.pulse?'on':'off');syncView();syncGame();$('palette').value=S.palette;$('layout').value=S.layout;
   syncEach();
   $('ver').textContent='v'+VERSION;
   renderLibrary();

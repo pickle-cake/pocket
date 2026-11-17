@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['minus', 'parseStrokes', 'nameMarkers', 'fmtPattern', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'leadSlot', 'envOnsets', 'matchStrokes', 'graceMain', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict']);
+  'graceSlot', 'leadSlot', 'envOnsets', 'matchStrokes', 'graceMain', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict', 'gapNorm', 'gapSilent', 'gapTxt', 'GAP_MAX', 'gapFit', 'gapText', 'shareKey', 'gapMult']);
 
 test('negative numbers are shown with a true minus sign', () => {
   assert.equal(c.minus(-30), '−30');
@@ -476,7 +476,7 @@ test('each level has its own high-score ladder, scaled by points per on-time str
   assert.deepEqual(h('hnone')[9], 380000);
   assert.deepEqual(h('hstrokes')[9], 56000);
   assert.deepEqual(h('hhalf')[9], 190000);
-  ['hstrokes', 'hbeat', 'hhalf', 'hbar', 'hnone'].forEach(id => h(id).forEach((n, i, a) => { if (i) assert.ok(n > a[i - 1], id + ' climbs'); }));
+  ['hstrokes', 'hguide', 'hbeat', 'hhalf', 'hbar', 'hnone'].forEach(id => h(id).forEach((n, i, a) => { if (i) assert.ok(n > a[i - 1], id + ' climbs'); }));
 });
 
 test('maxPoints equals a flawless run, across exercises of different speed', () => {
@@ -852,4 +852,166 @@ test('wander: strokes that drift off the click and back together are found, acro
   assert.ok(hits <= 4, hits + ' of 200 noise runs wander');
   const res = new Map([[0, { miss: true }]]);
   assert.equal(c.wander([{ t: 0 }], res, 20), null);
+});
+
+test('wander: the advice follows the click, listen on Easy, count on a sparse click, count out loud with none', () => {
+  const w = { early: -30, late: 20, sd: 15, scatter: 5 };
+  assert.match(c.wanderText(w, 1), /listen for the click under your strokes\.$/);
+  assert.match(c.wanderText(w, 0.25), /^Your timing wanders off the click and back: .* so it is the pulse that moves: keep a count going between the clicks, out loud if it helps\.$/);
+  assert.match(c.wanderText(w, 0), /^Your timing wanders off the tempo and back: .* count out loud as you play\.$/);
+  assert.match(c.wanderText({ early: -30, late: 0, sd: 5, scatter: 15 }, 0.25), /up to 30 ms early\. Keep a count going between the clicks, out loud if it helps\.$/);
+});
+
+test('click cover: clicks per stroke after the count-in', () => {
+  const r = 'RLRL RLRL RLRL RLRL';
+  assert.equal(c.clickCover(plan(r).plan), 1);
+  assert.equal(c.clickCover(plan(r, { clickMode: 'beat' }).plan), 0.25);
+  assert.equal(c.clickCover(plan(r, { clickMode: 'bar' }).plan), 1 / 16);
+  assert.equal(c.clickCover(plan(r, { clickMode: 'none' }).plan), 0);
+});
+
+test('Medium clicks the beat and the half beat, or the last note of an odd grid, rests included', () => {
+  /* where the clicks fall after the count-in, in beats from the start */
+  const at = (text) => { const pl = plan(text, { clickMode: 'guide' }).plan, s = pl.segs[0]; return plain(c.playClicks(pl).map(k => +((k.t - s.t0) / s.beat).toFixed(3))); };
+  const acc = (text) => plain(c.playClicks(plan(text, { clickMode: 'guide' }).plan).map(k => k.a));
+  assert.deepEqual(at('RLRR LRLL RLRR LRLL'), [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]);
+  assert.deepEqual(acc('RLRR LRLL RLRR LRLL'), [2, 0, 0, 0, 0, 0, 0, 0], 'beat 1 is strong');
+  /* rests still click: a stroke could land there */
+  assert.deepEqual(at('R_R_ L_L_ R___ L___'), [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]);
+  /* triplets: the first and the third */
+  assert.deepEqual(at('3:4 RLRLRLRLRLRL'), [0, 0.667, 1, 1.667, 2, 2.667, 3, 3.667]);
+  /* quintuplets: the first and the fifth */
+  assert.deepEqual(at('5:4 RLRLRLRLRLRLRLRLRLRL'), [0, 0.8, 1, 1.8, 2, 2.8, 3, 3.8]);
+  /* sextuplets: the first and the fourth, which is the half beat */
+  assert.deepEqual(at('6:4 RLRLRLRLRLRLRLRLRLRLRLRL'), [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]);
+  /* straight eighths with no rests: the same clicks as Easy */
+  const e = plan('8 RLRLRLRL', { clickMode: 'guide' }).plan, ez = plan('8 RLRLRLRL').plan;
+  assert.deepEqual(plain(c.playClicks(e).map(k => k.t)), plain(c.playClicks(ez).map(k => k.t)));
+  /* a mixed beat: an eighth and two sixteenths has a half beat; two in the time of three sixteenths and a sixteenth does not */
+  assert.deepEqual(at('8 R 16 LR 2:3 RL 16 R'), [0, 0.5, 1]);
+  /* sixteenths in 6/8: the eighth is the beat, so every eighth and the sixteenth after it */
+  const s = plan('time: 6/8\n16 RLRLRLRLRLRL', { clickMode: 'guide' }).plan;
+  assert.equal(c.playClicks(s).length, 12);
+  /* the count-in is the same as on every other level */
+  assert.deepEqual(plain(plan('RLRL', { clickMode: 'guide' }).plan.clicks.slice(0, 4).map(k => k.a)), plain(plan('RLRL', { clickMode: 'beat' }).plan.clicks.slice(0, 4).map(k => k.a)));
+});
+
+test('click rush: strokes that get earlier between clicks and snap back on the click are found', () => {
+  const g = gauss(rng(7));
+  const sixteenths = (lv, off, passes = 30) => {
+    const p = c.parseRoutine('RLRL RLRL RLRL RLRL');
+    const ex = c.resolveExercises(p.exercises, { unit: 'pass', v: passes }, { bpm: 60, subdiv: 4 });
+    const pl = c.buildPlan(ex, { gapBeats: 0, clickMode: lv, dyn: null });
+    const res = new Map();
+    pl.slots.forEach((s, i) => res.set(i, { ms: Math.round(off(s, i)) }));
+    return { pl, res, f: c.clickRush(pl, res, 20) };
+  };
+  /* Hard: every beat a click; the fourth sixteenth of each beat is 30 ms early, the click is on time */
+  const inBeat = s => s.pos % 4;
+  let r = sixteenths('beat', s => -10 * inBeat(s) + g() * 6);
+  assert.ok(r.f, 'found');
+  assert.equal(r.f.ref, 'click');
+  assert.equal(r.f.dir, 'early');
+  assert.ok(r.f.ms >= 25 && r.f.ms <= 35, JSON.stringify(r.f.ms));
+  assert.ok(r.f.slots.length > 0);
+  assert.match(c.rushText(r.f), /^You rush between the clicks: by the last stroke before a click you are \d+ ms earlier than on the click, and the click pulls you back\. .*Count every note out loud \(1 e & a for sixteenths\) while you play, or practise at this click level 10 BPM slower\.$/);
+  /* rushing through the whole bar and caught on beat 1, past the clicks on beats 2 to 4 */
+  r = sixteenths('beat', s => -3 * s.pos + g() * 6);
+  assert.equal(r.f && r.f.ref, 'bar');
+  assert.match(c.rushText(r.f), /^You rush through each bar: by the last stroke before beat 1 /);
+  /* dragging */
+  r = sixteenths('half', s => 4 * (s.pos % 8) + g() * 6);
+  assert.equal(r.f && r.f.dir, 'late');
+  assert.match(c.rushText(r.f), /^You drag between the clicks/);
+  /* Easy has a click on every stroke, and Solo none, so there is no gap to rush */
+  assert.equal(sixteenths('strokes', s => -10 * inBeat(s)).f, null);
+  assert.equal(sixteenths('none', s => -10 * inBeat(s)).f, null);
+  /* a steady offset, or one odd stroke in the middle of the beat, is not a rush */
+  assert.equal(sixteenths('beat', () => -25 + g() * 6).f, null);
+  assert.equal(sixteenths('beat', s => (inBeat(s) === 1 ? -30 : 0) + g() * 6).f, null);
+  let hits = 0;
+  for (let k = 0; k < 200; k++) if (sixteenths('beat', () => g() * 20, 8).f) hits++;
+  assert.ok(hits <= 4, hits + ' of 200 noise runs rush');
+});
+
+test('bars with a click: the click drops out of the silent bars, from the first bar of each exercise', () => {
+  const p = c.parseRoutine('RLRL RLRL RLRL RLRL');
+  const ex = c.resolveExercises(p.exercises, { unit: 'pass', v: 4 }, { bpm: 60, subdiv: 4 });
+  const at = (lv, bars) => c.buildPlan(ex, { gapBeats: 0, clickMode: lv, dyn: null, bars }).clicks.map(x => x.t).join(',');
+  const cin = '0,1,2,3';
+  assert.equal(at('beat', ''), cin + ',4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19', 'every bar');
+  assert.equal(at('beat', '10'), cin + ',4,5,6,7,12,13,14,15', '1 on, 1 off');
+  assert.equal(at('beat', '1100'), cin + ',4,5,6,7,8,9,10,11', '2 on, 2 off');
+  assert.equal(at('beat', '1000'), cin + ',4,5,6,7', '1 on, 3 off');
+  assert.equal(at('beat', '11100'), cin + ',4,5,6,7,8,9,10,11,12,13,14,15', '3 on, 2 off');
+  assert.equal(at('beat', '1-3'), at('beat', '1000'), 'the presets of 1.5.198 are read as patterns');
+  for (const x of ['x', '0110', '1111', '1', '1101', '10100', '100000', '111110']) assert.equal(at('beat', x), at('beat', ''), x + ' clicks every bar');
+  assert.equal(at('none', '10'), at('none', ''), 'Solo is untouched');
+  /* each exercise starts again with a click bar */
+  const two = c.resolveExercises(c.parseRoutine('RLRL RLRL RLRL RLRL\nLRLR LRLR LRLR LRLR').exercises, { unit: 'pass', v: 1 }, { bpm: 60, subdiv: 4 });
+  const pl = c.buildPlan(two, { gapBeats: 0, clickMode: 'beat', dyn: null, bars: '1-1' });
+  pl.segs.forEach(sg => assert.ok(pl.clicks.some(x => Math.abs(x.t - sg.t0) < 1e-6), 'a click on the first beat of exercise at ' + sg.t0));
+  assert.equal(pl.segs[0].gb, '10');
+  /* the shortest form, and the words for it */
+  /* bars on, then bars off, up to 4 of each */
+  assert.equal(c.GAP_MAX, 4);
+  assert.equal(c.gapNorm('11110000'), '11110000');
+  assert.equal(c.gapNorm('2-2'), '1100');
+  for (const x of ['1010', '1101', '1', '1111', '111110', '100000', 'x', 7]) assert.equal(c.gapNorm(x), '', String(x));
+  assert.equal(c.gapTxt('10'), '1 bar on, 1 off');
+  assert.equal(c.gapTxt('11000'), '2 bars on, 3 off');
+  assert.equal(c.gapTxt('1-3'), '1 bar on, 3 off');
+  assert.equal(c.gapTxt(''), '');
+});
+
+test('bars with a click: silent bars multiply the points and the maximum alike, and bests are kept apart', () => {
+  const run = gb => ({ id: 'g' + gb, t: 1, lv: 'beat', bpm: 60, tol: 20, gb, exercises: [{ k: 'e', due: 8, within: 8, q: 'oooooooo' }] });
+  const std = c.runScore(run(undefined));
+  assert.ok(Math.abs(c.runScore(run('10')) - std * 1.25) <= 1, 'x1.25 with 1 bar on, 1 off');
+  assert.ok(Math.abs(c.runScore(run('1000')) - std * 1.75) <= 1, 'x1.75 with 1 bar on, 3 off');
+  /* a quarter more for each silent bar, up to double */
+  assert.deepEqual(['10', '1100', '1000', '11110000', '1', '1010'].map(c.gapMult), [1.25, 1.5, 1.75, 2, 1, 1]);
+  for (const gb of ['10', '1100', '1000', '1-1']) assert.equal(c.runMax(run(gb)), c.runScore(run(gb)), 'a flawless run with ' + gb + ' is 100%');
+  assert.equal(c.gapMult(undefined), 1);
+  assert.equal(c.shareKey('beat', 20, ''), 'beat|20');
+  assert.equal(c.shareKey('beat', 20, '1100'), 'beat|20|1100');
+  assert.equal(c.shareKey('beat', 20, '2-2'), 'beat|20|1100', 'a best kept under a 1.5.198 preset joins its pattern');
+  assert.equal(c.shareKey('beat', 20, '11'), 'beat|20', 'no silent bars is every bar');
+  assert.equal(c.shareKey('beat', 20, 'bad'), 'beat|20');
+  const b = c.bestShares([run('10')], c.newSum());
+  assert.equal(b['beat|20|10'], 1);
+  assert.equal(b['beat|20'], undefined, 'a best with silent bars is not a best with the click in every bar');
+});
+
+test('bars with a click: rushing, wandering and the first stroke back are found by comparing the silent bars with the click bars', () => {
+  const g = gauss(rng(11));
+  const runOf = (bars, off, passes = 24) => {
+    const ex = c.resolveExercises(c.parseRoutine('RLRL RLRL RLRL RLRL').exercises, { unit: 'pass', v: passes }, { bpm: 60, subdiv: 4 });
+    const pl = c.buildPlan(ex, { gapBeats: 0, clickMode: 'beat', dyn: null, bars });
+    const sg = pl.segs[0], L = sg.beat * sg.gbB;
+    const res = new Map();
+    pl.slots.forEach((s, i) => { const n = Math.floor((s.t - sg.t0) / L + 1e-6), silent = !!sg.gb && c.gapSilent(sg.gb, n); res.set(i, { ms: Math.round(off(s, i, silent, n)) }); });
+    return c.gapFit(pl, res, 20);
+  };
+  let f = runOf('10', (s, i, silent) => (silent ? -20 : 0) + g() * 6);
+  assert.equal(f && f.what, 'gap');
+  assert.equal(f.dir, 'early');
+  assert.ok(f.ms >= 15 && f.ms <= 25, String(f.ms));
+  assert.match(c.gapText(f), /^In the silent bars you are \d+ ms earlier on average than in the bars with a click: without the click you rush\. Count the silent bars out loud/);
+  f = runOf('1100', (s, i, silent) => (silent ? 18 : 0) + g() * 6);
+  assert.equal(f && f.dir, 'late');
+  assert.match(c.gapText(f), /you drag\./);
+  f = runOf('10', (s, i, silent) => g() * (silent ? 25 : 5));
+  assert.equal(f && f.what, 'gapsd');
+  assert.match(c.gapText(f), /^In the silent bars your strokes spread \d+ ms, against \d+ ms with the click/);
+  /* the first stroke of a click bar after a silent bar is late */
+  f = runOf('10', (s, i, silent, n) => (!silent && n > 0 && s.pos === 0 ? 25 : 0) + g() * 5);
+  assert.equal(f && f.what, 'gapback');
+  assert.equal(f.dir, 'late');
+  assert.match(c.gapText(f), /^When the click comes back, your first stroke is /);
+  /* no silent bars, or noise alone, is no finding */
+  assert.equal(runOf('', (s, i, silent) => (silent ? -20 : 0) + g() * 6), null);
+  let hits = 0;
+  for (let k = 0; k < 200; k++) if (runOf('10', () => g() * 15, 8)) hits++;
+  assert.ok(hits <= 4, hits + ' of 200 noise runs found');
 });

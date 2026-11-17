@@ -108,17 +108,17 @@ audioTest('starting a run from the welcome closes it, so the results are not hid
   assert.deepEqual(p.errors, []);
 });
 
-audioTest('Visualisation: off by default, the staff; switched on, the highway takes its place only while a run plays', async () => {
+audioTest('View while playing: the staff by default; with Highway chosen, the highway takes its place only while a run plays', async () => {
   const shown = (p, sel) => p.evaluate(s => { const e = document.querySelector(s), cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden'; }, sel);
   const start = async p => { await p.keyboard.press('Space'); await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 }); };
   const staff = await open({ seeded: true, noise: -50, latCal: true, input: 'kb', eachUnit: 'pass', eachVal: 2 });
-  assert.equal(await staff.getAttribute('#view', 'aria-checked'), 'false');
+  assert.equal(await staff.getAttribute('#viewStaff', 'aria-pressed'), 'true');
   await start(staff);
   assert.ok(await shown(staff, '#rows'), 'the staff while playing, by default');
   assert.ok(!(await shown(staff, '#hwy')));
   assert.deepEqual(staff.errors, []);
   const p = await open({ seeded: true, noise: -50, latCal: true, input: 'kb', eachUnit: 'pass', eachVal: 2, view: 'hwy' });
-  assert.equal(await p.getAttribute('#view', 'aria-checked'), 'true');
+  assert.equal(await p.getAttribute('#viewHwy', 'aria-pressed'), 'true');
   assert.ok(await shown(p, '#rows'), 'before a run the staff is still there to pick the exercise');
   assert.ok(!(await shown(p, '#hwy')));
   await start(p);
@@ -126,9 +126,10 @@ audioTest('Visualisation: off by default, the staff; switched on, the highway ta
   assert.ok(await shown(p, '#hwy'), 'the highway while playing');
   assert.ok(!(await shown(p, '#rows')));
   assert.ok(await p.evaluate(() => { const c = document.getElementById('hwy'); return c.width > 0 && c.getContext('2d').getImageData(0, 0, c.width, c.height).data.some(v => v); }), 'the highway is drawn');
-  await p.evaluate(() => document.getElementById('view').click());   /* switched off mid-run: back to the staff */
-  assert.equal(await p.getAttribute('#view', 'aria-checked'), 'false');
-  assert.ok(await shown(p, '#rows'), 'switched off, the staff again');
+  await p.evaluate(() => document.getElementById('viewStaff').click());   /* Staff chosen mid-run: back to the staff */
+  assert.equal(await p.getAttribute('#viewStaff', 'aria-pressed'), 'true');
+  assert.equal(await p.getAttribute('#viewHwy', 'aria-pressed'), 'false');
+  assert.ok(await shown(p, '#rows'), 'Staff chosen, the staff again');
   assert.ok(!(await shown(p, '#hwy')));
   assert.deepEqual(p.errors, []);
 });
@@ -209,11 +210,93 @@ test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 
   await p.click('#ckHalf');
   assert.equal(await p.evaluate(() => window.__T.S().click), 'half');
   assert.equal(await p.getAttribute('#ckHalf', 'aria-pressed'), 'true');
-  assert.equal(await p.textContent('#clickHint'), 'A click on the strong beats');
+  assert.equal(await p.textContent('#clickHint'), 'A click on the strong beats. Underlined notes get a click.');
   const w = await p.evaluate(() => ({ page: document.documentElement.scrollWidth, btn: ['bpmDown', 'bpmUp', 'bpmOpen', 'eachVal', 'eachUnit', 'ckStrokes', 'ckBar'].map(id => document.getElementById(id).getBoundingClientRect()).map(r => Math.min(r.width, r.height)), over: [...document.querySelectorAll('#clickSeg button')].some(b => b.scrollWidth > b.clientWidth) }));
   assert.ok(w.btn.every(x => x >= 44), 'controls are 44px targets: ' + w.btn);
   assert.ok(!w.over, 'the click levels fit their buttons');
   assert.ok(w.page <= 390, 'no sideways scroll');
+  assert.deepEqual(p.errors, []);
+});
+
+test('Harder: silent bars: clicked notes underlined, one stepper in a closed disclosure, silent bars faded, a key that says so, kept, and off on Solo with the reason', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat' }, { width: 390, height: 844 });
+  const marks = () => p.evaluate(() => { const c = [...document.querySelectorAll('#rowsTrack .staff .cd')].filter(g => g.querySelector('.lt').textContent); const n = k => c.filter(g => g.classList.contains(k)).length; return [n('ck'), n('sb')]; });
+  const wt = () => p.evaluate(() => ['.ck', ':not(.ck):not(.sb)', '.sb'].map(k => { const g = document.querySelector('#rowsTrack .staff .cd' + k + ' .lt'); return g ? getComputedStyle(g).textDecorationLine : ''; }));
+  const key = () => p.evaluate(() => [...document.querySelectorAll('.cap.key')].filter(e => e.offsetParent).map(e => e.innerText.replace(/\s+/g, ' ').trim()));
+  const val = () => p.evaluate(() => document.getElementById('barsOffN').firstChild.textContent + ' ' + document.getElementById('barsDots').children.length + ' ' + document.getElementById('barsSum').textContent);
+  assert.equal(await p.getAttribute('#barsBox', 'open'), null, 'closed to start with');
+  assert.equal(await val(), '0 0 Off');
+  const [ck0, sil0] = await marks();
+  assert.ok(ck0 > 0 && sil0 === 0, 'clicked notes underlined, no silent bars: ' + ck0 + '/' + sil0);
+  assert.deepEqual(await wt(), ['underline', 'none', ''], 'underlined with a click, plain without');
+  assert.deepEqual(await key(), ['R click · R no click'], 'before a run the key is the click key, not the timing key');
+  await p.click('#barsBox>summary');
+  assert.equal(await p.textContent('#barsHint'), 'Add a silent bar with +. The exercise above shows where it goes.');
+  assert.ok(await p.isDisabled('#barsOffDown'));
+  await p.click('#barsOffUp');
+  assert.equal(await val(), '1 2 1 bar');
+  assert.equal(await p.evaluate(() => window.__T.S().bars), '10');
+  assert.equal(await p.textContent('#barsHint'), 'Faded notes are a silent bar. Silent bars are still scored: points ×1.25.');
+  const [ck1, sil1] = await marks();
+  assert.ok(sil1 > 0 && ck1 < ck0, 'silent bars are faded and lose their underlines: ' + ck1 + '/' + sil1);
+  assert.deepEqual(await key(), ['R click · R no click · R silent bar']);
+  await p.click('#ckStrokes');
+  assert.ok((await marks())[0] > ck1, 'Easy underlines more notes');
+  await p.click('#ckBeat');
+  for (let i = 0; i < 3; i++) await p.click('#barsOffUp');
+  assert.equal(await val(), '4 5 4 bars', 'up to 4 silent bars');
+  assert.ok(await p.isDisabled('#barsOffUp'));
+  assert.match(await p.textContent('#barsHint'), /×2.$/);
+  const w = await p.evaluate(() => ({ page: document.documentElement.scrollWidth, btn: [...document.querySelectorAll('#barsBox>summary, #barsOffDown, #barsOffUp')].map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }) }));
+  assert.ok(w.btn.every(x => x >= 44), '44px targets: ' + w.btn);
+  assert.ok(w.page <= 390, 'no sideways scroll');
+  await p.click('#ckNone');
+  assert.ok(await p.isDisabled('#barsOffDown'), 'off on Solo');
+  assert.equal(await p.textContent('#barsSum'), 'Off on Solo');
+  assert.equal(await p.textContent('#barsHint'), 'Off on Solo: it has no click after the count-in.');
+  assert.deepEqual(await marks(), [0, 0], 'Solo underlines nothing');
+  assert.deepEqual(await key(), [], 'and no click key');
+  await p.click('#ckBeat');
+  assert.equal(await p.evaluate(() => window.__T.S().bars), '10000', 'the setting comes back after Solo');
+  await p.reload();
+  assert.equal(await val(), '4 5 4 bars', 'kept');
+  await p.click('#barsBox>summary');
+  for (let i = 0; i < 4; i++) await p.click('#barsOffDown');
+  assert.equal(await val(), '0 0 Off', 'no silent bars is every bar again');
+  assert.deepEqual(p.errors, []);
+});
+
+audioTest('Listen, under the staff, plays the click with no count-in and the cursor moving, says what it plays, and stops on a setting change or a tab change', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat', bpm: 120 }, { width: 390, height: 844 });
+  const lab = () => p.getAttribute('#ckHear', 'aria-label');
+  assert.equal(await lab(), 'Listen to the click');
+  assert.equal(await p.textContent('#ckHearNote'), 'Hear the click for 2 passes at 120 BPM.');
+  const pos = await p.evaluate(() => {
+    const y = id => document.getElementById(id).getBoundingClientRect().top, b = document.getElementById('ckHear').getBoundingClientRect();
+    return { start: y('startBtn'), name: y('playName'), click: y('clickSeg'), rows: y('rows'), hear: y('ckHear'), r: Math.min(b.width, b.height) };
+  });
+  assert.ok(pos.r >= 44, '44px target: ' + pos.r);
+  assert.ok(pos.name < pos.start && pos.start < pos.click, 'Start sits under the routine, above the settings: ' + JSON.stringify(pos));
+  assert.ok(pos.hear > pos.rows, 'Listen sits under the staff: ' + JSON.stringify(pos));
+  await p.click('#barsBox>summary');
+  await p.click('#barsOffUp');
+  assert.equal(await p.textContent('#ckHearNote'), 'Hear the click at 120 BPM, twice round the bars with the click and the silent bars.');
+  await p.click('#ckNone');
+  assert.equal(await p.isVisible('#ckHear'), false, 'Solo has no click to hear');
+  await p.click('#ckBeat');
+  await p.click('#ckHear');
+  await p.waitForFunction(() => document.getElementById('ckHear').getAttribute('aria-label') === 'Stop');
+  await p.click('#ckHear');
+  assert.equal(await lab(), 'Listen to the click', 'Stop stops it');
+  await p.click('#ckHear');
+  await p.waitForFunction(() => document.getElementById('ckHear').getAttribute('aria-label') === 'Stop');
+  await p.click('#ckStrokes');
+  assert.equal(await lab(), 'Listen to the click', 'a setting change stops it');
+  await p.click('#ckHear');
+  await p.waitForFunction(() => document.getElementById('ckHear').getAttribute('aria-label') === 'Stop');
+  await p.click('#tabLibrary');
+  await p.click('#tabPlay');
+  assert.equal(await lab(), 'Listen to the click', 'leaving Play stops it');
   assert.deepEqual(p.errors, []);
 });
 
@@ -696,6 +779,49 @@ async function runOnce(settings, practice, init) {
   return out;
 }
 
+audioTest('Next step: a cleared run on Master with no silent bars offers one; Try sets it, Not now hides it for the day, and other levels get no offer', async () => {
+  const play = async settings => {
+    const p = await open(Object.assign({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 2, seeded: true, click: 'bar' }, settings), { width: 390, height: 844 });
+    await press(p, /^Start/);
+    await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+    await p.evaluate(() => {
+      const T = window.__T, r = T.run(), pl = r.plan;
+      pl.slots.forEach(s => T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } }));
+    });
+    await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+    await p.waitForTimeout(300);
+    return p;
+  };
+  let p = await play({});
+  assert.ok(await p.isVisible('#advOffer'), 'offered after a cleared run on Master');
+  assert.equal(await p.textContent('#offerT'), 'You held time with one click a bar. Try a silent bar next.');
+  assert.equal(await p.textContent('#offerTx'), 'The click plays bar 1, then drops out for bar 2. Keep counting; it comes back on beat 1. Silent bars score more: points ×1.25.');
+  const fig = await p.evaluate(() => [...document.querySelectorAll('#offerFig .bt')].map(b => b.className + ':' + b.textContent + ':' + b.querySelectorAll('.ck').length));
+  assert.deepEqual(fig, ['bt:1234:1', 'bt sb:1234:0'], 'the count of a bar with the click, 1 underlined, then a silent bar');
+  assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll('.cap.key')].filter(e => e.offsetParent).map(e => e.id)), ['tmKey'], 'after a run, the timing key');
+  const t = await p.evaluate(() => ['offerTry', 'offerLater'].map(id => { const r = document.getElementById(id).getBoundingClientRect(); return Math.min(r.width, r.height); }));
+  assert.ok(t.every(x => x >= 44), '44px targets: ' + t);
+  await p.click('#offerTry');
+  assert.equal(await p.isVisible('#advOffer'), false);
+  assert.equal(await p.evaluate(() => window.__T.S().bars), '10');
+  assert.match(await p.textContent('#status'), /^Silent bars on: the click plays 1 bar, then leaves 1 bar out\. Press Again to play it\./);
+  assert.deepEqual(p.errors, []);
+  p = await play({});
+  await p.click('#offerLater');
+  assert.equal(await p.isVisible('#advOffer'), false);
+  assert.equal(await p.evaluate(() => window.__T.S().bars), '', 'Not now changes nothing');
+  await p.click('#advAgain');
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan && !window.__T.run().ended, null, { timeout: 8000 });
+  await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand: pl.segs[s.seg].notes[s.pos].slice(-1), conf: 1 } })); });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  assert.equal(await p.isVisible('#advOffer'), false, 'not again the same day');
+  assert.deepEqual(p.errors, []);
+  p = await play({ click: 'beat' });
+  assert.equal(await p.isVisible('#advOffer'), false, 'Hard has the levels above it to try first');
+  assert.deepEqual(p.errors, []);
+});
+
 audioTest('Restart sits after Stop and needs a second tap, so a stray tap keeps the run', async () => {
   const p = await open({ input: 'kb', bpm: 60, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 4, seeded: true });
   await press(p, /^Start/);
@@ -904,7 +1030,7 @@ audioTest('the first result explains itself once', async () => {
   assert.deepEqual(p.errors, []);
 });
 
-audioTest('Master (count-in only) is scored and saved', async () => {
+audioTest('Solo (count-in only) is scored and saved', async () => {
   const o = await runOnce({ click: 'none' }, false);
   assert.deepEqual(o.saved, ['none']);
   assert.ok(o.discard);
@@ -1021,9 +1147,9 @@ test('every badge has one medal, with a written step name, on the Achievements p
   await p.evaluate(() => document.getElementById('pvBtnAch').click());
   await p.waitForTimeout(200);
   const r = await p.evaluate(() => ({ n: document.querySelectorAll('#badges .medal').length, bad: [...document.querySelectorAll('#badges .medal')].filter(m => /undefined|NaN/.test(m.title) || !m.title).length, off: document.querySelectorAll('#badges .medal.off').length }));
-  assert.equal(r.n, 22);
+  assert.equal(r.n, 24);
   assert.equal(r.bad, 0);
-  assert.equal(r.off, 22);
+  assert.equal(r.off, 24);
   const txt = await p.evaluate(() => document.getElementById('badges').innerText);
   assert.doesNotMatch(txt, /undefined|NaN/);
 });
@@ -1059,11 +1185,11 @@ audioTest('a scored run shows its score against the maximum, flags a new high sc
   assert.match(o.max, /^\/ [\d,]+$/);
   assert.ok(o.chip, 'the first score is a new high score');
   assert.ok(!o.solo);
-  assert.match(o.prev, /^First score on Hard at ±20 ms$/);
+  assert.match(o.prev, /^First score on Extreme at ±20 ms$/);
   assert.doesNotMatch(await p.evaluate(() => document.querySelector('#advRes .scap').innerText), /%/, 'the score is not given as a second percentage, beside on time');
   assert.equal(await p.evaluate(() => document.querySelector('#advRes .slab').textContent), 'Score');
   const bd = await p.evaluate(() => ({ shown: !document.getElementById('scoreBox').hidden, on: document.getElementById('bOn').textContent, note: document.getElementById('scoreNote').textContent, row: [...document.getElementById('advBtns1').children].filter(b => !b.hidden).map(b => b.id) }));
-  assert.ok(bd.shown); assert.match(bd.on, /^\d+$/); assert.match(bd.note, /Hard: 10 points on time/);
+  assert.ok(bd.shown); assert.match(bd.on, /^\d+$/); assert.match(bd.note, /Extreme: 10 points on time/);
   assert.deepEqual(bd.row, ['advDiscard', 'advDone', 'advAgain'], 'Discard, Done and Again share one row');
   const p0 = await runOnce({ click: 'half', game: true }, true);
   assert.doesNotMatch(p0.text, /high score/i, 'a practice run is not scored');
