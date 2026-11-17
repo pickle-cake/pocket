@@ -1844,6 +1844,8 @@ function levelStats(items){
   return {n:items.length,sd:null,med:median(items.map(x=>x.db)),diff:ds.length?ds.reduce((a,v)=>a+v,0)/ds.length:null,ruled:true};
 }
 function median(a){if(!a.length)return NaN;const b=[...a].sort((x,y)=>x-y),m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2;}
+/* A number with a true minus sign (U+2212) when it is below zero, and no sign otherwise. */
+const minus=v=>(v<0?'−':'')+Math.abs(v);
 function fmtMs(v,dec){
   if(v==null||isNaN(v))return '—';
   const f=dec?Number(v.toFixed(dec)):Math.round(v);
@@ -3238,7 +3240,7 @@ function analyseCheck(noise,hits,settleMs){
   const n=strokes.length,out={level:'good',sens:null,settle:null,lines:[],strokes:n,doubles:gaps.length};
   if(DB(noise)>-30){
     out.level='bad';
-    out.lines.push('The background is very loud ('+Math.round(DB(noise))+' dB) or something was hit during the quiet part. Nothing was changed. Stay still for the first two seconds and try again.');
+    out.lines.push('The background is very loud ('+minus(Math.round(DB(noise)))+' dB) or something was hit during the quiet part. Nothing was changed. Stay still for the first two seconds and try again.');
     return out;
   }
   if(n<5){
@@ -3251,7 +3253,7 @@ function analyseCheck(noise,hits,settleMs){
   let thr=upper<lower?Math.max(upper,noise*1.5):cl(Math.sqrt(noise*quiet),lower,upper);
   out.sens=cl(Math.round(DB(thr)),-55,-8);
   out.noiseDb=Math.round(DB(noise));
-  out.lines.push('Trigger line set to '+out.sens+' dB.');
+  out.lines.push('Trigger line set to '+minus(out.sens)+' dB.');
   {
     const floor=Math.min(out.sens,Math.max(out.sens-14,out.noiseDb+6)),reach=Math.round(DB(med)-floor);   /* how far below a typical stroke a ghost note is still heard */
     out.lines.push('Ghost notes can be heard down to about '+reach+' dB below your normal strokes.');
@@ -3402,7 +3404,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.177';                           /* shown beside the title */
+const VERSION='1.5.178';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5420,8 +5422,8 @@ function updateLevel(r){
   {
     const ln=$('lvDyn'),ds=done&&r.dyc?dynStats(r.dyl):null,t=[];
     if(ds){
-      if(ds.a.n)t.push('Accents: '+ds.a.ok+' of '+ds.a.n+' clear, '+(ds.a.sum/ds.a.n>=0?'+':'')+(ds.a.sum/ds.a.n).toFixed(0)+' dB against the strokes around them'+(ds.a.sd!==null?', '+spreadWord(ds.a.sd):'')+'.');
-      if(ds.g.n)t.push('Ghost notes: '+ds.g.ok+' of '+ds.g.n+' clear, '+(ds.g.sum/ds.g.n).toFixed(0)+' dB against the strokes around them'+(ds.g.sd!==null?', '+spreadWord(ds.g.sd):'')+'.');
+      if(ds.a.n)t.push('Accents: '+ds.a.ok+' of '+ds.a.n+' clear, '+(Math.round(ds.a.sum/ds.a.n)>=0?'+':'')+minus(Math.round(ds.a.sum/ds.a.n))+' dB against the strokes around them'+(ds.a.sd!==null?', '+spreadWord(ds.a.sd):'')+'.');
+      if(ds.g.n)t.push('Ghost notes: '+ds.g.ok+' of '+ds.g.n+' clear, '+minus(Math.round(ds.g.sum/ds.g.n))+' dB against the strokes around them'+(ds.g.sd!==null?', '+spreadWord(ds.g.sd):'')+'.');
       if(!t.length)t.push('Not enough strokes to compare accents and ghost notes.');
     }
     ln.hidden=!t.length;ln.textContent=t.join(' ');
@@ -8594,7 +8596,7 @@ function wire(){
   $('stopBtn').addEventListener('click',()=>{if(run&&!run.ended)stopRun();});
   $('settle').addEventListener('input',e=>{S.settle=+e.target.value;$('settleOut').textContent=S.settle+' ms';pushDet();save();});
   $('micCheck').addEventListener('click',toggleCheck);
-  $('sens').addEventListener('input',e=>{S.sens=+e.target.value;$('sensOut').textContent=S.sens+' dB';placeMeter();pushDet();save();});
+  $('sens').addEventListener('input',e=>{S.sens=+e.target.value;$('sensOut').textContent=minus(S.sens)+' dB';placeMeter();pushDet();save();});
   $('vol').addEventListener('input',e=>{S.vol=+e.target.value;$('volOut').textContent=S.vol+'%';save();});
   $('latency').addEventListener('change',e=>{const v=e.target.value;S.latency=v===''?null:clamp(Math.round(+v)||0,0,400);if(v!=='')S.latCal=true;save();syncInfo();});
   $('themeBtn').addEventListener('click',()=>{S.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';applyTheme();save();});
@@ -8726,7 +8728,7 @@ function init(){
   $('ver').textContent='v'+VERSION;
   renderLibrary();
   $('settle').value=S.settle;$('settleOut').textContent=S.settle+' ms';
-  $('sens').value=S.sens;$('sensOut').textContent=S.sens+' dB';placeMeter();
+  $('sens').value=S.sens;$('sensOut').textContent=minus(S.sens)+' dB';placeMeter();
   $('vol').value=S.vol;$('volOut').textContent=S.vol+'%';
   $('latency').value=S.latency==null?'':S.latency;
   initStrips();initTaps();wireBuilder();setInputMode();updateLatUI();
