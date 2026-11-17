@@ -266,31 +266,37 @@ test('Harder: silent bars: clicked notes underlined, one stepper in a closed dis
   assert.deepEqual(p.errors, []);
 });
 
-audioTest('Listen plays the click with the cursor moving, says what it plays, and stops on a setting change or a tab change', async () => {
+audioTest('Listen, under the staff, plays the click with no count-in and the cursor moving, says what it plays, and stops on a setting change or a tab change', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat', bpm: 120 }, { width: 390, height: 844 });
-  assert.equal((await p.textContent('#ckHear')).trim(), 'Listen');
-  assert.equal(await p.textContent('#ckHearNote'), 'Plays the click for 2 passes at 120 BPM.');
-  const r = await p.evaluate(() => { const b = document.getElementById('ckHear').getBoundingClientRect(); return Math.min(b.width, b.height); });
-  assert.ok(r >= 44, '44px target: ' + r);
+  const lab = () => p.getAttribute('#ckHear', 'aria-label');
+  assert.equal(await lab(), 'Listen to the click');
+  assert.equal(await p.textContent('#ckHearNote'), 'Hear the click for 2 passes at 120 BPM.');
+  const pos = await p.evaluate(() => {
+    const y = id => document.getElementById(id).getBoundingClientRect().top, b = document.getElementById('ckHear').getBoundingClientRect();
+    return { start: y('startBtn'), name: y('playName'), click: y('clickSeg'), rows: y('rows'), hear: y('ckHear'), r: Math.min(b.width, b.height) };
+  });
+  assert.ok(pos.r >= 44, '44px target: ' + pos.r);
+  assert.ok(pos.name < pos.start && pos.start < pos.click, 'Start sits under the routine, above the settings: ' + JSON.stringify(pos));
+  assert.ok(pos.hear > pos.rows, 'Listen sits under the staff: ' + JSON.stringify(pos));
   await p.click('#barsBox>summary');
   await p.click('#barsOffUp');
-  assert.equal(await p.textContent('#ckHearNote'), 'Plays the click at 120 BPM, twice round the bars with the click and the silent bars.');
+  assert.equal(await p.textContent('#ckHearNote'), 'Hear the click at 120 BPM, twice round the bars with the click and the silent bars.');
   await p.click('#ckNone');
-  assert.equal(await p.textContent('#ckHearNote'), 'Plays the count-in, then 2 passes with no click, at 120 BPM.');
+  assert.equal(await p.isVisible('#ckHear'), false, 'Solo has no click to hear');
   await p.click('#ckBeat');
   await p.click('#ckHear');
-  await p.waitForFunction(() => document.getElementById('ckHear').textContent.trim() === 'Stop');
+  await p.waitForFunction(() => document.getElementById('ckHear').getAttribute('aria-label') === 'Stop');
   await p.click('#ckHear');
-  assert.equal((await p.textContent('#ckHear')).trim(), 'Listen', 'Stop stops it');
+  assert.equal(await lab(), 'Listen to the click', 'Stop stops it');
   await p.click('#ckHear');
-  await p.waitForFunction(() => document.getElementById('ckHear').textContent.trim() === 'Stop');
+  await p.waitForFunction(() => document.getElementById('ckHear').getAttribute('aria-label') === 'Stop');
   await p.click('#ckStrokes');
-  assert.equal((await p.textContent('#ckHear')).trim(), 'Listen', 'a setting change stops it');
+  assert.equal(await lab(), 'Listen to the click', 'a setting change stops it');
   await p.click('#ckHear');
-  await p.waitForFunction(() => document.getElementById('ckHear').textContent.trim() === 'Stop');
+  await p.waitForFunction(() => document.getElementById('ckHear').getAttribute('aria-label') === 'Stop');
   await p.click('#tabLibrary');
   await p.click('#tabPlay');
-  assert.equal((await p.textContent('#ckHear')).trim(), 'Listen', 'leaving Play stops it');
+  assert.equal(await lab(), 'Listen to the click', 'leaving Play stops it');
   assert.deepEqual(p.errors, []);
 });
 

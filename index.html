@@ -169,7 +169,6 @@ body[data-run="1"] .notice{display:none}
 :root[data-layout=desktop] #pagePlay>.pcol{display:grid;gap:22px;align-content:start;min-width:0}
 :root[data-layout=desktop] #pagePlay>.pctl{grid-column:1;position:sticky;top:16px}
 :root[data-layout=desktop] #pagePlay>.pview{grid-column:2}
-:root[data-layout=desktop] .pctl .transport{order:-1}   /* Start stays at the top of the controls, in view */
 .htools{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 12px}
 .htools .seg{margin:0}
 /* Desktop: Library, Scores, Achievements and Settings use the width; History and Help stay one column */
@@ -426,7 +425,8 @@ details.how>summary{display:flex;align-items:center;justify-content:space-betwee
 details.how>summary::after{float:none;flex:none;margin:0 4px 4px 0}
 details.how[open]>summary::after{margin:4px 4px 0 0}
 .hear{display:flex;align-items:center;gap:var(--s-3)}
-.hear .btn{display:inline-flex;align-items:center;gap:var(--s-2);flex:none}
+.hear .btn{flex:none;margin-left:calc((24px - var(--hit))/2)}   /* the 24px speaker lines up with the key above it */
+body:not([data-state=idle]) #hearRow{display:none}   /* Listen is for before a run */
 #barsBox>summary span{margin-left:auto;font-weight:400;color:var(--muted)}   /* what is set, beside the chevron */
 #barsBox .sbody{gap:var(--s-3);padding-bottom:var(--s-3)}
 #barsBox .tempo{max-width:220px}
@@ -1220,7 +1220,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <div class="clk" style="--c:16"><div class="clt">4/4: one bar, sixteen strokes</div><span class="cln">Easy</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Medium</span><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><span class="cln">Hard</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Each mark is one stroke. A filled mark has a click.</p>
         <div class="clk" style="--c:6"><div class="clt">6/8: one bar, six eighths</div><span class="cln">Hard</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Extreme follows the two groups of three. Easy and Medium click every eighth here, as each eighth is a beat.</p>
         <p>Choose the click level on the Play page. Easy clicks every stroke (none on rests). Medium clicks the beat and the half beat (1 and &amp;), or the last note of a triplet, so you fill in the notes between; it clicks on rests too. Hard clicks every beat, Extreme the strong beats (1 and 3, or the start of each group), and Master beat 1 of each bar. Solo only clicks the count-in, so you hold the tempo yourself. Each level is scored on its own, against the same grid.</p>
-        <p>Before you start, the notes show where the click plays: underlined notes get a click and plain ones do not, so you can see what a level leaves out. The key under the staff says so. Listen, under the levels, plays the count-in and the click twice through, with the cursor moving along the notes, so you can hear it before you play. Harder: silent bars, under the click level, lets the click drop out: after each bar with the click come up to 4 silent bars, their notes faded. Keep playing and counting, and the click comes back on beat 1. The cycle starts again with each exercise, so its first bar always clicks. The strokes in silent bars are still scored, and each stroke is worth more: a quarter more for each silent bar, up to double, so 1 silent bar is 1.25 times and 3 in a row are 1.75 times. A clear counts at its click level. The coaching says when your time moves in the silent bars, and how your first stroke lands when the click comes back. It is off on Solo, which has no click to leave out. When a run on Master clears the target with no silent bars, Next step under the result offers one: Try sets it for the next run, and Not now hides the offer until tomorrow.</p>
+        <p>Before you start, the notes show where the click plays: underlined notes get a click and plain ones do not, so you can see what a level leaves out. The key under the staff says so. The speaker button under the staff plays the click twice through, without the count-in, with the cursor moving along the notes, so you can hear it before you play. Harder: silent bars, under the click level, lets the click drop out: after each bar with the click come up to 4 silent bars, their notes faded. Keep playing and counting, and the click comes back on beat 1. The cycle starts again with each exercise, so its first bar always clicks. The strokes in silent bars are still scored, and each stroke is worth more: a quarter more for each silent bar, up to double, so 1 silent bar is 1.25 times and 3 in a row are 1.75 times. A clear counts at its click level. The coaching says when your time moves in the silent bars, and how your first stroke lands when the click comes back. It is off on Solo, which has no click to leave out. When a run on Master clears the target with no silent bars, Next step under the result offers one: Try sets it for the next run, and Not now hides the offer until tomorrow.</p>
         <p> Set Scoring to Practice to try something without saving it: you still see the result, but nothing is added to your records. It is back on the next time you open the app. Use headphones, or the click is heard as strokes.</p>
         <button class="btn" type="button" data-try="single" data-text="RLRR LRLL RLRR LRLL">Try it</button>
       </div>
@@ -1458,6 +1458,16 @@ RLRR LRLL RLRR LRLL</pre>
       </details>
       <p class="maxline routine-only" id="maxLine"></p>
     </section>
+    <div class="transport">
+      <button class="btn primary" id="startBtn" type="button" aria-describedby="playSummary">Start</button>
+      <p class="hint cfg" id="playSummary"></p>
+      <div class="btns" id="runBtns" hidden>
+        <button class="btn" id="stopBtn" type="button">Stop</button>
+        <button class="btn link" id="restartBtn" type="button">Restart</button>
+      </div>
+      <p class="hint" id="lockNote">Stop the run to change the settings below.</p>
+      <div id="advBar"></div>
+    </div>
 
     <section class="panel cfg" id="quickRow" aria-label="Tempo, length and click">
       <div class="qgrid">
@@ -1480,8 +1490,7 @@ RLRR LRLL RLRR LRLL</pre>
           <button type="button" id="ckBar" data-v="bar" aria-pressed="false">Master</button>
           <button type="button" id="ckNone" data-v="none" aria-pressed="false">Solo</button>
         </div>
-        <p class="hint" id="clickHint"></p>
-        <div class="hear"><button class="btn" id="ckHear" type="button" aria-describedby="ckHearNote"></button><p class="hint" id="ckHearNote"></p></div></div>
+        <p class="hint" id="clickHint"></p></div>
       <details id="barsBox" class="how">
         <summary>Harder: silent bars<span id="barsSum"></span></summary>
         <div class="sbody">
@@ -1540,16 +1549,6 @@ RLRR LRLL RLRR LRLL</pre>
     </section>
       </div>
     </details>
-    <div class="transport">
-      <button class="btn primary" id="startBtn" type="button" aria-describedby="playSummary">Start</button>
-      <p class="hint cfg" id="playSummary"></p>
-      <div class="btns" id="runBtns" hidden>
-        <button class="btn" id="stopBtn" type="button">Stop</button>
-        <button class="btn link" id="restartBtn" type="button">Restart</button>
-      </div>
-      <p class="hint" id="lockNote">Stop the run to change the settings below.</p>
-      <div id="advBar"></div>
-    </div>
     </div>
 
     <div class="pcol pview">
@@ -1621,6 +1620,7 @@ RLRR LRLL RLRR LRLL</pre>
       <p class="hint" id="rowsMore" hidden></p>
       </div>
       <p class="cap key" id="ckKey"><span class="k ck">R</span> click · <span class="k nc">R</span> no click<span id="ckKeySb" hidden> · <span class="k sb">R</span> silent bar</span></p>
+      <div class="hear" id="hearRow"><button class="btn icon play" id="ckHear" type="button" aria-describedby="ckHearNote"></button><p class="hint" id="ckHearNote"></p></div>
       <p class="cap key" id="tmKey"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other hand<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
       <div class="pads kb-only">
         <button class="pad" type="button" data-hand="L" aria-label="Left hand pad">L</button>
@@ -3579,7 +3579,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.203';                           /* shown beside the title */
+const VERSION='1.5.204';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5560,12 +5560,12 @@ function previewRows(animate){
   }
   paintRows(null,null);
 }
-/* Listen on Play plays the click as a run would, with the count-in, the click level and the silent bars, but no strokes, while
+/* Listen, under the staff on Play, plays the click as a run would, without the count-in: the click level and the silent bars, but no strokes, while
    the cursor moves along the rows. With silent bars it goes twice round the bars with the click and the silent bars; otherwise
    it plays 2 passes. It plays the first exercise of a run from here. Nothing is heard from the mic or scored. Start, a change to
    the rows or leaving the page stops it. */
 let hear=null;
-const ICON_PLAY='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M7 4.5 19.5 12 7 19.5Z" fill="currentColor"/></svg>',ICON_HALT='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
+const ICON_SPK='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',ICON_STOP='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
 function hearPlan(){
   const b=currentExercises()[0];if(!b)return null;
   const one=previewPlan([withPasses(b,1)]),sg=one.segs[0],g=sg.gb;
@@ -5575,12 +5575,11 @@ function hearPlan(){
 function syncHear(){
   const b=$('ckHear');if(!b)return;
   const busy=!!(run&&!run.ended)||!!loop||!!chk,h=busy||hear?null:hearPlan();
-  b.innerHTML=(hear?ICON_HALT:ICON_PLAY)+'<span>'+(hear?'Stop':'Listen')+'</span>';
+  b.innerHTML=hear?ICON_STOP:ICON_SPK;b.setAttribute('aria-label',hear?'Stop':'Listen to the click');b.title=hear?'Stop':'Listen to the click';
   b.disabled=!hear&&!h;
   $('ckHearNote').textContent=hear?$('ckHearNote').textContent:busy?'Listen waits until the run ends.':!h?'Add an exercise to listen to its click.'
-    :S.click==='none'?'Plays the count-in, then 2 passes with no click, at '+h.bpm+' BPM.'
-    :h.g?'Plays the click at '+h.bpm+' BPM, twice round the bars with the click and the silent bars.'
-    :'Plays the click for 2 passes at '+h.bpm+' BPM.';
+    :h.g?'Hear the click at '+h.bpm+' BPM, twice round the bars with the click and the silent bars.'
+    :'Hear the click for 2 passes at '+h.bpm+' BPM.';
 }
 function endHear(){
   if(!hear)return false;
@@ -5593,10 +5592,10 @@ async function startHear(){
   const h=hearPlan();if(!h)return;
   if(!(await ensureAudio(false))||hear||(run&&!run.ended))return;
   closeListen();
-  const plan=h.plan,t0=ctx.currentTime+0.15;
-  plan.clicks.forEach(c=>{if(c.t<plan.end-1e-6)click(t0+c.t,c.a);});
+  const plan=h.plan,lead=plan.segs[0].t0,t0=ctx.currentTime+0.15-lead;   /* no count-in: the first click is on the first note */
+  plan.clicks.forEach(c=>{if(c.t>=lead-1e-6&&c.t<plan.end-1e-6)click(t0+c.t,c.a);});
   applyLayout(h.one);rowsShown=ROWS;labelsOn=true;labelMode='routine';setRows(plan,0,false);
-  hear={plan:plan,t0:t0,cur:-1,showG:0,pulseIdx:-1,res:new Map(),mode:'hear',tol:S.tol,raf:0,timer:setTimeout(stopHear,(0.15+plan.end+0.3)*1000)};
+  hear={plan:plan,t0:t0,cur:-1,showG:0,pulseIdx:-1,res:new Map(),mode:'hear',tol:S.tol,raf:0,timer:setTimeout(stopHear,(0.15+plan.end-lead+0.3)*1000)};
   hear.raf=requestAnimationFrame(hearFrame);
   syncHear();
 }
@@ -8219,7 +8218,7 @@ function syncInfo(){
   {const r=$('tmRange');r.value=S.bpm;r.setAttribute('aria-valuetext',S.bpm+' BPM');paintRange(r);}
   setPressed('clickSeg',S.click);
   $('clickHint').textContent=(CLICK_HINT[S.click]||'')+(S.click==='none'?'.':'. Underlined notes get a click.');
-  $('ckKey').hidden=S.click==='none';$('ckKeySb').hidden=!gapNorm(barsOn());
+  $('ckKey').hidden=$('hearRow').hidden=S.click==='none';$('ckKeySb').hidden=!gapNorm(barsOn());
   syncBars();
   syncDyCtl();
   {   /* what the closed drawer holds, so a setting that matters is never hidden */
@@ -8429,7 +8428,6 @@ function listenFrame(){
     if(rb.top<bb.top+2||rb.bottom>bb.bottom-2)box.scrollTop+=rb.top-bb.top-8;
   }
 }
-const ICON_SPK='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',ICON_STOP='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
 function syncListen(){
   const busy=!!(run&&!run.ended)||!!loop||!!chk;
   const b=$('bListen');
