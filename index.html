@@ -1576,10 +1576,10 @@ RLRR LRLL RLRR LRLL</pre>
       <p class="hint" id="rowEnd" hidden></p>
       <p class="hint" id="rowsMore" hidden></p>
       </div>
-      <p class="cap key"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other stick<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
+      <p class="cap key"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other hand<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
       <div class="pads kb-only">
-        <button class="pad" type="button" data-hand="L" aria-label="Left stick pad">L</button>
-        <button class="pad" type="button" data-hand="R" aria-label="Right stick pad">R</button>
+        <button class="pad" type="button" data-hand="L" aria-label="Left hand pad">L</button>
+        <button class="pad" type="button" data-hand="R" aria-label="Right hand pad">R</button>
       </div>
     </section>
 
@@ -1636,7 +1636,7 @@ RLRR LRLL RLRR LRLL</pre>
         <h3>Timing trace</h3>
         <div class="hscw"><div class="hscroll" id="trBox"><div class="hscin" id="trIn"><canvas id="trace" role="img" aria-label="Timing error of every heard stroke in the run, in milliseconds, newest at the right"></canvas></div></div><button class="btn jump" id="trJump" type="button" hidden>Newest &#9656;</button></div>
         <p class="cap" id="trTap" aria-live="polite">Tap a dot to read that stroke.</p>
-        <p class="cap">Up is late, down is early. Ring is the left stick, solid dot the right.</p>
+        <p class="cap">Up is late, down is early. Ring is the left hand, solid dot the right.</p>
       </section>
 
 
@@ -1646,8 +1646,8 @@ RLRR LRLL RLRR LRLL</pre>
           <div class="stat"><div class="v" id="sWithin">—</div><div class="k">On time</div></div>
           <div class="stat"><div class="v" id="sSpread">—</div><div class="k">Spread (ms)</div></div>
           <div class="stat"><div class="v" id="sHits">—</div><div class="k">Strokes heard</div></div>
-          <div class="stat"><div class="v" id="sL">—</div><div class="k">Left stick (ms)</div></div>
-          <div class="stat"><div class="v" id="sR">—</div><div class="k">Right stick (ms)</div></div>
+          <div class="stat"><div class="v" id="sL">—</div><div class="k">Left hand (ms)</div></div>
+          <div class="stat"><div class="v" id="sR">—</div><div class="k">Right hand (ms)</div></div>
           <div class="stat"><div class="v" id="sStick">—</div><div class="k">Sticking correct</div></div>
           <div class="stat"><div class="v" id="sExtra">—</div><div class="k">Extra hits</div></div>
           <div class="stat mic-only"><div class="v" id="sLevel">—</div><div class="k">Level spread (dB)</div></div>
@@ -3402,7 +3402,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.176';                           /* shown beside the title */
+const VERSION='1.5.177';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -5669,7 +5669,7 @@ function initTaps(){
   $('trBox').addEventListener('click',ev=>{
     const pts=view?view.trace:[],i=at($('trBox'),ev,36,12),p=pts[i],o=$('trTap');
     if(!p){o.textContent='Tap a dot to read that stroke.';return;}
-    o.textContent='Heard stroke '+(i+1)+': '+fmtMs(p.ms)+' ms, '+(p.hand==='L'?'left':'right')+' hand'+(p.wrong?', wrong stick':'')+'.';
+    o.textContent='Heard stroke '+(i+1)+': '+fmtMs(p.ms)+' ms, '+(p.hand==='L'?'left':'right')+' hand'+(p.wrong?', wrong hand':'')+'.';
   });
 }
 function drawTrace(){if(lvStrip)lvStrip.draw();if(trStrip)trStrip.draw();}
