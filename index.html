@@ -1359,7 +1359,7 @@ RLRR LRLL RLRR LRLL</pre>
       <h3>Scores, tempo and progress</h3>
       <ul>
         <li><b>On time</b> is the share of due strokes inside your on-time window. With an accent or ghost rule a stroke must also be played as written: an accent clearly louder and a ghost clearly softer than its neighbours. An exercise needs at least one full pass to be scored.</li>
-        <li><b>Score:</b> with Scores and rewards on, every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Extreme and 5 on Master). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best share is kept for each window. The streak carries from one exercise to the next. The total never goes below zero. Your best score at each click level is an achievement, and a new one is announced when the run ends.</li>
+        <li><b>Score:</b> with Scores and rewards on, every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Extreme and 5 on Master). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best score, that share, is kept for each level and window. Best on time is your on-time % at a tempo. The streak carries from one exercise to the next. The total never goes below zero. Your high score in points at each click level is an achievement, and a new one is announced when the run ends.</li>
         <li><b>Scores and rewards:</b> turn them on under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold. A run that clears an exercise faster than before shows its medal and the tempo of the next one.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
@@ -3390,7 +3390,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.170';                           /* shown beside the title */
+const VERSION='1.5.171';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4033,11 +4033,12 @@ const slotTol=sl=>slotWin(sl,S.tol);
 /* The window, as said beside a score when it is not the standard one. */
 /* The window's bonus, as its own line on a score card; none at the widest window. */
 const winNote=tol=>winMult(tol)>1?'\u00b1'+(tol||20)+' ms window: points \u00d7'+winMult(tol):'';
+/* Each best has its own noun: the high score is points, the best score is the share of a perfect run, best on time is the on-time %, and best tempo is the fastest clear. */
 /* A score against the best before it at its click level and window, in words: the card's one percentage is on time, so the share of a perfect run is only the bar. was is the best share before, or 0. */
 function bestLine(share,was,lv,tol){
   const at=' on '+levelName(lv)+' at \u00b1'+(tol||20)+' ms';
   if(!(was>0))return 'First score'+at;
-  return (share>was+1e-9?'New best':share>=was-1e-9?'Equals your best':'Below your best')+at;
+  return (share>was+1e-9?'New best score':share>=was-1e-9?'Equals your best score':'Below your best score')+at;
 }
 function liveScore(r,sg,c){
   if(!r.hud)return;
@@ -5800,7 +5801,7 @@ function recordRun(r){
   if(!scoreOn){const dk=dayKey(run.t);recs.sum.days[dk]=(recs.sum.days[dk]||0)+run.sec;}   /* the time of a practice run still counts towards today and the streak */
   const saved=saveRecs();
   if(scoreOn)askPersist();
-  lastRun={run:run,autoLib:autoLib,prevBest:prevBest,newTempo:newTempo,won:won,rows:rows,skipped:skipped,saved:saved,practice:!scoreOn,score:score,share0:share0,hsNew:scoreOn&&score>hs0};
+  lastRun={run:run,autoLib:autoLib,prevBest:prevBest,newTempo:newTempo,won:won,rows:rows,skipped:skipped,saved:saved,practice:!scoreOn,score:score,share0:share0,hs0:hs0,hsNew:scoreOn&&score>hs0};
 }
 /* After a run the score is brought into view. The run layout is still being undone, so the jump repeats once the page has settled. */
 function showResult(){
@@ -5834,11 +5835,11 @@ function renderAdvice(){
     if(one){
       const x=played[0],b=pb(x);
       $('advStat').textContent=adv.cleared?'Cleared the '+tgt+' target':'Target is '+tgt;
-      $('advSub').textContent=b===null?'First run at this tempo':(x.pct>b+1e-9?'New best, was '+onPct(b):'Best at this tempo: '+onPct(b));
+      $('advSub').textContent=b===null?'First run at this tempo':(x.pct>b+1e-9?'New best on time, was '+onPct(b):'Best on time at this tempo: '+onPct(b));
     }else{
       const nb=played.filter(x=>{const b=pb(x);return b!==null&&x.pct>b+1e-9;}).length;
       $('advStat').textContent=played.filter(x=>x.pct>=TARGET).length+' of '+n+' cleared';
-      $('advSub').textContent=nb?nb+(nb===1?' new best':' new bests'):(played.every(x=>pb(x)===null)?'First run at this tempo':'No new bests');
+      $('advSub').textContent=nb?nb+(nb===1?' new best on time':' new bests on time'):(played.every(x=>pb(x)===null)?'First run at this tempo':'No new bests on time');
     }
     {   /* how the score came about */
       const sb=$('scoreBox'),on=!L.practice&&S.game;sb.hidden=!on;
@@ -5853,10 +5854,10 @@ function renderAdvice(){
       r.classList.toggle('solo',!mx);
       if(mx){
         const f=n=>n.toLocaleString('en-US');
-        $('advScore').textContent=f(L.score);$('advMax').textContent='/ '+f(mx);$('advHs').hidden=!L.hsNew;
+        $('advScore').textContent=f(L.score);$('advMax').textContent='/ '+f(mx);$('advHs').hidden=!L.hsNew;$('advHs').textContent='New high score on '+levelName(L.run.lv);
         const bar=$('advScoreBar');bar.firstChild.style.width=Math.min(100,100*L.score/mx)+'%';
         const tk=bar.lastChild,showTk=L.share0>0&&L.share0<1;tk.hidden=!showTk;if(showTk)tk.style.left=(100*L.share0)+'%';
-        $('advPrev').textContent=bestLine(L.score/mx,L.share0,L.run.lv,L.run.tol)+(showTk&&L.score/mx<L.share0?', marked on the bar':'');
+        $('advPrev').textContent=L.score>=mx&&!L.hsNew&&L.hs0>0?'Perfect score. High score on '+levelName(L.run.lv)+': '+f(L.hs0):bestLine(L.score/mx,L.share0,L.run.lv,L.run.tol)+(showTk&&L.score/mx<L.share0?', marked on the bar':'');   /* a perfect run below the high score was at a slower tempo or with fewer strokes */
         $('advBonus').hidden=!winNote(L.run.tol);$('advBonus').textContent=winNote(L.run.tol);
       }
     }
@@ -6653,7 +6654,7 @@ function renderRunPage(r){
     mk('span','slab','Score');
     const hd=mk('div','shd');mk('b',null,f0(sc),hd);mk('span',null,'of '+f0(mx),hd);
     const bar=mk('div','sbar');mk('i',null,null,bar).style.width=Math.min(100,100*sc/mx)+'%';
-    const cp=mk('div','scap'),best=bestShares(recs.runs,recs.sum)[shareKey(r.lv,r.tol)]||0;mk('span',null,sc/mx>=best-1e-9?'Your best on '+levelName(r.lv)+' at \u00b1'+(r.tol||20)+' ms':bestLine(sc/mx,best,r.lv,r.tol),cp);   /* the best includes this run */
+    const cp=mk('div','scap'),best=bestShares(recs.runs,recs.sum)[shareKey(r.lv,r.tol)]||0;mk('span',null,sc/mx>=best-1e-9?'Your best score on '+levelName(r.lv)+' at \u00b1'+(r.tol||20)+' ms':bestLine(sc/mx,best,r.lv,r.tol),cp);   /* the best includes this run */
     if(winNote(r.tol))mk('p','swin',winNote(r.tol));
     const ac=mk('div','sacc'),pb=mk('b',null,a[0],ac);pb.className=a[1];
     const sp=mk('span',null,'on time',ac);
