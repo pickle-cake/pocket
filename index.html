@@ -27,8 +27,7 @@ if(t!=='light'&&t!=='dark')t=window.matchMedia&&matchMedia('(prefers-color-schem
   --fill:#E3A93B; --accent-ink:#1A1200;             /* brass as a fill, with its own ink: the same in light and dark */
   --early:#2A66B0; --late:#B0304F; --ok:#1F6E44;     /* timing states, separate from the accent; each 4.5:1 or more as small text */
   --warn:var(--accent); --danger:var(--late); --on-danger:#fff;   /* warnings and destructive actions: their own roles, the same values for now */
-  --heat:#E5322B; --heat-low:#fff;                  /* the streak meter runs from --heat-low at the first stroke to --heat at the best streak */
-  --meter-lo:var(--ok); --meter-mid:var(--fill); --meter-hi:var(--heat);   /* the stroke level meter: soft to loud; its own role, following the palette */
+  --meter-lo:var(--ok); --meter-mid:var(--fill); --meter-hi:#E5322B;   /* the stroke level meter: soft to loud; its own role, following the palette */
   --surface-2:color-mix(in srgb,var(--ink) 6%,var(--bg));   /* troughs, keys, pressed rows: a step down from the page */
   --shade:#000; --shine:#fff;                        /* depth on the highway's strokes, only ever at low alpha */
   --hand-l:#5E5CA0; --hand-r:#A97F57;               /* the highway's lanes: a cool hue for L, a warm one for R, muted so neither reads as a timing colour */
@@ -54,8 +53,8 @@ if(t!=='light'&&t!=='dark')t=window.matchMedia&&matchMedia('(prefers-color-schem
     --shadow-pop:0 8px 24px rgb(0 0 0 / .35);
     color-scheme:dark;
   }
-  :root[data-palette=cb]{--early:#00669F; --late:#A84300; --ok:#5A6560; --heat:#FF8A3D; --hand-l:#5E5CA0; --hand-r:#9C8A4A}     /* colour-blind safe: blue, vermillion, grey stay apart in all common forms */
-  :root[data-palette=cb][data-theme=dark]{--early:#56B4E9; --late:#FF8A3D; --ok:#9AA59D; --heat:#FF8A3D; --hand-l:#A3A1E0; --hand-r:#D2C08A}
+  :root[data-palette=cb]{--early:#00669F; --late:#A84300; --ok:#5A6560; --meter-hi:#FF8A3D; --hand-l:#5E5CA0; --hand-r:#9C8A4A}     /* colour-blind safe: blue, vermillion, grey stay apart in all common forms */
+  :root[data-palette=cb][data-theme=dark]{--early:#56B4E9; --late:#FF8A3D; --ok:#9AA59D; --meter-hi:#FF8A3D; --hand-l:#A3A1E0; --hand-r:#D2C08A}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;touch-action:manipulation}   /* no double-tap zoom */
 body{
@@ -680,7 +679,7 @@ body[data-edit=type] .buildonly{display:none}
 .live em.on{opacity:1}
 .live .lvm{grid-column:1/-1;display:grid;grid-template-columns:repeat(16,1fr);gap:3px}
 .live .lvm i{height:14px;border-radius:var(--r-sm);background:var(--line)}
-.live .lvm i.on{background:color-mix(in srgb,var(--heat) calc(var(--t)*100%),var(--heat-low));box-shadow:0 0 0 1px var(--line)}
+.live .lvm i.on{background:var(--fill)}   /* the streak meter is a meter fill: brass, not a heat colour that reads as late */
 @media (prefers-reduced-motion:no-preference){.live .fire.on .fo{animation:lvflick .45s ease-in-out infinite alternate}.live .fire.on .fn{animation:lvflick .3s ease-in-out infinite alternate-reverse}.live .fire path{transform-box:fill-box;transform-origin:50% 100%}.live em.on{animation:lvfade .7s ease-out forwards}.live .lvm i.on{transition:background var(--dur-1) var(--ease)}}
 @keyframes lvflick{from{transform:scale(1,.9) skewX(-4deg)}to{transform:scale(.94,1.08) skewX(4deg)}}
 @keyframes lvfade{from{opacity:1;transform:translateY(2px)}to{opacity:.15;transform:none}}
@@ -3402,7 +3401,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.181';                           /* shown beside the title */
+const VERSION='1.5.182';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4084,7 +4083,7 @@ function initLive(r){
   $('lvMtr').style.setProperty('--v','0%');
   const box=$('live');box.hidden=!r.hud;
   if(!r.hud)return;
-  const mt=$('lvMeter');if(!mt.children.length)for(let i=0;i<STREAK_CAP;i++){const e=document.createElement('i');e.style.setProperty('--t',(i/(STREAK_CAP-1)).toFixed(3));mt.appendChild(e);}
+  const mt=$('lvMeter');if(!mt.children.length)for(let i=0;i<STREAK_CAP;i++){mt.appendChild(document.createElement('i'));}
   mt.lastChild.insertAdjacentHTML('beforeend',LV_FLAME);   /* the last section is where the flame shows */
   paintLive(r);$('lvFlash').className='';$('lvFlash').textContent='';
 }
