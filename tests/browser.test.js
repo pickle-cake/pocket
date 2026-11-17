@@ -210,7 +210,7 @@ test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 
   await p.click('#ckHalf');
   assert.equal(await p.evaluate(() => window.__T.S().click), 'half');
   assert.equal(await p.getAttribute('#ckHalf', 'aria-pressed'), 'true');
-  assert.equal(await p.textContent('#clickHint'), 'A click on the strong beats. A tick under a note marks each click.');
+  assert.equal(await p.textContent('#clickHint'), 'A click on the strong beats. Underlined notes get a click.');
   const w = await p.evaluate(() => ({ page: document.documentElement.scrollWidth, btn: ['bpmDown', 'bpmUp', 'bpmOpen', 'eachVal', 'eachUnit', 'ckStrokes', 'ckBar'].map(id => document.getElementById(id).getBoundingClientRect()).map(r => Math.min(r.width, r.height)), over: [...document.querySelectorAll('#clickSeg button')].some(b => b.scrollWidth > b.clientWidth) }));
   assert.ok(w.btn.every(x => x >= 44), 'controls are 44px targets: ' + w.btn);
   assert.ok(!w.over, 'the click levels fit their buttons');
@@ -218,25 +218,30 @@ test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 
   assert.deepEqual(p.errors, []);
 });
 
-test('Harder: silent bars: ticks under the clicked notes, one stepper in a closed disclosure, a dashed line under silent bars, kept, and off on Solo with the reason', async () => {
+test('Harder: silent bars: clicked notes underlined, one stepper in a closed disclosure, silent bars faded, a key that says so, kept, and off on Solo with the reason', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat' }, { width: 390, height: 844 });
-  const marks = () => p.evaluate(() => [document.querySelectorAll('#rowsTrack .staff .ck').length, document.querySelectorAll('#rowsTrack .staff .sil').length]);
+  const marks = () => p.evaluate(() => { const c = [...document.querySelectorAll('#rowsTrack .staff .cd')].filter(g => g.querySelector('.lt').textContent); const n = k => c.filter(g => g.classList.contains(k)).length; return [n('ck'), n('sb')]; });
+  const wt = () => p.evaluate(() => ['.ck', ':not(.ck):not(.sb)', '.sb'].map(k => { const g = document.querySelector('#rowsTrack .staff .cd' + k + ' .lt'); return g ? getComputedStyle(g).textDecorationLine : ''; }));
+  const key = () => p.evaluate(() => [...document.querySelectorAll('.cap.key')].filter(e => e.offsetParent).map(e => e.innerText.replace(/\s+/g, ' ').trim()));
   const val = () => p.evaluate(() => document.getElementById('barsOffN').firstChild.textContent + ' ' + document.getElementById('barsDots').children.length + ' ' + document.getElementById('barsSum').textContent);
   assert.equal(await p.getAttribute('#barsBox', 'open'), null, 'closed to start with');
   assert.equal(await val(), '0 0 Off');
   const [ck0, sil0] = await marks();
-  assert.ok(ck0 > 0 && sil0 === 0, 'a tick under each clicked note, no silent bars: ' + ck0 + '/' + sil0);
+  assert.ok(ck0 > 0 && sil0 === 0, 'clicked notes underlined, no silent bars: ' + ck0 + '/' + sil0);
+  assert.deepEqual(await wt(), ['underline', 'none', ''], 'underlined with a click, plain without');
+  assert.deepEqual(await key(), ['R click · R no click'], 'before a run the key is the click key, not the timing key');
   await p.click('#barsBox>summary');
   assert.equal(await p.textContent('#barsHint'), 'Add a silent bar with +. The exercise above shows where it goes.');
   assert.ok(await p.isDisabled('#barsOffDown'));
   await p.click('#barsOffUp');
   assert.equal(await val(), '1 2 1 bar');
   assert.equal(await p.evaluate(() => window.__T.S().bars), '10');
-  assert.equal(await p.textContent('#barsHint'), 'A dashed line under the notes marks a silent bar. Silent bars are still scored: points ×1.25.');
+  assert.equal(await p.textContent('#barsHint'), 'Faded notes are a silent bar. Silent bars are still scored: points ×1.25.');
   const [ck1, sil1] = await marks();
-  assert.ok(sil1 > 0 && ck1 < ck0, 'silent bars are dashed and lose their ticks: ' + ck1 + '/' + sil1);
+  assert.ok(sil1 > 0 && ck1 < ck0, 'silent bars are faded and lose their underlines: ' + ck1 + '/' + sil1);
+  assert.deepEqual(await key(), ['R click · R no click · R silent bar']);
   await p.click('#ckStrokes');
-  assert.ok((await marks())[0] > ck1, 'Easy ticks more notes');
+  assert.ok((await marks())[0] > ck1, 'Easy underlines more notes');
   await p.click('#ckBeat');
   for (let i = 0; i < 3; i++) await p.click('#barsOffUp');
   assert.equal(await val(), '4 5 4 bars', 'up to 4 silent bars');
@@ -249,7 +254,8 @@ test('Harder: silent bars: ticks under the clicked notes, one stepper in a close
   assert.ok(await p.isDisabled('#barsOffDown'), 'off on Solo');
   assert.equal(await p.textContent('#barsSum'), 'Off on Solo');
   assert.equal(await p.textContent('#barsHint'), 'Off on Solo: it has no click after the count-in.');
-  assert.deepEqual(await marks(), [0, 0], 'Solo shows no ticks');
+  assert.deepEqual(await marks(), [0, 0], 'Solo underlines nothing');
+  assert.deepEqual(await key(), [], 'and no click key');
   await p.click('#ckBeat');
   assert.equal(await p.evaluate(() => window.__T.S().bars), '10000', 'the setting comes back after Solo');
   await p.reload();
@@ -785,7 +791,8 @@ audioTest('Next step: a cleared run on Master with no silent bars offers one; Tr
   assert.equal(await p.textContent('#offerT'), 'You held time with one click a bar. Try a silent bar next.');
   assert.equal(await p.textContent('#offerTx'), 'The click plays bar 1, then drops out for bar 2. Keep counting; it comes back on beat 1. Silent bars score more: points ×1.25.');
   const fig = await p.evaluate(() => [...document.querySelectorAll('#offerFig .bt')].map(b => b.className + ':' + b.textContent + ':' + b.querySelectorAll('.ck').length));
-  assert.deepEqual(fig, ['bt:1234:1', 'bt sil:1234:0'], 'the count of a bar with the click, a tick on 1, then a silent bar');
+  assert.deepEqual(fig, ['bt:1234:1', 'bt sb:1234:0'], 'the count of a bar with the click, 1 underlined, then a silent bar');
+  assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll('.cap.key')].filter(e => e.offsetParent).map(e => e.id)), ['tmKey'], 'after a run, the timing key');
   const t = await p.evaluate(() => ['offerTry', 'offerLater'].map(id => { const r = document.getElementById(id).getBoundingClientRect(); return Math.min(r.width, r.height); }));
   assert.ok(t.every(x => x >= 44), '44px targets: ' + t);
   await p.click('#offerTry');

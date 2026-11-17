@@ -271,8 +271,8 @@ body[data-run="1"] .notice{display:none}
 .cd.early .lt{font-style:italic}      /* a second cue beside colour: early leans, late is underlined */
 .cd.late .lt{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .cd.miss .lt{fill:var(--muted);opacity:.4}
-.staff .ck{fill:var(--ink)}   /* before a run, a tick under each note that gets a click */
-.staff .sil{stroke:var(--muted);stroke-width:2;stroke-dasharray:4 4}   /* and a dashed line under the notes of a silent bar: a shape, not just a colour */
+.cd.ck .lt{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}   /* before a run, a note with a click is underlined */
+.cd.sb .lt{fill:var(--muted)}   /* and a note in a silent bar is faded */
 .staff .mks{fill:var(--ink);display:none}
 .cd.mk .mks.h,.cd.mk.mkL .mks.l,.cd.mk.mkR .mks.r{display:block}   /* a finding's strokes: a bracket under the timing, round one stroke or a run of them. Shape, not colour, so it reads beside the timing colours. */
 .rows.mking .cd:not(.mk){opacity:.5}   /* and the strokes it does not mean step back */
@@ -569,11 +569,10 @@ html.pgopen{overflow:hidden}
 .offer h2{font:600 var(--t-title) var(--font-body)}
 .ofig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s-2) var(--s-3);align-items:baseline;max-width:calc(var(--s-7)*8)}
 .ofig .lbl{margin:0}
-.ofig .bt{display:flex;padding-bottom:var(--s-1);border-bottom:2px solid transparent}
-.ofig .bt span{flex:1;display:grid;justify-items:center;gap:var(--s-1);font:600 var(--t-small) var(--font-data)}
-.ofig .bt span::after{content:'';width:var(--s-1);height:var(--s-3);border-radius:var(--r-sm)}
-.ofig .bt .ck::after{background:var(--ink)}   /* a tick, as under a clicked note on the staff */
-.ofig .bt.sil{color:var(--muted);border-bottom:2px dashed var(--muted)}   /* and a dashed line, as under a silent bar */
+.ofig .bt{display:flex}
+.ofig .bt span{flex:1;text-align:center;font:800 var(--t-nav) var(--font-display)}
+.ofig .bt .ck{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}   /* underlined where the click plays, as on the staff */
+.ofig .bt.sb{color:var(--muted)}   /* and faded in a silent bar */
 #advBadge .bnx i{display:block;height:6px;border-radius:999px;background:var(--line);overflow:hidden}
 #advBadge .bnx i b{display:block;height:100%;background:var(--fill)}
 @media (prefers-reduced-motion:no-preference){#advBadge.pop{animation:winpop var(--dur-3) var(--ease) both}}   /* once, never looping */
@@ -796,6 +795,9 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .key .k.ok{color:var(--ok)}.key .k.early{color:var(--early);font-style:italic}
 .key .k.late{color:var(--late);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .key .k.miss{color:var(--muted);opacity:.4}
+.key .k.ck,.key .k.nc,.key .k.sb{font:800 var(--t-nav) var(--font-display)}   /* the click key: the staff's letters, underlined, plain and faded */
+.key .k.ck{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}.key .k.sb{color:var(--muted)}
+body:not([data-state=idle]) #ckKey,body[data-state=idle] #tmKey{display:none}   /* before a run the key says where the click plays; from the start of a run, what the timing colours mean */
 .key .k.box{padding:2px var(--s-1);background:linear-gradient(var(--ink),var(--ink)) bottom/100% 2px,linear-gradient(var(--ink),var(--ink)) bottom left/2px 5px,linear-gradient(var(--ink),var(--ink)) bottom right/2px 5px;background-repeat:no-repeat}   /* like a marked stroke on the staff: a bracket under it */
 @media (max-width:359px){.tabs button{font-size:13px;letter-spacing:0}}   /* four tab names fit the narrowest phones */
 .dur{display:grid;grid-template-columns:minmax(70px,1fr) minmax(110px,1.4fr);gap:8px}
@@ -1218,7 +1220,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         <div class="clk" style="--c:16"><div class="clt">4/4: one bar, sixteen strokes</div><span class="cln">Easy</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Medium</span><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><i class="on"></i><i class=""></i><span class="cln">Hard</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Each mark is one stroke. A filled mark has a click.</p>
         <div class="clk" style="--c:6"><div class="clt">6/8: one bar, six eighths</div><span class="cln">Hard</span><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span class="cln">Extreme</span><i class="on"></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><span class="cln">Master</span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div><p class="clc">Extreme follows the two groups of three. Easy and Medium click every eighth here, as each eighth is a beat.</p>
         <p>Choose the click level on the Play page. Easy clicks every stroke (none on rests). Medium clicks the beat and the half beat (1 and &amp;), or the last note of a triplet, so you fill in the notes between; it clicks on rests too. Hard clicks every beat, Extreme the strong beats (1 and 3, or the start of each group), and Master beat 1 of each bar. Solo only clicks the count-in, so you hold the tempo yourself. Each level is scored on its own, against the same grid.</p>
-        <p>Before you start, a tick under a note marks each click, so you can see what a level leaves out. Listen, under the levels, plays the count-in and the click twice through, with the cursor moving along the notes, so you can hear it before you play. Harder: silent bars, under the click level, lets the click drop out: after each bar with the click come up to 4 silent bars, each with a dashed line under its notes. Keep playing and counting, and the click comes back on beat 1. The cycle starts again with each exercise, so its first bar always clicks. The strokes in silent bars are still scored, and each stroke is worth more: a quarter more for each silent bar, up to double, so 1 silent bar is 1.25 times and 3 in a row are 1.75 times. A clear counts at its click level. The coaching says when your time moves in the silent bars, and how your first stroke lands when the click comes back. It is off on Solo, which has no click to leave out. When a run on Master clears the target with no silent bars, Next step under the result offers one: Try sets it for the next run, and Not now hides the offer until tomorrow.</p>
+        <p>Before you start, the notes show where the click plays: underlined notes get a click and plain ones do not, so you can see what a level leaves out. The key under the staff says so. Listen, under the levels, plays the count-in and the click twice through, with the cursor moving along the notes, so you can hear it before you play. Harder: silent bars, under the click level, lets the click drop out: after each bar with the click come up to 4 silent bars, their notes faded. Keep playing and counting, and the click comes back on beat 1. The cycle starts again with each exercise, so its first bar always clicks. The strokes in silent bars are still scored, and each stroke is worth more: a quarter more for each silent bar, up to double, so 1 silent bar is 1.25 times and 3 in a row are 1.75 times. A clear counts at its click level. The coaching says when your time moves in the silent bars, and how your first stroke lands when the click comes back. It is off on Solo, which has no click to leave out. When a run on Master clears the target with no silent bars, Next step under the result offers one: Try sets it for the next run, and Not now hides the offer until tomorrow.</p>
         <p> Set Scoring to Practice to try something without saving it: you still see the result, but nothing is added to your records. It is back on the next time you open the app. Use headphones, or the click is heard as strokes.</p>
         <button class="btn" type="button" data-try="single" data-text="RLRR LRLL RLRR LRLL">Try it</button>
       </div>
@@ -1618,7 +1620,8 @@ RLRR LRLL RLRR LRLL</pre>
       <p class="hint" id="rowEnd" hidden></p>
       <p class="hint" id="rowsMore" hidden></p>
       </div>
-      <p class="cap key"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other hand<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
+      <p class="cap key" id="ckKey"><span class="k ck">R</span> click · <span class="k nc">R</span> no click<span id="ckKeySb" hidden> · <span class="k sb">R</span> silent bar</span></p>
+      <p class="cap key" id="tmKey"><span class="k ok">R</span> on time · <span class="k early">R</span> early · <span class="k late">R</span> late · <span class="k miss">R</span> missed · <span class="k">&rarr;R</span> other hand<span id="mkKey" hidden> · <span class="k box">R</span> in the note shown</span></p>
       <div class="pads kb-only">
         <button class="pad" type="button" data-hand="L" aria-label="Left hand pad">L</button>
         <button class="pad" type="button" data-hand="R" aria-label="Right hand pad">R</button>
@@ -3576,7 +3579,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.202';                           /* shown beside the title */
+const VERSION='1.5.203';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4952,18 +4955,18 @@ function buildRow(plan,g,w){
   const dyn=[];for(let i=0;i<N;i++)dyn.push(plan.cells[sg.cell0+pa.p*N+i].dy||'');
   const st=buildStaff(sg,w,undefined,undefined,dyn),cards=st.cards;
   cards.forEach((c,i)=>{c._slot=plan.cells[sg.cell0+pa.p*N+i].slot;});
-  if(plan.ticks)tickRow(plan,sg,pa.p,cards);
+  if(plan.ticks)clickRow(plan,sg,pa.p,cards);
   el.append(lab,st.svg);
   return {el:el,lab:lab,cards:cards,sg:sg,si:pa.si,p:pa.p};
 }
-/* A tick under each note that gets a click, where in the note it falls, and a dashed line under the notes of a silent bar. */
-function tickRow(plan,sg,p,cards){
-  const NS='http://www.w3.org/2000/svg',bs=sg.beat*sg.gbB,ck=plan.clicks.filter(c=>c.t>=sg.t0-1e-6&&c.t<sg.end-1e-6);
-  const mk=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+/* Before a run, where the click plays: a note with a click (one inside a long note counts) is underlined (ck), and every note
+   of a silent bar is faded (sb). */
+function clickRow(plan,sg,p,cards){
+  const bs=sg.beat*sg.gbB,ck=plan.clicks.filter(c=>c.t>=sg.t0-1e-6&&c.t<sg.end-1e-6);
   cards.forEach((g,i)=>{
-    const c=plan.cells[sg.cell0+p*sg.N+i],x0=g._cx-g._w/2;
-    if(sg.gb&&gapSilent(sg.gb,gapBar(sg.t0,bs,c.t))){g.appendChild(mk('line',{class:'sil',x1:x0+2,x2:x0+g._w-2,y1:93,y2:93}));return;}
-    ck.forEach(k=>{if(k.t>=c.t-1e-6&&k.t<c.t+c.d-1e-6){const x=g._cx+(k.t-c.t)/c.d*g._w;   /* a click inside a long note sits where its time falls */g.appendChild(mk('rect',{class:'ck',x:x-1.5,y:89,width:3,height:9,rx:1.5}));}});
+    const c=plan.cells[sg.cell0+p*sg.N+i];
+    if(sg.gb&&gapSilent(sg.gb,gapBar(sg.t0,bs,c.t)))g.classList.add('sb');
+    else if(ck.some(k=>k.t>=c.t-1e-6&&k.t<c.t+c.d-1e-6))g.classList.add('ck');
   });
 }
 /* The row that will slide in next is built a moment after each shift, so building it never lands on the shift itself. */
@@ -6170,7 +6173,7 @@ function renderOffer(L,cleared){
   $('offerTx').textContent='The click plays bar 1, then drops out for bar 2. Keep counting; it comes back on beat 1. Silent bars score more: points \u00d7'+gapMult(OFFER_GB)+'.';
   const sg=view&&view.plan&&view.plan.segs[0],n=clamp(sg&&sg.gbB||4,1,12),fig=$('offerFig');
   fig.textContent='';
-  [['Click',''],['Silent',' sil']].forEach(([k,c])=>{
+  [['Click',''],['Silent',' sb']].forEach(([k,c])=>{
     const l=document.createElement('span');l.className='lbl';l.textContent=k;
     const b=document.createElement('span');b.className='bt'+c;
     for(let i=1;i<=n;i++){const x=document.createElement('span');x.textContent=String(i);if(!c&&i===1)x.className='ck';b.appendChild(x);}
@@ -8215,7 +8218,8 @@ function syncInfo(){
   $('bpmNum').textContent=S.bpm;$('bpmOpen').setAttribute('aria-label',S.bpm+' BPM, change the tempo');
   {const r=$('tmRange');r.value=S.bpm;r.setAttribute('aria-valuetext',S.bpm+' BPM');paintRange(r);}
   setPressed('clickSeg',S.click);
-  $('clickHint').textContent=(CLICK_HINT[S.click]||'')+(S.click==='none'?'.':'. A tick under a note marks each click.');
+  $('clickHint').textContent=(CLICK_HINT[S.click]||'')+(S.click==='none'?'.':'. Underlined notes get a click.');
+  $('ckKey').hidden=S.click==='none';$('ckKeySb').hidden=!gapNorm(barsOn());
   syncBars();
   syncDyCtl();
   {   /* what the closed drawer holds, so a setting that matters is never hidden */
@@ -8239,7 +8243,7 @@ function syncBars(){
   $('barsSum').textContent=solo?'Off on Solo':g?sil+(sil>1?' bars':' bar'):'Off';
   /* a pattern of 1.5.199 with more than one bar with the click is kept, and said */
   $('barsHint').textContent=solo?'Off on Solo: it has no click after the count-in.'
-    :g?(on>1?'The click plays '+gapTxt(g)+'. ':'')+'A dashed line under the notes marks a silent bar. Silent bars are still scored: points ×'+gapMult(g)+'.'
+    :g?(on>1?'The click plays '+gapTxt(g)+'. ':'')+'Faded notes are a silent bar. Silent bars are still scored: points ×'+gapMult(g)+'.'
     :'Add a silent bar with +. The exercise above shows where it goes.';
 }
 /* A segmented control's buttons carry their value in data-v; the one that matches is pressed. */
@@ -8793,7 +8797,7 @@ function wire(){
   window.addEventListener('resize',placeTempo);
   dismissable($('tempoModal'),closeTempo);
   $('score').addEventListener('change',e=>{scoreOn=e.target.value==='1';syncInfo();});
-  /* the ticks under the notes follow the click, before a run */
+  /* underlined, plain and faded notes follow the click, before a run */
   $('ckHear').addEventListener('click',()=>{if(hear)stopHear();else startHear();});
   $('offerTry').addEventListener('click',()=>takeOffer(true));
   $('offerLater').addEventListener('click',()=>takeOffer(false));
