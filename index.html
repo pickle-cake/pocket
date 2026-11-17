@@ -3402,7 +3402,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.191';                           /* shown beside the title */
+const VERSION='1.5.192';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -8690,6 +8690,18 @@ function wire(){
   $('updLater').addEventListener('click',()=>{updLater=true;showUpd();});
   setTimeout(checkUpdate,2000);
   window.addEventListener('focus',checkUpdate);setInterval(checkUpdate,1800000);
+  /* A one-line field selects its value when it gets focus, so typing replaces it. The click or tap that focused it would
+     put the caret back where it landed, so that first mouseup is cancelled and the selection made again after it.
+     Text areas keep the caret: their text is edited, not replaced. */
+  let selField=null;
+  const selectable=el=>el instanceof HTMLInputElement&&(el.type==='number'||el.type==='text')&&!el.readOnly&&!el.disabled;
+  document.addEventListener('focusin',e=>{
+    const el=e.target;if(!selectable(el))return;
+    selField=el;el.select();
+    setTimeout(()=>{if(document.activeElement===el&&selField===el)el.select();},0);
+  });
+  document.addEventListener('mouseup',e=>{if(selField&&e.target===selField){e.preventDefault();selField.select();}selField=null;});
+  document.addEventListener('focusout',()=>{selField=null;});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){micTest=false;if(run&&!run.ended)pauseRun();idleMic();}if(!document.hidden){checkUpdate();if(run&&!run.ended)lockScreen();}});
   /* The staff is laid out for its width. It is laid out again whenever that width changes: the window is resized, or the staff
      was hidden (at zero width, as under the welcome) and is shown. */
