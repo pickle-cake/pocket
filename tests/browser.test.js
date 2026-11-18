@@ -433,6 +433,21 @@ test('Change lists the four routines last opened or played at the top, without t
   assert.deepEqual(p.errors, []);
 });
 
+test('Choose has New routine: an empty routine opens in the editor, and Back returns to Play', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true }, null, () => {
+    if (!localStorage.getItem('stick-timing-trainer.records.v2')) localStorage.setItem('stick-timing-trainer.records.v2', JSON.stringify({ v: 1, names: {}, nu: 1, runs: [], lib: [{ id: 'n1', x: '8 RLRL RLRL', t: 1 }] }));
+  });
+  await p.evaluate(() => document.getElementById('pickModal').hidden || document.getElementById('pickClose').click());
+  await p.click('#playChange');
+  await p.click('#pickNew');
+  assert.equal(await p.isVisible('#pickModal'), false, 'the picker closes');
+  assert.equal(await p.isVisible('#pagePattern'), true, 'the editor opens');
+  assert.equal(await p.inputValue('#routineText'), '', 'with an empty routine');
+  await p.click('#edBack');
+  assert.equal(await p.isVisible('#pagePlay'), true, 'Back returns to Play');
+  assert.deepEqual(p.errors, []);
+});
+
 test('Device has no stick calibration, and an old saved one is dropped', async () => {
   const p = await open(null, null, () => {
     if (!localStorage.getItem('stick-timing-trainer.v1')) localStorage.setItem('stick-timing-trainer.v1', JSON.stringify({ settings: { seeded: true, noise: -50, latCal: true, handDet: true }, cal: { L: [[1, 2]], R: [[3, 4]] } }));

@@ -108,7 +108,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
 input[type=range]::-moz-range-track{height:4px;border-radius:var(--r-full);background:var(--line-strong)}
 input[type=range]::-moz-range-progress{height:4px;border-radius:var(--r-full);background:var(--fill)}
 input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radius:50%;background:var(--fill);box-shadow:0 0 0 2px var(--accent-ink)}
-input[type=range]:disabled{opacity:.4;cursor:not-allowed}
+input[type=range]:disabled,input[type=text]:disabled,input[type=number]:disabled,select:disabled{opacity:.4;cursor:not-allowed}   /* a disabled field looks it, not only its value */
 #pattern{font:600 var(--t-title) var(--font-data);letter-spacing:.08em}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}   /* fields side by side */
 /* Quick row: the three settings changed between runs (tempo, length, click), one tap each above Start. */
@@ -358,6 +358,7 @@ button.row:disabled{opacity:.4;cursor:not-allowed}
 .exercises>.row{padding:var(--s-2) var(--s-3)}   /* inside the bordered list box */
 #pickList .row{padding-inline:var(--s-3)}   /* every row as wide as the selected one, so the titles line up */
 .pickrec>.eyebrow{color:var(--ink);margin:0 0 var(--s-2)}   /* a section label: the recent routines, ahead of the groups */
+#pickNew{margin-bottom:var(--s-3)}   /* New routine stands apart from the list under it */
 .chkmsg{margin:0;padding:var(--s-3);border-left:3px solid var(--accent);font:600 var(--t-small) var(--font-body);color:var(--ink)}   /* a notice: flat, with an accent rail */ .chkmsg:empty{display:none}
 .rtruns{padding:0 var(--s-3);background:var(--surface);border-left:3px solid var(--accent)}   /* the runs of an open row sit on a band with an accent rail, so they read as part of it */
 .row>.rtruns{grid-column:1/-1;margin:var(--s-2) 0 calc(-1*var(--s-3))}
@@ -427,9 +428,11 @@ details.how[open]>summary::after{margin:4px 4px 0 0}
 .hear{display:flex;align-items:center;gap:var(--s-3)}
 .hear .btn{flex:none;margin-left:calc((24px - var(--hit))/2)}   /* the 24px speaker lines up with the key above it */
 body:not([data-state=idle]) #hearRow{display:none}   /* Listen is for before a run */
-#barsBox>summary span,#bOpts>summary span,#bRoutSum{margin-left:auto;font-weight:400;color:var(--muted)}   /* what is set, beside the chevron */
+#barsBox>summary span,#bOptsSum,#bRoutSum{margin-left:auto;font-weight:400;color:var(--muted)}   /* what is set, beside the chevron */
 #bOpts>.bset,#bRout>.bset{padding-bottom:var(--s-2)}
 #bRoutName{white-space:nowrap}
+#bRout:not([open]) #bRoutName,#bRout[open] #bRoutSum,#bOpts:not([open]) #bOptsName,#bOpts[open] #bOptsSum{display:none}   /* like More settings: closed shows what is set, open just the name */
+#bRout:not([open]) #bRoutSum,#bOpts:not([open]) #bOptsSum{margin-left:0;font-weight:inherit;color:inherit}
 #barsBox .sbody{gap:var(--s-3);padding-bottom:var(--s-3)}
 #barsBox .tempo{max-width:220px}
 .how dl{margin:0 0 var(--s-3);display:grid;gap:var(--s-1) 0}
@@ -623,7 +626,6 @@ body[data-mode="routine"] .single-only{display:none}
 .bset{display:grid;gap:12px}
 .bbtns{display:flex;gap:8px;flex:none}
 .bmeta{display:flex;align-items:center;gap:10px;min-height:48px}
-#editList .meta{display:none}
 .bnote{display:flex;align-items:flex-start;gap:10px}
 .bnote .btn{flex:none}
 .bfields{flex:1;min-width:0}
@@ -1069,7 +1071,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         </section>
         <!-- Options for the one exercise being edited, folded away under the keys. The summary says what is set. -->
         <details class="how buildonly b-routine" id="bOpts">
-          <summary>This exercise<span id="bOptsSum"></span></summary>
+          <summary><span id="bOptsName">This exercise</span><span id="bOptsSum"></span></summary>
           <div class="bset">
             <div class="fields">
               <div class="field"><label for="oLenU">Plays for</label><select id="oLenU"></select></div>
@@ -1182,7 +1184,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <h3>Quick start</h3>
       <ol>
         <li><b>Settings:</b> use headphones for the click, tap Show level and hit the pad. The level bar should cross the trigger line on every stroke.</li>
-        <li><b>Library:</b> press <b>New</b> to write a routine or <b>Import</b> to bring one in. One exercise plays on its own. Two or more make a routine, played in order.</li>
+        <li><b>Library:</b> press <b>New</b> to write a routine (or, on Play, <b>Choose</b> then <b>New routine</b>) or <b>Import</b> to bring one in. One exercise plays on its own. Two or more make a routine, played in order.</li>
         <li><b>Play:</b> set the tempo, click level and how long each exercise plays, then press Start. Hold − or + to keep going, or tap the tempo for steps of 10, a slider and the tempos you play most. After the count-in, play each stroke as the line reaches it (or, with the highway, as it reaches the line), and press Stop when you are done. Your result appears first, with <b>Again</b> and <b>Done</b>. The staff keeps its colours and numbers so you can see which strokes were off. Done brings the controls back.</li>
       </ol>
       <p>No microphone? Under Settings &rsaquo; Device, set Input to "Keyboard or pads" and press <b>F</b> for left, <b>J</b> for right. This is a test mode, and its timing is rougher than a pad with a microphone.</p>
@@ -1483,7 +1485,7 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="field"><label for="eachVal"><span class="routine-only">Each exercise</span><span class="single-only">Length</span></label>
           <div class="dur"><input type="number" id="eachVal" min="1" max="200" step="1" inputmode="decimal"><select id="eachUnit" aria-label="Measured in"><option value="min">min</option><option value="pass">passes</option></select></div></div>
       </div>
-      <p class="hint" id="eachNote" hidden></p>
+      <p class="notice" id="eachNote" hidden></p>
       <div class="field"><span class="lbl" id="clickLbl">Click</span>
         <div class="seg wide" id="clickSeg" role="group" aria-labelledby="clickLbl" aria-describedby="clickHint">
           <button type="button" id="ckStrokes" data-v="strokes" aria-pressed="false">Easy</button>
@@ -1746,6 +1748,7 @@ RLRR LRLL RLRR LRLL</pre>
 <div class="modal" id="pickModal" role="dialog" aria-modal="true" aria-label="Choose a routine" hidden>
   <div class="card mbox scroll">
     <div class="mhead"><h3>Choose a routine</h3><button class="btn" id="pickClose" type="button">Close</button></div>
+    <div class="btns"><button class="btn" id="pickNew" type="button">New routine</button></div>
     <div id="pickList"></div>
   </div>
 </div>
@@ -3581,7 +3584,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.213';                           /* shown beside the title */
+const VERSION='1.5.219';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -7459,9 +7462,11 @@ function fillExerciseList(box,onPick,menu){
     const q=document.createElement('span');q.className='rt seq';q.textContent=showPattern(b.notes,b.groupStart,b.subs,b.defSub,b.sig,b.src);
     const m=document.createElement('span');m.className='rm meta';
     m.textContent=b.passes+(b.passes===1?' pass':' passes')+' · '+fmtTime(b.secs)+(b.bpm!==S.bpm?' · @'+b.bpm:'');
-    const ra=document.createElement('span');ra.className='ra';ra.appendChild(m);
-    if(menu)ra.appendChild(dotsBtn(()=>{onPick(b.idx);openRowMenu(b.idx);}));
-    row.append(n,q,ra);
+    const ra=document.createElement('span');ra.className='ra';
+    /* The Editor's list has its menu in the trailing area, so the meta goes on a second line under the sticking. It shows an
+       exercise's own x, time or @ without opening it. */
+    if(menu){ra.appendChild(dotsBtn(()=>{onPick(b.idx);openRowMenu(b.idx);}));row.append(n,q,m,ra);}
+    else{ra.appendChild(m);row.append(n,q,ra);}
     box.appendChild(row);
   });
   box.hidden=!exercises.length;
@@ -7491,8 +7496,8 @@ function buildEditList(){
     const n=document.createElement('span');n.className='rn';n.textContent=ex.filter(x=>x<i).length+1;
     const q=document.createElement('span');q.className='rt seq';q.textContent=l.trim()||'New: tap the keys below';q.style.color='var(--muted)';
     const m=document.createElement('span');m.className='rm meta';m.textContent=l.trim()?'check':'new';
-    const ra=document.createElement('span');ra.className='ra';ra.append(m,dotsBtn(()=>{if(bLine!==i)pick();openRowMenu('l'+i);}));
-    row.append(n,q,ra);
+    const ra=document.createElement('span');ra.className='ra';ra.append(dotsBtn(()=>{if(bLine!==i)pick();openRowMenu('l'+i);}));
+    row.append(n,q,m,ra);
     const after=[...box.querySelectorAll('.erow')].find(r=>{const e=r.dataset.line!=null?{line:+r.dataset.line}:routineParsed.exercises[(+r.dataset.idx)-1];return e&&e.line>i;});
     box.insertBefore(row,after||null);box.hidden=false;
   });
@@ -7828,8 +7833,9 @@ function openPick(){
   const byName=S.libSort==='name';
   const list=recs.lib.slice().sort(byName?(a,b)=>nameOrder(entryName(a),entryName(b)):(a,b)=>b.t-a.t);
   if(!list.length){
-    box.appendChild(emptyState('book','No saved routines yet','Routines you write or import show up here.','Open the Library',()=>{closePick();showTab('library');}));
+    box.appendChild(emptyState('book','No saved routines yet','Routines you write or import show up here.','Write a routine',newFromPick));
   }
+  $('pickNew').parentNode.hidden=!list.length;   /* the empty state has its own button for it */
   const pickRow=(e,label)=>{
     const b=document.createElement('button');b.type='button';b.className='row'+(e.id===S.libId?' cur':'');
     const n=exerciseCount(e.x);
@@ -7860,6 +7866,8 @@ function openPick(){
   $('pickModal').hidden=false;$('pickClose').focus();
 }
 const closePick=()=>{$('pickModal').hidden=true;$('playChange').focus();};
+/* New from the picker: an empty routine in the editor, and Back returns to Play, where it plays. */
+function newFromPick(){closePick();guard(()=>{bLine=0;setRoutineText('');openEditor('play');});}
 function renderLibraryPage(){
   const box=$('libPage');if(!box)return;
   box.textContent='';
@@ -8214,7 +8222,7 @@ function syncInfo(){
     syncMaxScore();
     const en=$('eachNote');
     en.hidden=!routineParsed.each;
-    if(routineParsed.each)en.textContent='This routine sets its own time per exercise (each:), so the two settings above are not used. Exercises with their own x, time or @ still win.';
+    if(routineParsed.each)en.textContent='This routine sets the length of each exercise (each:), so Each exercise is not used. An exercise with its own x or time keeps that, and Tempo applies to every exercise without its own @.';
     $('eachVal').disabled=!!routineParsed.each||(run&&!run.ended);
     $('eachUnit').disabled=!!routineParsed.each||(run&&!run.ended);
   }
@@ -8229,7 +8237,7 @@ function syncInfo(){
   $('bpmNum').textContent=S.bpm;$('bpmOpen').setAttribute('aria-label',S.bpm+' BPM, change the tempo');
   {const r=$('tmRange');r.value=S.bpm;r.setAttribute('aria-valuetext',S.bpm+' BPM');paintRange(r);}
   setPressed('clickSeg',S.click);
-  $('clickHint').textContent=(CLICK_HINT[S.click]||'')+(S.click==='none'?'.':'. Underlined notes get a click.');
+  $('clickHint').textContent=(CLICK_HINT[S.click]||'')+(S.click==='none'?'.':'. Underlined notes get a click.')+(S.click==='guide'&&guideIsEasy(exercises)?' With '+(exercises.length>1?'these exercises':'this exercise')+' that is every stroke, the same as Easy.':'');
   $('ckKey').hidden=$('hearRow').hidden=S.click==='none';$('ckKeySb').hidden=!gapNorm(barsOn());
   syncBars();
   syncDyCtl();
@@ -8240,6 +8248,13 @@ function syncInfo(){
     if(S.mode==='routine')parts.push(S.gap?'Count-in between':'Straight on');
     $('setSum').textContent=$('setBox').open?'More settings':parts.join(' · ');   /* open: just the name; closed: what is inside */
   }
+}
+/* Medium clicks the beat and the half beat. With two strokes a beat (eighth notes) that is every stroke, so it is the same as Easy,
+   and the hint says so. One pass of each exercise, without silent bars, is enough to compare the two. */
+function guideIsEasy(exercises){
+  if(!exercises.length)return false;
+  const ex=exercises.map(b=>withPasses(b,1)),ts=m=>buildPlan(ex,{gapBeats:S.gap,clickMode:m}).clicks.map(c=>Math.round(c.t*1e6)).join();
+  return ts('guide')===ts('strokes');
 }
 const CLICK_HINT={strokes:'A click on every stroke',guide:'A click on the beat and the half beat',beat:'A click on the beat',half:'A click on the strong beats',bar:'A click on 1 of each bar',none:'Count-in only'};
 /* Silent bars: −/+ for how many bars the click leaves out after each bar with it. Bar 1 always clicks, so each exercise starts
@@ -8556,7 +8571,7 @@ function renderBuilder(){
     bFillSelect($('oTime'),B_TIMES,v=>v||'Same as routine',f.t);
     fillGroup($('oGroup'),f.t,f.g);
     const lenTxt=l=>l.u==='x'?l.v+(l.v===1?' pass':' passes'):l.v+(l.u==='m'?' min':' s');
-    $('bOptsSum').textContent=[f.len?lenTxt(f.len):'',f.bpm?f.bpm+' BPM':'',f.t?f.t+(f.g?' ('+f.g+')':''):''].filter(Boolean).join(' · ')||'Same as routine';
+    $('bOptsSum').textContent=[f.len?lenTxt(f.len):'',f.bpm?f.bpm+' BPM':'',f.t?f.t+(f.g?' ('+f.g+')':''):''].filter(Boolean).join(' · ')||'This exercise: same as routine';   /* closed, the summary stands alone, so it says whose */
     $('bRoutSum').textContent=[el?lenTxt(el)+' each':'',tb?tb+(tm&&tm[2]?' ('+tm[2].replace(/\s+/g,'')+')':''):'No signature',st?CODE_NAME[st]:'Sixteenth'].filter(Boolean).join(' · ');
   }
   /* strokes, staff and status for the exercise being edited */
@@ -8883,6 +8898,7 @@ function wire(){
   $('lsName').addEventListener('click',()=>{S.libSort='name';save();renderLibraryPage();});
   $('edBack').addEventListener('click',()=>{showTab(editFrom==='play'?'play':'library');if(editFrom==='import')openOpen();window.scrollTo(0,0);});
   $('playChange').addEventListener('click',openPick);
+  $('pickNew').addEventListener('click',newFromPick);
   $('pickClose').addEventListener('click',closePick);
   dismissable($('pickModal'),closePick,{backdrop:false});
   $('cfSave').addEventListener('click',()=>{if(saveToLibrary())closeConfirm(true);else $('cfText').textContent=$('saveMsg').textContent;});
