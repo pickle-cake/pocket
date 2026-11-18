@@ -236,6 +236,7 @@ body[data-run="1"] .notice{display:none}
 .prow.change .rl{color:var(--accent)}
 .prow .rl{font:600 var(--t-eyebrow) var(--font-body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);min-height:28px;padding:5px 9px;border-radius:8px;display:flex;align-items:center;transition:color var(--dur-2) var(--ease)}
 .prow .rl.newex{color:var(--accent)}
+.prow .rl .bpm{font-weight:700;color:var(--ink)}   /* the tempo stands out from the muted label, in every row */
 .staff{display:block;width:100%;height:auto;overflow:visible}
 .staff .lvax,.staff .lvck{stroke:var(--line);stroke-width:1}
 .staff .lvth{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3}
@@ -3584,7 +3585,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.220';                           /* shown beside the title */
+const VERSION='1.5.222';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4997,9 +4998,15 @@ function makeRow(plan,g){
 }
 let ROWS=3;                                   /* how many passes are on screen */
 let rowsShown=ROWS,labelsOn=true,labelMode='routine';
+/* A row label that starts with its tempo, picked out so it is easy to find. One inline wrapper, because .rl is a flex box and would drop the spaces around the tempo. */
+function rowLabel(lab,bpm,rest){
+  const w=document.createElement('span'),b=document.createElement('b');
+  b.className='bpm';b.textContent=bpm+' BPM';
+  w.append(b,rest?' · '+rest:'');lab.replaceChildren(w);
+}
 const rowKey=o=>o.key||(o.key=patKey(o.sg.notes,o.sg.groupStart,o.sg.subs,o.sg.defSub,o.sg.sig));
 function roleRows(){
-  const multi=labelsOn&&S.mode==='routine'&&labelMode==='routine',latL=labelMode==='lat',prevL=labelMode==='preview';
+  const multi=labelsOn&&S.mode==='routine'&&labelMode==='routine',one=labelsOn&&S.mode!=='routine'&&labelMode==='routine',latL=labelMode==='lat',prevL=labelMode==='preview';
   rowMap.forEach((o,g)=>{
     const d=g-rowTop;
     o.el.classList.remove('r1','r2','r3','nxt');
@@ -5009,16 +5016,15 @@ function roleRows(){
     o.lab.classList.toggle('newex',d>0&&!same&&!prevL);
     /* An upcoming row that is a different pattern or tempo from the row above it is lifted out of the dimmed rows. */
     o.el.classList.toggle('change',multi&&d>0&&!same&&!!prev&&(rowKey(prev)!==rowKey(o)||prev.sg.bpm!==o.sg.bpm));
-    /* every row names its tempo, so a routine that changes tempo between exercises says so on the staff */
-    const tail='pass '+(o.p+1)+' of '+o.sg.passes+' · '+o.sg.bpm+' BPM',sgs=o.sg.sig?' · '+sigText(o.sg.sig):'';
-    let t='';
-    if(prevL)t=(d===0?'Start · exercise ':'Exercise ')+o.sg.idx+' of '+routineParsed.exercises.length+sgs+' · '+o.sg.bpm+' BPM · '+exerciseGuide(o.sg);
-    else if(latL){if(d===0)t='Round '+(o.p+1);}
-    else if(multi){
-      t='Exercise '+o.sg.idx+' of '+routineParsed.exercises.length+sgs+' · '+tail;   /* every row is described the same way as the current one */
-    }
-    o.lab.textContent=t;
-    o.lab.hidden=!(multi||latL||prevL);
+    /* every row starts with its tempo, so a routine that changes tempo between exercises says so on the staff.
+       A single exercise keeps one tempo, so only the row being played names it; the others keep an empty label, so every row is the same height. */
+    const sgs=o.sg.sig?' · '+sigText(o.sg.sig):'';
+    if(prevL)rowLabel(o.lab,o.sg.bpm,(d===0?'Start · exercise ':'Exercise ')+o.sg.idx+' of '+routineParsed.exercises.length+sgs+' · '+exerciseGuide(o.sg));
+    else if(latL)o.lab.textContent=d===0?'Round '+(o.p+1):'';
+    else if(multi)rowLabel(o.lab,o.sg.bpm,'Exercise '+o.sg.idx+' of '+routineParsed.exercises.length+sgs+' · pass '+(o.p+1)+' of '+o.sg.passes);   /* every row is described the same way as the current one */
+    else if(one&&d===0)rowLabel(o.lab,o.sg.bpm,'');
+    else o.lab.textContent='';
+    o.lab.hidden=!(multi||one||latL||prevL);
   });
 }
 function finishSlide(){
@@ -5540,7 +5546,7 @@ function staffSection(page,r){
     const W=host.clientWidth||320,tp=Math.min(totalPasses(rm.plan),REVIEW_ROWS);
     for(let g=0;g<tp;g++){
       const o=buildRow(rm.plan,g,W);
-      o.lab.textContent=(rm.plan.segs.length>1?'Exercise '+o.sg.idx+' \u00b7 ':'')+'pass '+(o.p+1)+' of '+o.sg.passes+' · '+o.sg.bpm+' BPM';
+      rowLabel(o.lab,o.sg.bpm,(rm.plan.segs.length>1?'Exercise '+o.sg.idx+' \u00b7 ':'')+'pass '+(o.p+1)+' of '+o.sg.passes);
       o.cards.forEach(el=>{if(el._slot>=0)paintCard(el,rm.res.get(el._slot),true,rm.tol,rm.bzn.get(el._slot));});
       tr.appendChild(o.el);
     }
