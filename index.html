@@ -108,7 +108,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
 input[type=range]::-moz-range-track{height:4px;border-radius:var(--r-full);background:var(--line-strong)}
 input[type=range]::-moz-range-progress{height:4px;border-radius:var(--r-full);background:var(--fill)}
 input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radius:50%;background:var(--fill);box-shadow:0 0 0 2px var(--accent-ink)}
-input[type=range]:disabled{opacity:.4;cursor:not-allowed}
+input[type=range]:disabled,input[type=text]:disabled,input[type=number]:disabled,select:disabled{opacity:.4;cursor:not-allowed}   /* a disabled field looks it, not only its value */
 #pattern{font:600 var(--t-title) var(--font-data);letter-spacing:.08em}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}   /* fields side by side */
 /* Quick row: the three settings changed between runs (tempo, length, click), one tap each above Start. */
@@ -1483,7 +1483,7 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="field"><label for="eachVal"><span class="routine-only">Each exercise</span><span class="single-only">Length</span></label>
           <div class="dur"><input type="number" id="eachVal" min="1" max="200" step="1" inputmode="decimal"><select id="eachUnit" aria-label="Measured in"><option value="min">min</option><option value="pass">passes</option></select></div></div>
       </div>
-      <p class="hint" id="eachNote" hidden></p>
+      <p class="notice" id="eachNote" hidden></p>
       <div class="field"><span class="lbl" id="clickLbl">Click</span>
         <div class="seg wide" id="clickSeg" role="group" aria-labelledby="clickLbl" aria-describedby="clickHint">
           <button type="button" id="ckStrokes" data-v="strokes" aria-pressed="false">Easy</button>
@@ -3581,7 +3581,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.213';                           /* shown beside the title */
+const VERSION='1.5.214';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -8214,7 +8214,7 @@ function syncInfo(){
     syncMaxScore();
     const en=$('eachNote');
     en.hidden=!routineParsed.each;
-    if(routineParsed.each)en.textContent='This routine sets its own time per exercise (each:), so the two settings above are not used. Exercises with their own x, time or @ still win.';
+    if(routineParsed.each)en.textContent='This routine sets the length of each exercise (each:), so Each exercise is not used. An exercise with its own x or time keeps that, and Tempo applies to every exercise without its own @.';
     $('eachVal').disabled=!!routineParsed.each||(run&&!run.ended);
     $('eachUnit').disabled=!!routineParsed.each||(run&&!run.ended);
   }
