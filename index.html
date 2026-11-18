@@ -623,7 +623,6 @@ body[data-mode="routine"] .single-only{display:none}
 .bset{display:grid;gap:12px}
 .bbtns{display:flex;gap:8px;flex:none}
 .bmeta{display:flex;align-items:center;gap:10px;min-height:48px}
-#editList .meta{display:none}
 .bnote{display:flex;align-items:flex-start;gap:10px}
 .bnote .btn{flex:none}
 .bfields{flex:1;min-width:0}
@@ -3581,7 +3580,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.215';                           /* shown beside the title */
+const VERSION='1.5.216';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -7459,9 +7458,11 @@ function fillExerciseList(box,onPick,menu){
     const q=document.createElement('span');q.className='rt seq';q.textContent=showPattern(b.notes,b.groupStart,b.subs,b.defSub,b.sig,b.src);
     const m=document.createElement('span');m.className='rm meta';
     m.textContent=b.passes+(b.passes===1?' pass':' passes')+' · '+fmtTime(b.secs)+(b.bpm!==S.bpm?' · @'+b.bpm:'');
-    const ra=document.createElement('span');ra.className='ra';ra.appendChild(m);
-    if(menu)ra.appendChild(dotsBtn(()=>{onPick(b.idx);openRowMenu(b.idx);}));
-    row.append(n,q,ra);
+    const ra=document.createElement('span');ra.className='ra';
+    /* The Editor's list has its menu in the trailing area, so the meta goes on a second line under the sticking. It shows an
+       exercise's own x, time or @ without opening it. */
+    if(menu){ra.appendChild(dotsBtn(()=>{onPick(b.idx);openRowMenu(b.idx);}));row.append(n,q,m,ra);}
+    else{ra.appendChild(m);row.append(n,q,ra);}
     box.appendChild(row);
   });
   box.hidden=!exercises.length;
@@ -7491,8 +7492,8 @@ function buildEditList(){
     const n=document.createElement('span');n.className='rn';n.textContent=ex.filter(x=>x<i).length+1;
     const q=document.createElement('span');q.className='rt seq';q.textContent=l.trim()||'New: tap the keys below';q.style.color='var(--muted)';
     const m=document.createElement('span');m.className='rm meta';m.textContent=l.trim()?'check':'new';
-    const ra=document.createElement('span');ra.className='ra';ra.append(m,dotsBtn(()=>{if(bLine!==i)pick();openRowMenu('l'+i);}));
-    row.append(n,q,ra);
+    const ra=document.createElement('span');ra.className='ra';ra.append(dotsBtn(()=>{if(bLine!==i)pick();openRowMenu('l'+i);}));
+    row.append(n,q,m,ra);
     const after=[...box.querySelectorAll('.erow')].find(r=>{const e=r.dataset.line!=null?{line:+r.dataset.line}:routineParsed.exercises[(+r.dataset.idx)-1];return e&&e.line>i;});
     box.insertBefore(row,after||null);box.hidden=false;
   });
