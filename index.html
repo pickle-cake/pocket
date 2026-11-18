@@ -84,7 +84,7 @@ header .headbtns{grid-area:btns} header .sub{grid-area:sub} header .tabs{grid-ar
 
 .transport{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
 .transport #startBtn{width:100%}
-#playSummary{text-align:right;margin:0}
+#playSummary,#lastNote{text-align:right;margin:0;text-wrap:balance}
 #playSummary:empty{display:none}
 .status{font:400 13px/1.4 var(--font-data);color:var(--muted);margin:0}
 .status:empty{display:none}
@@ -381,7 +381,7 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tabs button{font:700 var(--t-nav) var(--font-display);letter-spacing:.06em;text-transform:uppercase;border:0;background:transparent;color:var(--muted);min-height:var(--hit);padding:0 2px;border-radius:var(--r-md);cursor:pointer}
 .tabs button[aria-selected=true]{background:var(--fill);color:var(--accent-ink)}
 .tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
-body[data-run="1"] .sub,body[data-run="1"] #playSummary{display:none}
+body[data-run="1"] .sub,body[data-run="1"] #playSummary,body[data-run="1"] #lastNote{display:none}
 :root:not([data-layout=desktop]) body[data-run="1"] .cfg{display:none}
 /* Desktop keeps the settings in view while playing, but dimmed and out of reach. */
 :root[data-layout=desktop] body[data-run="1"] .panel.cfg{opacity:.45;pointer-events:none;user-select:none}
@@ -744,7 +744,7 @@ body[data-input="kb"] #micPill{display:none}
 #advBar{display:none;grid-column:1/-1;gap:8px}
 #advBar .advmain{margin-top:0}
 :root[data-layout=desktop] body[data-review="1"] #advBar{display:grid}
-:root[data-layout=desktop] body[data-review="1"] #startBtn,:root[data-layout=desktop] body[data-review="1"] #playSummary{display:none}
+:root[data-layout=desktop] body[data-review="1"] #startBtn,:root[data-layout=desktop] body[data-review="1"] #playSummary,:root[data-layout=desktop] body[data-review="1"] #lastNote{display:none}
 .exercises.lexs{border:0;border-radius:0;background:none}
 /* An open row is lifted with a lighter background that reaches a little past the text on both sides. */
 .setbox{border:0;border-radius:0;background:none}
@@ -1462,6 +1462,7 @@ RLRR LRLL RLRR LRLL</pre>
     <div class="transport">
       <button class="btn primary" id="startBtn" type="button" aria-describedby="playSummary">Start</button>
       <p class="hint cfg" id="playSummary"></p>
+      <p class="hint cfg" id="lastNote" hidden></p>   <!-- shown whenever there is something to play, even with no saved run, so the settings below do not jump as the click level changes -->
       <div class="btns" id="runBtns" hidden>
         <button class="btn" id="stopBtn" type="button">Stop</button>
         <button class="btn link" id="restartBtn" type="button">Restart</button>
@@ -1505,7 +1506,6 @@ RLRR LRLL RLRR LRLL</pre>
             <p class="hint" id="barsHint"></p></div>
         </div>
       </details>
-      <p class="hint" id="lastNote" hidden></p>   <!-- under the click: it changes with the level, so the level buttons stay put -->
     </section>
     <details id="setBox" class="setbox">
       <summary id="setSum"></summary>
@@ -3580,7 +3580,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.205';                           /* shown beside the title */
+const VERSION='1.5.206';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -8272,8 +8272,10 @@ function syncLastNote(){
       ok=!!lr&&lr.exercises.length>=lr.ne&&lr.exercises.every(b=>b.due>0&&b.within/b.due>=TARGET);
     }
   }
-  el.hidden=!(e&&e.bpm&&!isNaN(pct));
-  if(!el.hidden){const t=nextText({cleared:ok,bpm:e.bpm,routine:ex.length>1});el.textContent='Last time: '+onPct(pct)+' on time at '+e.bpm+' BPM. '+t[0].toUpperCase()+t.slice(1);}
+  el.hidden=!ex.length||!!(run&&!run.ended)||!!lastRun;
+  if(el.hidden)return;
+  if(!(e&&e.bpm&&!isNaN(pct))){el.textContent='No saved run with these settings yet.';return;}
+  {const t=nextText({cleared:ok,bpm:e.bpm,routine:ex.length>1});el.textContent='Last time: '+onPct(pct)+' on time at '+e.bpm+' BPM. '+t[0].toUpperCase()+t.slice(1);}
 }
 function routineGuide(){
   const e=guide().rt.get(statKey(routineKeyOf(allExercises().map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig))),S.click,dynCode()));

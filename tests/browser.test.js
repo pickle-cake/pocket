@@ -1213,6 +1213,13 @@ audioTest('scores and rewards start off, and with them off a run is saved and cl
 });
 
 
+test('with no saved run, the line under Start says so, so the settings below it do not move', async () => {
+  const p = await open({ routineText: 'RLRL RRLL', click: 'beat' });
+  assert.equal(await p.getAttribute('#lastNote', 'hidden'), null);
+  assert.equal(await p.textContent('#lastNote'), 'No saved run with these settings yet.');
+  assert.equal(await p.evaluate(() => document.getElementById('lastNote').previousElementSibling.id), 'playSummary');
+});
+
 audioTest('after a run a note says what to play next time, and Play says it again with the last result', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
   await press(p, /^Start/);
