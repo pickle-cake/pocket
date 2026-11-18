@@ -427,7 +427,9 @@ details.how[open]>summary::after{margin:4px 4px 0 0}
 .hear{display:flex;align-items:center;gap:var(--s-3)}
 .hear .btn{flex:none;margin-left:calc((24px - var(--hit))/2)}   /* the 24px speaker lines up with the key above it */
 body:not([data-state=idle]) #hearRow{display:none}   /* Listen is for before a run */
-#barsBox>summary span{margin-left:auto;font-weight:400;color:var(--muted)}   /* what is set, beside the chevron */
+#barsBox>summary span,#bOpts>summary span,#bRoutSum{margin-left:auto;font-weight:400;color:var(--muted)}   /* what is set, beside the chevron */
+#bOpts>.bset,#bRout>.bset{padding-bottom:var(--s-2)}
+#bRoutName{white-space:nowrap}
 #barsBox .sbody{gap:var(--s-3);padding-bottom:var(--s-3)}
 #barsBox .tempo{max-width:220px}
 .how dl{margin:0 0 var(--s-3);display:grid;gap:var(--s-1) 0}
@@ -605,7 +607,7 @@ body[data-mode="routine"] .single-only{display:none}
 .lnk input{min-width:0}.lnkurl{word-break:break-all;color:var(--muted);font-size:13px}.lnk .btns{margin:0}
 .exercises{max-height:288px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
 .erow{cursor:pointer}   /* an editor or Play list row: a .row.num that picks an exercise */
-#editList{height:184px;max-height:none}
+#editList{max-height:264px}   /* fits its rows; about five show before it scrolls */
 .patrow{display:flex;gap:12px;align-items:center;justify-content:space-between}
 .patrow .btn{flex:none}
 .patrow .hint{margin:0;min-width:0}
@@ -619,8 +621,6 @@ body[data-mode="routine"] .single-only{display:none}
 .bmsg .err{margin:0}
 .bhdr{display:grid;gap:12px}
 .bset{display:grid;gap:12px}
-.btn.add{justify-self:start;margin-top:8px}
-.b-single .btn.add{margin-top:0}
 .bbtns{display:flex;gap:8px;flex:none}
 .bmeta{display:flex;align-items:center;gap:10px;min-height:48px}
 #editList .meta{display:none}
@@ -814,7 +814,7 @@ body:not([data-state=idle]) #ckKey,body[data-state=idle] #tmKey{display:none}   
 .menu{position:fixed;z-index:60;min-width:170px;padding:var(--s-1);box-shadow:var(--shadow-pop);display:grid}
 .menu button,#helpNav button{border:0;background:none;color:var(--ink);font:600 var(--t-small) var(--font-body);text-align:left;padding:0 var(--s-3);min-height:var(--hit);border-radius:var(--r-md);cursor:pointer}
 .menu button:hover,.menu button:focus-visible{background:var(--bg)}
-.menu button:disabled{opacity:.4;cursor:not-allowed;background:none}
+.menu button:disabled{opacity:.4;background:none;pointer-events:none}   /* a tap on it lands on the menu, which closes */
 .menu button.danger,.btn.danger{color:var(--danger)}
 button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--danger);color:var(--on-danger);border:1px solid var(--danger);padding-inline:var(--s-3)}   /* the one armed look, on every kind of button */
 </style>
@@ -1000,55 +1000,41 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
           </div>
           <p class="hint" id="saveMsg" aria-live="polite"></p>
         </section>
-        <section class="panel buildonly" aria-label="Defaults">
-          <div class="bset" id="bSet">
-            <div class="field"><label for="bTitle">Title</label><input type="text" id="bTitle" maxlength="80" autocomplete="off" autocorrect="off" data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other" placeholder="Name this routine"></div>
-            <div class="fields b-routine">
-              <div class="field"><label for="bEachU">Each exercise plays for</label><select id="bEachU"></select></div>
-              <div class="field"><label for="bEachV">Amount</label><input type="number" id="bEachV" min="1" max="999" step="any" inputmode="decimal"></div>
-            </div>
-            <div class="fields b-routine">
-              <div class="field"><label for="bTime">Time</label><select id="bTime"></select></div>
-              <div class="field"><label for="bGroup">Grouping</label><select id="bGroup"></select></div>
-              <div class="field"><label for="bStrokes">Default note</label><select id="bStrokes"></select></div>
-            </div>
-            <div class="fields b-single">
-              <div class="field"><label for="bTime1">Time</label><select id="bTime1"></select></div>
-              <div class="field"><label for="bGroup1">Grouping</label><select id="bGroup1"></select></div>
-              <div class="field"><label for="subdiv">Default note</label><select id="subdiv"></select></div>
-            </div>
-          </div>
-        </section>
+        <!-- Title and the routine-wide settings (folded), then the exercises, then (in the next panel) the keys that edit the one picked: the list and the keys stay together. -->
         <section class="panel buildonly" aria-label="Exercises to edit">
-          <div class="b-routine bhdr buildonly">
+          <div class="field"><label for="bTitle">Title</label><input type="text" id="bTitle" maxlength="80" autocomplete="off" autocorrect="off" data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other" placeholder="Name this routine"></div>
+          <details class="how" id="bRout">
+            <summary><span id="bRoutName">Settings</span><span id="bRoutSum"></span></summary>
+            <div class="bset" id="bSet">
+              <div class="fields b-routine">
+                <div class="field"><label for="bEachU">Each exercise plays for</label><select id="bEachU"></select></div>
+                <div class="field"><label for="bEachV">Amount</label><input type="number" id="bEachV" min="1" max="999" step="any" inputmode="decimal"></div>
+              </div>
+              <div class="fields b-routine">
+                <div class="field"><label for="bTime">Time</label><select id="bTime"></select></div>
+                <div class="field"><label for="bGroup">Grouping</label><select id="bGroup"></select></div>
+                <div class="field"><label for="bStrokes">Default note</label><select id="bStrokes"></select></div>
+              </div>
+              <div class="fields b-single">
+                <div class="field"><label for="bTime1">Time</label><select id="bTime1"></select></div>
+                <div class="field"><label for="bGroup1">Grouping</label><select id="bGroup1"></select></div>
+                <div class="field"><label for="subdiv">Default note</label><select id="subdiv"></select></div>
+              </div>
+            </div>
+          </details>
+          <div class="bhdr">
             <div class="field"><label>Exercises</label>
               <div class="exercises" id="editList" role="listbox" aria-label="Exercises in this routine. Tap one to edit it."></div>
-              <button class="btn link add" id="bAddEx" type="button">+ Add exercise</button>
             </div>
+            <div class="btns"><button class="btn" id="bAddEx" type="button">+ New exercise</button><button class="btn" id="bDup" type="button">Duplicate</button></div>
             <div class="card menu" id="exMenu" role="menu" hidden>
               <button id="bAddAbove" type="button" role="menuitem">Insert above</button>
               <button id="bAddBelow" type="button" role="menuitem">Insert below</button>
-              <button id="bDup" type="button" role="menuitem">Clone</button>
               <button id="bUp" type="button" role="menuitem">Move up</button>
               <button id="bDown" type="button" role="menuitem">Move down</button>
               <button id="bTop" type="button" role="menuitem">Move to top</button>
               <button id="bBottom" type="button" role="menuitem">Move to bottom</button>
               <button class="danger" id="bDel" type="button" role="menuitem">Delete</button>
-            </div>
-          </div>
-          <div class="b-single"><button class="btn link add" id="bAddEx1" type="button">+ Add exercise</button> <span class="hint">A second exercise makes this a routine.</span></div>
-        </section>
-        <section class="panel buildonly b-routine" aria-label="This exercise">
-          <h3>This exercise</h3>
-          <div class="bset">
-            <div class="fields">
-              <div class="field"><label for="oLenU">Plays for</label><select id="oLenU"></select></div>
-              <div class="field"><label for="oLenV">Amount</label><input type="number" id="oLenV" min="1" max="999" step="any" inputmode="decimal"></div>
-              <div class="field"><label for="oBpm">Tempo (BPM)</label><input type="number" id="oBpm" min="40" max="220" inputmode="numeric" placeholder="Same as Play"></div>
-            </div>
-            <div class="fields">
-              <div class="field"><label for="oTime">Time</label><select id="oTime"></select></div>
-              <div class="field"><label for="oGroup">Grouping</label><select id="oGroup"></select></div>
             </div>
           </div>
         </section>
@@ -1081,6 +1067,21 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
           </div>
         </div>
         </section>
+        <!-- Options for the one exercise being edited, folded away under the keys. The summary says what is set. -->
+        <details class="how buildonly b-routine" id="bOpts">
+          <summary>This exercise<span id="bOptsSum"></span></summary>
+          <div class="bset">
+            <div class="fields">
+              <div class="field"><label for="oLenU">Plays for</label><select id="oLenU"></select></div>
+              <div class="field"><label for="oLenV">Amount</label><input type="number" id="oLenV" min="1" max="999" step="any" inputmode="decimal"></div>
+              <div class="field"><label for="oBpm">Tempo (BPM)</label><input type="number" id="oBpm" min="40" max="220" inputmode="numeric" placeholder="Same as Play"></div>
+            </div>
+            <div class="fields">
+              <div class="field"><label for="oTime">Time</label><select id="oTime"></select></div>
+              <div class="field"><label for="oGroup">Grouping</label><select id="oGroup"></select></div>
+            </div>
+          </div>
+        </details>
         <section class="panel" aria-label="Notation help">
           <h3>Notation help</h3>
         <div class="nh">
@@ -3580,7 +3581,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.208';                           /* shown beside the title */
+const VERSION='1.5.213';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4583,8 +4584,9 @@ function feedbackText(){
   return (msg||'(no message)')+($('fbDev').checked?'\n\n-- Device and timing details --\n'+feedbackDetails():'');
 }
 function syncFeedback(){$('fbShow').hidden=!$('fbDev').checked;$('fbDet').textContent=$('fbDev').checked?feedbackDetails():'';}
-function openFeedback(withDetails,start){
-  fbFrom=document.activeElement;
+/* from: the button that opened it, where focus goes back on close (Safari does not focus a tapped button) */
+function openFeedback(withDetails,start,from){
+  fbFrom=from||document.activeElement;
   if(start&&!$('fbText').value.trim())$('fbText').value=start;
   $('fbDev').checked=!!withDetails;$('fbShow').open=false;$('fbMsg').textContent='';
   syncFeedback();
@@ -5770,7 +5772,7 @@ function drillFor(f){
 /* Puts the drill on the Play page at its slower tempo, named after the routine it came from. It does not start. */
 function practiseDrill(d){
   if(run&&!run.ended)return;
-  const from=curName().replace(/ drill$/,''),name=from==='Unsaved routine'?'Drill':from+' drill';
+  const from=curName().replace(/ drill$/,''),name=from==='New routine'?'Drill':from+' drill';
   guard(()=>{
     setRoutineText(setHeader(d.text,'title',name));
     S.bpm=d.bpm;$('bpm').value=S.bpm;
@@ -7478,24 +7480,32 @@ function editExercise(i){
 function buildEditList(){
   const box=$('editList'),keep=box.scrollTop;
   fillExerciseList(box,editExercise,true);
-  const lines=bLines();
-  if(S.mode==='routine'&&bLine<lines.length&&bValid(lines,bLine)&&bExerciseLines().indexOf(bLine)<0){
-    const row=document.createElement('div');row.className='row num erow editing';row.setAttribute('role','option');row.tabIndex=0;row.dataset.idx='new';
-    const n=document.createElement('span');n.className='rn';n.textContent='+';
-    const q=document.createElement('span');q.className='rt seq';q.textContent=lines[bLine].trim()||'(empty)';q.style.color='var(--muted)';
-    const m=document.createElement('span');m.className='rm meta';m.textContent='new';
-    const ra=document.createElement('span');ra.className='ra';ra.append(m,dotsBtn(()=>openRowMenu('new')));
+  /* Lines that do not play yet (empty, half built, or with a mistake) still get a row, so nothing vanishes from the list. */
+  const lines=bLines(),ex=bExerciseLines();
+  lines.forEach((l,i)=>{
+    if(ex.indexOf(i)>=0||!bValid(lines,i)||(i!==bLine&&!l.trim()))return;
+    const row=document.createElement('div');row.className='row num erow';row.setAttribute('role','option');row.tabIndex=0;row.dataset.idx='l'+i;row.dataset.line=i;
+    const pick=()=>{bLine=i;renderBuilder();};
+    row.addEventListener('click',pick);
+    row.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick();}});
+    const n=document.createElement('span');n.className='rn';n.textContent=ex.filter(x=>x<i).length+1;
+    const q=document.createElement('span');q.className='rt seq';q.textContent=l.trim()||'New: tap the keys below';q.style.color='var(--muted)';
+    const m=document.createElement('span');m.className='rm meta';m.textContent=l.trim()?'check':'new';
+    const ra=document.createElement('span');ra.className='ra';ra.append(m,dotsBtn(()=>{if(bLine!==i)pick();openRowMenu('l'+i);}));
     row.append(n,q,ra);
-    const after=[...box.querySelectorAll('.erow')].find(r=>{const e=routineParsed.exercises[(+r.dataset.idx)-1];return e&&e.line>bLine;});
+    const after=[...box.querySelectorAll('.erow')].find(r=>{const e=r.dataset.line!=null?{line:+r.dataset.line}:routineParsed.exercises[(+r.dataset.idx)-1];return e&&e.line>i;});
     box.insertBefore(row,after||null);box.hidden=false;
-  }
+  });
   box.scrollTop=keep;
   markEditing();
+  if(rowMenu===$('exMenu')&&!(rowMenuBtn&&rowMenuBtn.isConnected)){   /* the list was redrawn: the menu follows its row, or closes if the row is gone */
+    const d=box.querySelector('.erow[data-idx="'+rowMenu.dataset.idx+'"] .dots');
+    if(d){rowMenuBtn=d;d.setAttribute('aria-expanded','true');}else closeRowMenu();
+  }
 }
 function markEditing(){
   document.querySelectorAll('#editList .erow').forEach(r=>{
-    if(r.dataset.idx==='new')return;
-    const e=routineParsed.exercises[(+r.dataset.idx)-1];
+    const e=r.dataset.line!=null?{line:+r.dataset.line}:routineParsed.exercises[(+r.dataset.idx)-1];
     r.classList.toggle('editing',!!e&&e.line===bLine);
   });
   /* keep the row being edited inside the list's own scroll area, without moving the page */
@@ -7643,8 +7653,9 @@ function scratchState(){
   return key&&libFor(key)?'clean':'scratch';
 }
 function curName(){
-  const e=currentEntry();
-  return (getHeader(S.routineText,'title')||'').trim()||(e?entryName(e):'Unsaved routine');   /* a title being typed shows at once, before Save */
+  /* the open entry, or the saved one with the same text, which scratchState also calls Saved */
+  const e=currentEntry()||libFor(textKey(setHeader(S.routineText,'title','').trim(),S.subdiv));
+  return (getHeader(S.routineText,'title')||'').trim()||(e?entryName(e):'New routine');   /* a title being typed shows at once, before Save */
 }
 /* Puts library text in the scratch pad, linked to its entry. */
 function openText(txt,key){
@@ -8504,20 +8515,30 @@ function renderBuilder(){
   document.querySelectorAll('.b-routine').forEach(e=>{e.hidden=!routine;});
   document.querySelectorAll('.b-single').forEach(e=>{e.hidden=routine;});
   if(!routine){
-    const cur=bGet(),m=SIG_PRE.exec(cur);
-    const tt=m?m[1]+'/'+m[2]:'';
+    /* The line's own time and note, or else the routine's time: and strokes: lines, which still apply to it */
+    const cur=bGet(),m=SIG_PRE.exec(cur),hs=m||SIG_PRE.exec((getHeader(S.routineText,'time')||'')+': ');
+    const tt=hs?hs[1]+'/'+hs[2]:'';
     bFillSelect($('bTime1'),B_TIMES,v=>v||'No signature',tt);
-    fillGroup($('bGroup1'),tt,m&&m[3]);
+    fillGroup($('bGroup1'),tt,hs&&hs[3]);
     const ld=LEAD.exec(cur.slice(m?m[0].length:0));
-    bFillSelect($('subdiv'),B_CODES,v=>CODE_NAME[v],ld?ld[1]:'16');   /* the pattern's own opening code, or sixteenths when it has none */
+    bFillSelect($('subdiv'),B_CODES,v=>CODE_NAME[v],ld?ld[1]:(getHeader(S.routineText,'strokes')||'16').toLowerCase());
   }
   if(document.activeElement!==$('bTitle'))$('bTitle').value=getHeader(S.routineText,'title')||'';
-  if(routine){
+  {
     const lines=bLines(),ex=bExerciseLines(),k=ex.indexOf(bLine);
     $('bDup').disabled=k<0;
+    $('bDup').title=k<0?'Add strokes to this exercise first':'';
     $('bTop').disabled=$('bUp').disabled=k<=0;
     $('bDown').disabled=$('bBottom').disabled=k<0||k>=ex.length-1;
     $('bDel').disabled=!(k>=0||(bLine<lines.length&&bValid(lines,bLine)&&lines.length>1));
+    buildEditList();
+  }
+  $('bRoutName').textContent=routine?'Routine settings':'Settings';
+  if(!routine){
+    const sel=id=>$(id).options[$(id).selectedIndex];
+    $('bRoutSum').textContent=[sel('bTime1').textContent+($('bGroup1').value?' ('+$('bGroup1').value+')':''),sel('subdiv').textContent].join(' · ');
+  }
+  if(routine){
     let t=(getHeader(S.routineText,'time')||'').replace(/^(off|none|-)$/i,'');
     const tm=/^\s*(\d{1,2}\s*\/\s*\d{1,2})\s*(?:\(([\d\s+]+)\))?\s*$/.exec(t);
     const tb=tm?tm[1].replace(/\s+/g,''):t;
@@ -8534,7 +8555,9 @@ function renderBuilder(){
     if(document.activeElement!==$('oBpm'))$('oBpm').value=f.bpm;
     bFillSelect($('oTime'),B_TIMES,v=>v||'Same as routine',f.t);
     fillGroup($('oGroup'),f.t,f.g);
-    buildEditList();
+    const lenTxt=l=>l.u==='x'?l.v+(l.v===1?' pass':' passes'):l.v+(l.u==='m'?' min':' s');
+    $('bOptsSum').textContent=[f.len?lenTxt(f.len):'',f.bpm?f.bpm+' BPM':'',f.t?f.t+(f.g?' ('+f.g+')':''):''].filter(Boolean).join(' · ')||'Same as routine';
+    $('bRoutSum').textContent=[el?lenTxt(el)+' each':'',tb?tb+(tm&&tm[2]?' ('+tm[2].replace(/\s+/g,'')+')':''):'No signature',st?CODE_NAME[st]:'Sixteenth'].filter(Boolean).join(' · ');
   }
   /* strokes, staff and status for the exercise being edited */
   const pv=bPreview();
@@ -8596,7 +8619,7 @@ function wireBuilder(){
   dismissable($('lsModal'),closeListen);
   document.querySelectorAll('.bkey').forEach(k=>k.addEventListener('click',()=>bEdit(k.dataset.k)));
   [['bTop','top'],['bUp','up'],['bDown','down'],['bBottom','bottom']].forEach(x=>$(x[0]).addEventListener('click',()=>bMoveEx(x[1])));
-  $('exMenu').addEventListener('click',e=>{if(e.target.closest('button'))closeRowMenu();});
+  $('exMenu').addEventListener('click',closeRowMenu);   /* any tap in it closes it, a greyed-out item too */
   arm($('edDiscard'),()=>{closeRowMenu();const e=currentEntry();if(e)loadEntry(e);},'Discard');   /* back to the saved routine; in the ⋮ menu, as the bar has no room for it on a phone */
   $('saveMore').addEventListener('click',()=>openMenu($('saveMenu'),$('saveMore')));
   $('saveMenu').addEventListener('click',e=>{if(e.target.closest('button'))closeRowMenu();});
@@ -8630,7 +8653,6 @@ function wireBuilder(){
     lines.splice(at,0,seed(lines));bLine=at;bSetLines(lines);focusLine(lines);
   };
   $('bAddEx').addEventListener('click',addExercise);
-  $('bAddEx1').addEventListener('click',addExercise);
   /* A new empty exercise is selected at once, and shows in the list so it can be edited there. */
   const insertAt=below=>{
     const lines=bLines(),at=Math.min(below?bLine+1:bLine,lines.length);
@@ -8643,6 +8665,7 @@ function wireBuilder(){
     lines.splice(bLine+1,0,lines[bLine]);bLine=bLine+1;bSetLines(lines);
   });
   arm($('bDel'),()=>{
+    closeRowMenu();   /* the two-tap Delete keeps its taps to itself, so it closes the menu here */
     const lines=bLines();
     lines.splice(bLine,1);if(!lines.length)lines.push('');
     bLine=Math.min(bLine,lines.length-1);bSetLines(lines);
@@ -8657,17 +8680,27 @@ function wireBuilder(){
   const hdr=(id,key,ev,val)=>$(id).addEventListener(ev,e=>setHdr(key,val?val():e.target.value));
   /* Strokes are: writes the opening note code into the pattern, so the text always says what it plays. */
   $('subdiv').addEventListener('change',e=>{
+    dropHdr('strokes');
     const cur=bGet(),m=SIG_PRE.exec(cur),pre=m?m[0]:'',rest=cur.slice(pre.length),c=e.target.value;
     bPut(pre+(LEAD.test(rest)?rest.replace(LEAD,c):c+' '+rest.replace(/^\s+/,'')));
     renderBuilder();
   });
+  /* With one exercise its settings are written on the line, and the routine line they replace goes, so only one of them applies */
+  const dropHdr=key=>{
+    if(getHeader(S.routineText,key)==null)return;
+    const before=bLines().length;
+    S.routineText=setHeader(S.routineText,key,'');$('routineText').value=S.routineText;
+    bLine=Math.max(0,bLine+(bLines().length-before));
+  };
   /* One pattern: the time signature is written as a prefix, such as 7/8: RLRLRLR */
   $('bTime1').addEventListener('change',e=>{
+    dropHdr('time');
     const t=e.target.value,rest=bGet().replace(SIG_PRE,'');
     bPut((t?t+': ':'')+rest);
     renderBuilder();
   });
   $('bGroup1').addEventListener('change',e=>{
+    dropHdr('time');
     const t=$('bTime1').value,g=e.target.value,rest=bGet().replace(SIG_PRE,'');
     bPut((t?t+(g?' ('+g+')':'')+': ':'')+rest);
     renderBuilder();
@@ -8831,9 +8864,9 @@ function wire(){
   $('exportLib').addEventListener('click',exportLibrary);
   ['micMsg','chkMsg','latMsg'].forEach(id=>setupWatch.observe($(id),{childList:true,characterData:true,subtree:true}));
   document.addEventListener('input',e=>{if(e.target.type==='range')paintRange(e.target);},true);
-  $('clkReport').addEventListener('click',()=>openFeedback(true,'The clicks were out of step with the count-in. '));
-  $('fbHelp').addEventListener('click',()=>openFeedback(false,''));
-  $('fbTrouble').addEventListener('click',()=>openFeedback(false,''));
+  $('clkReport').addEventListener('click',e=>openFeedback(true,'The clicks were out of step with the count-in. ',e.currentTarget));
+  $('fbHelp').addEventListener('click',e=>openFeedback(false,'',e.currentTarget));
+  $('fbTrouble').addEventListener('click',e=>openFeedback(false,'',e.currentTarget));
   $('fbDev').addEventListener('change',syncFeedback);
   $('fbMail').addEventListener('click',mailFeedback);
   $('fbCopy').addEventListener('click',copyFeedback);

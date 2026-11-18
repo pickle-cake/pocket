@@ -595,6 +595,56 @@ test('builder: flam holds until a stroke, greys the other keys, and writes fR', 
   assert.deepEqual(p.errors, []);
 });
 
+test('builder: one exercise shows in the list, and Duplicate makes the next one', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, routineText: 'RLRL RLRL' });
+  await p.click('#editPlay');
+  await p.waitForTimeout(300);
+  const rows = () => p.evaluate(() => [...document.querySelectorAll('#editList .erow')].map(r => r.textContent));
+  assert.equal((await rows()).length, 1, 'a single exercise is listed');
+  assert.equal(await p.isVisible('#bDup'), true);
+  await p.click('#bDup');
+  assert.equal((await rows()).length, 2);
+  assert.equal(await p.evaluate(() => document.querySelector('#editList .erow:nth-child(2)').classList.contains('editing')), true, 'the copy is selected');
+  await p.click('.bkey[data-k="R"]');
+  assert.equal(await p.inputValue('#routineText'), 'RLRL RLRL\nRLRL RLRLR', 'the keys write to the copy');
+  assert.equal(await p.isVisible('#bOpts'), true, 'two exercises show the exercise options');
+  assert.deepEqual(p.errors, []);
+});
+
+test('builder: a line with a mistake keeps its row, and a greyed-out menu item closes the menu', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, routineText: 'RLRL RLRL\nRLRL (' });
+  await p.click('#editPlay');
+  await p.waitForTimeout(300);
+  const meta = () => p.evaluate(() => [...document.querySelectorAll('#editList .erow .rm')].map(r => r.textContent));
+  assert.equal((await meta()).length, 2, 'both lines are listed');
+  assert.equal((await meta())[1], 'check');
+  await p.click('#editList .erow:nth-child(2)');
+  assert.equal(await p.inputValue('#bReadP'), 'RLRL (', 'the row picks that line');
+  await p.click('#editList .erow:nth-child(2) .dots');
+  assert.equal(await p.isDisabled('#bDown'), true);
+  await p.click('#bDown', { force: true });
+  assert.equal(await p.isVisible('#exMenu'), false, 'a tap on a greyed-out item closes the menu');
+  assert.deepEqual(p.errors, []);
+});
+
+test('builder: Delete closes the menu, and one exercise left shows the routine time it still plays in', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, routineText: 'time: 2/2\nRLRL RLRL\nLRLR LRLR' });
+  await p.click('#editPlay');
+  await p.waitForTimeout(300);
+  await p.click('#editList .erow:first-child .dots');
+  await p.click('#bDel');
+  assert.equal(await p.isVisible('#exMenu'), true, 'the first tap arms Delete');
+  await p.click('#bDel');
+  assert.equal(await p.isVisible('#exMenu'), false, 'the second tap deletes and closes the menu');
+  assert.equal(await p.inputValue('#routineText'), 'time: 2/2\nLRLR LRLR');
+  assert.equal(await p.inputValue('#bTime1'), '2/2', 'the routine time still applies, so it shows');
+  await p.click('#bRout summary');
+  await p.selectOption('#bTime1', '3/4');
+  assert.equal(await p.inputValue('#routineText'), '3/4: LRLR LRLR', 'the time moves onto the line and the routine line goes');
+  assert.equal(await p.inputValue('#bReadP'), '3/4: LRLR LRLR', 'the same exercise is still being edited');
+  assert.deepEqual(p.errors, []);
+});
+
 test('menus: one open at a time, Escape and the same button close it', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, routineText: 'RLRL RLRL\nLRLR LRLR' });
   await p.click('#editPlay');
