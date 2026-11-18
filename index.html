@@ -3580,7 +3580,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.206';                           /* shown beside the title */
+const VERSION='1.5.207';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -7683,7 +7683,7 @@ function routineInfoOf(parsed){
 const maxText=max=>'Max score: '+max.toLocaleString('en-US');
 function syncMaxScore(){
   const el=$('maxLine');el.textContent='';
-  if(S.mode!=='routine'||!routineParsed.exercises.length)return;
+  if(!S.game||S.mode!=='routine'||!routineParsed.exercises.length)return;   /* a score, so only with scores and rewards on */
   const i=routineInfoOf(routineParsed);
   if(i.max)el.textContent=maxText(i.max);
 }
@@ -7824,7 +7824,7 @@ function openPick(){
     const n=exerciseCount(e.x);
     b.innerHTML='<span class="rt"></span><span class="ra"><span class="rm"></span></span>';b.firstChild.textContent=label;
     const d=b.lastChild.firstChild;d.textContent=n+(n===1?' exercise':' exercises');
-    if(n>1){const i=routineInfoOf(parseRoutine(e.x));if(i.max){d.appendChild(document.createElement('br'));d.appendChild(document.createTextNode(maxText(i.max)));}}
+    if(n>1&&S.game){const i=routineInfoOf(parseRoutine(e.x));if(i.max){d.appendChild(document.createElement('br'));d.appendChild(document.createTextNode(maxText(i.max)));}}
     b.addEventListener('click',()=>{
       if(e.id===S.libId){closePick();return;}
       closePick();guard(()=>loadEntry(e));
@@ -8870,7 +8870,7 @@ function wire(){
   $('palette').addEventListener('change',e=>{S.palette=e.target.value;applyTheme();save();});
   $('layout').addEventListener('change',e=>{S.layout=e.target.value;save();syncLayout();});
   if(wideMQ)wideMQ.addEventListener('change',syncLayout);
-  $('game').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||(b.dataset.v==='on')===S.game)return;S.game=b.dataset.v==='on';syncGame();save();if(!S.game&&!$('pvAch').hidden)setPview('hist');renderAll();});
+  $('game').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||(b.dataset.v==='on')===S.game)return;S.game=b.dataset.v==='on';syncGame();syncMaxScore();save();if(!S.game&&!$('pvAch').hidden)setPview('hist');renderAll();});
   $('view').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.v===S.view)return;S.view=b.dataset.v;syncView();applyView();save();if(run&&!run.ended)drawHwy(run);});
   $('pulse').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.pulse=b.dataset.v==='on';setPressed('pulse',b.dataset.v);save();if(!S.pulse)clearPulse();});
   $('csvBtn').addEventListener('click',downloadCsv);

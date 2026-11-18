@@ -1460,8 +1460,15 @@ audioTest('the result\'s actions are in view without scrolling, in one row of eq
   }
 });
 
+test('a routine shows no Max score with scores and rewards off, and shows it as soon as they are turned on', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL\nLRLR LRLR', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
+  assert.equal(await p.textContent('#maxLine'), '');
+  await p.evaluate(() => document.getElementById('gameOn').click());
+  assert.match(await p.textContent('#maxLine'), /^Max score: [\d,]+$/);
+});
+
 test('changing the on-time window updates the routine\'s Max score at once', async () => {
-  const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL\nLRLR LRLR', eachUnit: 'pass', eachVal: 1, click: 'half', tol: 20, seeded: true });
+  const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL\nLRLR LRLR', eachUnit: 'pass', eachVal: 1, click: 'half', tol: 20, seeded: true, game: true });
   const max = () => p.evaluate(() => +document.getElementById('maxLine').textContent.replace(/\D/g, ''));
   const at20 = await max();
   await p.evaluate(() => { const s = document.getElementById('tol'); s.value = '50'; s.dispatchEvent(new Event('change')); });
