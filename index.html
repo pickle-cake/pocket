@@ -3581,7 +3581,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.212';                           /* shown beside the title */
+const VERSION='1.5.213';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4584,8 +4584,9 @@ function feedbackText(){
   return (msg||'(no message)')+($('fbDev').checked?'\n\n-- Device and timing details --\n'+feedbackDetails():'');
 }
 function syncFeedback(){$('fbShow').hidden=!$('fbDev').checked;$('fbDet').textContent=$('fbDev').checked?feedbackDetails():'';}
-function openFeedback(withDetails,start){
-  fbFrom=document.activeElement;
+/* from: the button that opened it, where focus goes back on close (Safari does not focus a tapped button) */
+function openFeedback(withDetails,start,from){
+  fbFrom=from||document.activeElement;
   if(start&&!$('fbText').value.trim())$('fbText').value=start;
   $('fbDev').checked=!!withDetails;$('fbShow').open=false;$('fbMsg').textContent='';
   syncFeedback();
@@ -8863,9 +8864,9 @@ function wire(){
   $('exportLib').addEventListener('click',exportLibrary);
   ['micMsg','chkMsg','latMsg'].forEach(id=>setupWatch.observe($(id),{childList:true,characterData:true,subtree:true}));
   document.addEventListener('input',e=>{if(e.target.type==='range')paintRange(e.target);},true);
-  $('clkReport').addEventListener('click',()=>openFeedback(true,'The clicks were out of step with the count-in. '));
-  $('fbHelp').addEventListener('click',()=>openFeedback(false,''));
-  $('fbTrouble').addEventListener('click',()=>openFeedback(false,''));
+  $('clkReport').addEventListener('click',e=>openFeedback(true,'The clicks were out of step with the count-in. ',e.currentTarget));
+  $('fbHelp').addEventListener('click',e=>openFeedback(false,'',e.currentTarget));
+  $('fbTrouble').addEventListener('click',e=>openFeedback(false,'',e.currentTarget));
   $('fbDev').addEventListener('change',syncFeedback);
   $('fbMail').addEventListener('click',mailFeedback);
   $('fbCopy').addEventListener('click',copyFeedback);
