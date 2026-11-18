@@ -427,11 +427,11 @@ details.how[open]>summary::after{margin:4px 4px 0 0}
 .hear{display:flex;align-items:center;gap:var(--s-3)}
 .hear .btn{flex:none;margin-left:calc((24px - var(--hit))/2)}   /* the 24px speaker lines up with the key above it */
 body:not([data-state=idle]) #hearRow{display:none}   /* Listen is for before a run */
-#barsBox>summary span,#bOpts>summary span,#bRoutSum{margin-left:auto;font-weight:400;color:var(--muted)}   /* what is set, beside the chevron */
+#barsBox>summary span,#bOptsSum,#bRoutSum{margin-left:auto;font-weight:400;color:var(--muted)}   /* what is set, beside the chevron */
 #bOpts>.bset,#bRout>.bset{padding-bottom:var(--s-2)}
 #bRoutName{white-space:nowrap}
-#bRout:not([open]) #bRoutName,#bRout[open] #bRoutSum{display:none}   /* like More settings: closed shows what is set, open just the name */
-#bRout:not([open]) #bRoutSum{margin-left:0;font-weight:inherit;color:inherit}
+#bRout:not([open]) #bRoutName,#bRout[open] #bRoutSum,#bOpts:not([open]) #bOptsName,#bOpts[open] #bOptsSum{display:none}   /* like More settings: closed shows what is set, open just the name */
+#bRout:not([open]) #bRoutSum,#bOpts:not([open]) #bOptsSum{margin-left:0;font-weight:inherit;color:inherit}
 #barsBox .sbody{gap:var(--s-3);padding-bottom:var(--s-3)}
 #barsBox .tempo{max-width:220px}
 .how dl{margin:0 0 var(--s-3);display:grid;gap:var(--s-1) 0}
@@ -1070,7 +1070,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
         </section>
         <!-- Options for the one exercise being edited, folded away under the keys. The summary says what is set. -->
         <details class="how buildonly b-routine" id="bOpts">
-          <summary>This exercise<span id="bOptsSum"></span></summary>
+          <summary><span id="bOptsName">This exercise</span><span id="bOptsSum"></span></summary>
           <div class="bset">
             <div class="fields">
               <div class="field"><label for="oLenU">Plays for</label><select id="oLenU"></select></div>
@@ -3582,7 +3582,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.217';                           /* shown beside the title */
+const VERSION='1.5.218';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -8566,7 +8566,7 @@ function renderBuilder(){
     bFillSelect($('oTime'),B_TIMES,v=>v||'Same as routine',f.t);
     fillGroup($('oGroup'),f.t,f.g);
     const lenTxt=l=>l.u==='x'?l.v+(l.v===1?' pass':' passes'):l.v+(l.u==='m'?' min':' s');
-    $('bOptsSum').textContent=[f.len?lenTxt(f.len):'',f.bpm?f.bpm+' BPM':'',f.t?f.t+(f.g?' ('+f.g+')':''):''].filter(Boolean).join(' · ')||'Same as routine';
+    $('bOptsSum').textContent=[f.len?lenTxt(f.len):'',f.bpm?f.bpm+' BPM':'',f.t?f.t+(f.g?' ('+f.g+')':''):''].filter(Boolean).join(' · ')||'This exercise: same as routine';   /* closed, the summary stands alone, so it says whose */
     $('bRoutSum').textContent=[el?lenTxt(el)+' each':'',tb?tb+(tm&&tm[2]?' ('+tm[2].replace(/\s+/g,'')+')':''):'No signature',st?CODE_NAME[st]:'Sixteenth'].filter(Boolean).join(' · ');
   }
   /* strokes, staff and status for the exercise being edited */
