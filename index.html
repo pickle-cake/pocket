@@ -3581,7 +3581,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.214';                           /* shown beside the title */
+const VERSION='1.5.215';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -8229,7 +8229,7 @@ function syncInfo(){
   $('bpmNum').textContent=S.bpm;$('bpmOpen').setAttribute('aria-label',S.bpm+' BPM, change the tempo');
   {const r=$('tmRange');r.value=S.bpm;r.setAttribute('aria-valuetext',S.bpm+' BPM');paintRange(r);}
   setPressed('clickSeg',S.click);
-  $('clickHint').textContent=(CLICK_HINT[S.click]||'')+(S.click==='none'?'.':'. Underlined notes get a click.');
+  $('clickHint').textContent=(CLICK_HINT[S.click]||'')+(S.click==='none'?'.':'. Underlined notes get a click.')+(S.click==='guide'&&guideIsEasy(exercises)?' With '+(exercises.length>1?'these exercises':'this exercise')+' that is every stroke, the same as Easy.':'');
   $('ckKey').hidden=$('hearRow').hidden=S.click==='none';$('ckKeySb').hidden=!gapNorm(barsOn());
   syncBars();
   syncDyCtl();
@@ -8240,6 +8240,13 @@ function syncInfo(){
     if(S.mode==='routine')parts.push(S.gap?'Count-in between':'Straight on');
     $('setSum').textContent=$('setBox').open?'More settings':parts.join(' · ');   /* open: just the name; closed: what is inside */
   }
+}
+/* Medium clicks the beat and the half beat. With two strokes a beat (eighth notes) that is every stroke, so it is the same as Easy,
+   and the hint says so. One pass of each exercise, without silent bars, is enough to compare the two. */
+function guideIsEasy(exercises){
+  if(!exercises.length)return false;
+  const ex=exercises.map(b=>withPasses(b,1)),ts=m=>buildPlan(ex,{gapBeats:S.gap,clickMode:m}).clicks.map(c=>Math.round(c.t*1e6)).join();
+  return ts('guide')===ts('strokes');
 }
 const CLICK_HINT={strokes:'A click on every stroke',guide:'A click on the beat and the half beat',beat:'A click on the beat',half:'A click on the strong beats',bar:'A click on 1 of each bar',none:'Count-in only'};
 /* Silent bars: −/+ for how many bars the click leaves out after each bar with it. Bar 1 always clicks, so each exercise starts
