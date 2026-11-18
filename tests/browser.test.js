@@ -1195,8 +1195,13 @@ audioTest('a scored run shows its score against the maximum, flags a new high sc
   assert.doesNotMatch(p0.text, /high score/i, 'a practice run is not scored');
 });
 
-audioTest('scores and rewards start off, and with them off a run is saved and cleared, and shows on time with no score, streak meter or medals', async () => {
-  const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
+test('scores and rewards start on for a new install, and a saved Off is kept', async () => {
+  assert.equal(await (await open({ seeded: true })).evaluate(() => window.__T.S().game), true);
+  assert.equal(await (await open({ seeded: true, game: false })).evaluate(() => window.__T.S().game), false);
+});
+
+audioTest('with scores and rewards off, a run is saved and cleared, and shows on time with no score, streak meter or medals', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true, game: false });
   const n0 = await p.evaluate(() => ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).length);
   await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
@@ -1212,6 +1217,13 @@ audioTest('scores and rewards start off, and with them off a run is saved and cl
   assert.doesNotMatch(await p.evaluate(() => document.getElementById('pvHist').innerText), /Score:/, 'history shows no score');
 });
 
+
+test('with no saved run, the line under Start says so, so the settings below it do not move', async () => {
+  const p = await open({ routineText: 'RLRL RRLL', click: 'beat' });
+  assert.equal(await p.getAttribute('#lastNote', 'hidden'), null);
+  assert.equal(await p.textContent('#lastNote'), 'No saved run with these settings yet.');
+  assert.equal(await p.evaluate(() => document.getElementById('lastNote').previousElementSibling.id), 'playSummary');
+});
 
 audioTest('after a run a note says what to play next time, and Play says it again with the last result', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
@@ -1453,8 +1465,15 @@ audioTest('the result\'s actions are in view without scrolling, in one row of eq
   }
 });
 
+test('a routine shows no Max score with scores and rewards off, and shows it as soon as they are turned on', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL\nLRLR LRLR', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true, game: false });
+  assert.equal(await p.textContent('#maxLine'), '');
+  await p.evaluate(() => document.getElementById('gameOn').click());
+  assert.match(await p.textContent('#maxLine'), /^Max score: [\d,]+$/);
+});
+
 test('changing the on-time window updates the routine\'s Max score at once', async () => {
-  const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL\nLRLR LRLR', eachUnit: 'pass', eachVal: 1, click: 'half', tol: 20, seeded: true });
+  const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL\nLRLR LRLR', eachUnit: 'pass', eachVal: 1, click: 'half', tol: 20, seeded: true, game: true });
   const max = () => p.evaluate(() => +document.getElementById('maxLine').textContent.replace(/\D/g, ''));
   const at20 = await max();
   await p.evaluate(() => { const s = document.getElementById('tol'); s.value = '50'; s.dispatchEvent(new Event('change')); });
