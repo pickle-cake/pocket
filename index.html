@@ -1387,7 +1387,7 @@ RLRR LRLL RLRR LRLL</pre>
       <ul>
         <li><b>On time</b> is the share of due strokes inside your on-time window. With an accent or ghost rule a stroke must also be played as written: an accent clearly louder and a ghost clearly softer than its neighbours. An exercise needs at least one full pass to be scored.</li>
         <li><b>Score:</b> with Scores and rewards on, every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Master and 5 on Solo). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. Silent bars earn a bonus too (see Click levels). The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best score, that share, is kept for each level, window and bars with a click setting. Best on time is your on-time % at a tempo. The streak carries from one exercise to the next. The total never goes below zero. Your high score in points at each click level is an achievement, and a new one is announced when the run ends.</li>
-        <li><b>Scores and rewards:</b> choose On under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
+        <li><b>Scores and rewards:</b> on unless you choose Off under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold. A run that clears an exercise faster than before shows its medal and the tempo of the next one.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run a note says what to play next time: stay at that tempo until every exercise reaches 90%, or, once cleared, try 5 BPM faster. Play shows it again, with your last result, when you next open that exercise or routine. On time is rounded down, so 89.6% reads 89%. Any tempo is always allowed.</li>
@@ -3580,7 +3580,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.207';                           /* shown beside the title */
+const VERSION='1.5.208';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3632,7 +3632,7 @@ S.eachVal=S.eachUnit==='pass'?clamp(Math.round(+S.eachVal)||8,1,200):clamp(+S.ea
 S.gap=+S.gap===0?0:4;
 S.pulse=S.pulse!==false;
 S.view=S.view==='hwy'?'hwy':'staff';
-S.game=S.game===true;   /* scores, the streak meter, high scores and medals: off until turned on. Off hides them; runs are still saved, cleared and timed. */
+S.game=S.game!==false;   /* scores, the streak meter, high scores and medals: on until turned off; a saved Off is kept. Off hides them; runs are still saved, cleared and timed. */
 S.palette=S.palette==='cb'?'cb':'std';
 S.layout=S.layout==='phone'||S.layout==='desktop'?S.layout:'auto';
 S.resultHelp=S.resultHelp===true;
