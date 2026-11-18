@@ -3581,7 +3581,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.211';                           /* shown beside the title */
+const VERSION='1.5.212';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -8514,12 +8514,13 @@ function renderBuilder(){
   document.querySelectorAll('.b-routine').forEach(e=>{e.hidden=!routine;});
   document.querySelectorAll('.b-single').forEach(e=>{e.hidden=routine;});
   if(!routine){
-    const cur=bGet(),m=SIG_PRE.exec(cur);
-    const tt=m?m[1]+'/'+m[2]:'';
+    /* The line's own time and note, or else the routine's time: and strokes: lines, which still apply to it */
+    const cur=bGet(),m=SIG_PRE.exec(cur),hs=m||SIG_PRE.exec((getHeader(S.routineText,'time')||'')+': ');
+    const tt=hs?hs[1]+'/'+hs[2]:'';
     bFillSelect($('bTime1'),B_TIMES,v=>v||'No signature',tt);
-    fillGroup($('bGroup1'),tt,m&&m[3]);
+    fillGroup($('bGroup1'),tt,hs&&hs[3]);
     const ld=LEAD.exec(cur.slice(m?m[0].length:0));
-    bFillSelect($('subdiv'),B_CODES,v=>CODE_NAME[v],ld?ld[1]:'16');   /* the pattern's own opening code, or sixteenths when it has none */
+    bFillSelect($('subdiv'),B_CODES,v=>CODE_NAME[v],ld?ld[1]:(getHeader(S.routineText,'strokes')||'16').toLowerCase());
   }
   if(document.activeElement!==$('bTitle'))$('bTitle').value=getHeader(S.routineText,'title')||'';
   {
@@ -8663,6 +8664,7 @@ function wireBuilder(){
     lines.splice(bLine+1,0,lines[bLine]);bLine=bLine+1;bSetLines(lines);
   });
   arm($('bDel'),()=>{
+    closeRowMenu();   /* the two-tap Delete keeps its taps to itself, so it closes the menu here */
     const lines=bLines();
     lines.splice(bLine,1);if(!lines.length)lines.push('');
     bLine=Math.min(bLine,lines.length-1);bSetLines(lines);
@@ -8677,17 +8679,27 @@ function wireBuilder(){
   const hdr=(id,key,ev,val)=>$(id).addEventListener(ev,e=>setHdr(key,val?val():e.target.value));
   /* Strokes are: writes the opening note code into the pattern, so the text always says what it plays. */
   $('subdiv').addEventListener('change',e=>{
+    dropHdr('strokes');
     const cur=bGet(),m=SIG_PRE.exec(cur),pre=m?m[0]:'',rest=cur.slice(pre.length),c=e.target.value;
     bPut(pre+(LEAD.test(rest)?rest.replace(LEAD,c):c+' '+rest.replace(/^\s+/,'')));
     renderBuilder();
   });
+  /* With one exercise its settings are written on the line, and the routine line they replace goes, so only one of them applies */
+  const dropHdr=key=>{
+    if(getHeader(S.routineText,key)==null)return;
+    const before=bLines().length;
+    S.routineText=setHeader(S.routineText,key,'');$('routineText').value=S.routineText;
+    bLine=Math.max(0,bLine+(bLines().length-before));
+  };
   /* One pattern: the time signature is written as a prefix, such as 7/8: RLRLRLR */
   $('bTime1').addEventListener('change',e=>{
+    dropHdr('time');
     const t=e.target.value,rest=bGet().replace(SIG_PRE,'');
     bPut((t?t+': ':'')+rest);
     renderBuilder();
   });
   $('bGroup1').addEventListener('change',e=>{
+    dropHdr('time');
     const t=$('bTime1').value,g=e.target.value,rest=bGet().replace(SIG_PRE,'');
     bPut((t?t+(g?' ('+g+')':'')+': ':'')+rest);
     renderBuilder();
