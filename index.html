@@ -358,6 +358,7 @@ button.row:disabled{opacity:.4;cursor:not-allowed}
 .exercises>.row{padding:var(--s-2) var(--s-3)}   /* inside the bordered list box */
 #pickList .row{padding-inline:var(--s-3)}   /* every row as wide as the selected one, so the titles line up */
 .pickrec>.eyebrow{color:var(--ink);margin:0 0 var(--s-2)}   /* a section label: the recent routines, ahead of the groups */
+#pickNew{margin-bottom:var(--s-3)}   /* New routine stands apart from the list under it */
 .chkmsg{margin:0;padding:var(--s-3);border-left:3px solid var(--accent);font:600 var(--t-small) var(--font-body);color:var(--ink)}   /* a notice: flat, with an accent rail */ .chkmsg:empty{display:none}
 .rtruns{padding:0 var(--s-3);background:var(--surface);border-left:3px solid var(--accent)}   /* the runs of an open row sit on a band with an accent rail, so they read as part of it */
 .row>.rtruns{grid-column:1/-1;margin:var(--s-2) 0 calc(-1*var(--s-3))}
@@ -1183,7 +1184,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
       <h3>Quick start</h3>
       <ol>
         <li><b>Settings:</b> use headphones for the click, tap Show level and hit the pad. The level bar should cross the trigger line on every stroke.</li>
-        <li><b>Library:</b> press <b>New</b> to write a routine or <b>Import</b> to bring one in. One exercise plays on its own. Two or more make a routine, played in order.</li>
+        <li><b>Library:</b> press <b>New</b> to write a routine (or, on Play, <b>Choose</b> then <b>New routine</b>) or <b>Import</b> to bring one in. One exercise plays on its own. Two or more make a routine, played in order.</li>
         <li><b>Play:</b> set the tempo, click level and how long each exercise plays, then press Start. Hold − or + to keep going, or tap the tempo for steps of 10, a slider and the tempos you play most. After the count-in, play each stroke as the line reaches it (or, with the highway, as it reaches the line), and press Stop when you are done. Your result appears first, with <b>Again</b> and <b>Done</b>. The staff keeps its colours and numbers so you can see which strokes were off. Done brings the controls back.</li>
       </ol>
       <p>No microphone? Under Settings &rsaquo; Device, set Input to "Keyboard or pads" and press <b>F</b> for left, <b>J</b> for right. This is a test mode, and its timing is rougher than a pad with a microphone.</p>
@@ -1747,6 +1748,7 @@ RLRR LRLL RLRR LRLL</pre>
 <div class="modal" id="pickModal" role="dialog" aria-modal="true" aria-label="Choose a routine" hidden>
   <div class="card mbox scroll">
     <div class="mhead"><h3>Choose a routine</h3><button class="btn" id="pickClose" type="button">Close</button></div>
+    <div class="btns"><button class="btn" id="pickNew" type="button">New routine</button></div>
     <div id="pickList"></div>
   </div>
 </div>
@@ -3582,7 +3584,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.218';                           /* shown beside the title */
+const VERSION='1.5.219';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -7831,8 +7833,9 @@ function openPick(){
   const byName=S.libSort==='name';
   const list=recs.lib.slice().sort(byName?(a,b)=>nameOrder(entryName(a),entryName(b)):(a,b)=>b.t-a.t);
   if(!list.length){
-    box.appendChild(emptyState('book','No saved routines yet','Routines you write or import show up here.','Open the Library',()=>{closePick();showTab('library');}));
+    box.appendChild(emptyState('book','No saved routines yet','Routines you write or import show up here.','Write a routine',newFromPick));
   }
+  $('pickNew').parentNode.hidden=!list.length;   /* the empty state has its own button for it */
   const pickRow=(e,label)=>{
     const b=document.createElement('button');b.type='button';b.className='row'+(e.id===S.libId?' cur':'');
     const n=exerciseCount(e.x);
@@ -7863,6 +7866,8 @@ function openPick(){
   $('pickModal').hidden=false;$('pickClose').focus();
 }
 const closePick=()=>{$('pickModal').hidden=true;$('playChange').focus();};
+/* New from the picker: an empty routine in the editor, and Back returns to Play, where it plays. */
+function newFromPick(){closePick();guard(()=>{bLine=0;setRoutineText('');openEditor('play');});}
 function renderLibraryPage(){
   const box=$('libPage');if(!box)return;
   box.textContent='';
@@ -8893,6 +8898,7 @@ function wire(){
   $('lsName').addEventListener('click',()=>{S.libSort='name';save();renderLibraryPage();});
   $('edBack').addEventListener('click',()=>{showTab(editFrom==='play'?'play':'library');if(editFrom==='import')openOpen();window.scrollTo(0,0);});
   $('playChange').addEventListener('click',openPick);
+  $('pickNew').addEventListener('click',newFromPick);
   $('pickClose').addEventListener('click',closePick);
   dismissable($('pickModal'),closePick,{backdrop:false});
   $('cfSave').addEventListener('click',()=>{if(saveToLibrary())closeConfirm(true);else $('cfText').textContent=$('saveMsg').textContent;});
