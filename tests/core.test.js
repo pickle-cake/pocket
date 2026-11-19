@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['minus', 'parseStrokes', 'nameMarkers', 'fmtPattern', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'leadSlot', 'envOnsets', 'matchStrokes', 'graceMain', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict', 'gapNorm', 'gapSilent', 'gapTxt', 'GAP_MAX', 'gapFit', 'gapText', 'shareKey', 'gapMult']);
+  'graceSlot', 'leadSlot', 'envOnsets', 'matchStrokes', 'graceMain', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict', 'gapNorm', 'gapSilent', 'gapTxt', 'GAP_MAX', 'gapFit', 'gapText', 'shareKey', 'gapMult', 'routineStats', 'nextText', 'ownTempos', 'tempoSpan']);
 
 test('negative numbers are shown with a true minus sign', () => {
   assert.equal(c.minus(-30), '−30');
@@ -1014,4 +1014,24 @@ test('bars with a click: rushing, wandering and the first stroke back are found 
   let hits = 0;
   for (let k = 0; k < 200; k++) if (runOf('10', () => g() * 15, 8)) hits++;
   assert.ok(hits <= 4, hits + ' of 200 noise runs found');
+});
+
+test('a routine where every exercise has its own tempo keeps no routine tempo: one history, and cleared without a BPM', () => {
+  const ex = (bpm, within) => ({ k: '/4 RLRL', bpm, due: 16, within, heard: 16, avg: 0, ls: null });
+  const run = (t, bpm, within, ft) => ({ id: 'r' + t, t, mode: 'routine', rk: 'pabc', lv: 'half', dy: '', ne: 2, bpm, ft, exercises: [ex(50, within), ex(90, within)] });
+  const [e] = c.routineStats([run(1, 60, 16, 1), run(2, 120, 15, 1)], null);
+  assert.equal(e.bpm, 0, 'the Tempo setting of each run is not its tempo');
+  assert.equal(e.span, '50–90');
+  assert.equal(e.recs.filter(x => x.bpm === 0).length, 2, 'runs at different Tempo settings stay in one history');
+  assert.equal(e.cleared, 0, 'a clear is not credited to the Tempo setting');
+  assert.equal(e.ftc, 1);
+  const [o] = c.routineStats([run(1, 120, 16)], null);
+  assert.equal(o.cleared, 120, 'a routine that uses Tempo is cleared at it, as before');
+  assert.equal(c.nextText({ fixed: true, cleared: false, routine: true }), 'play it again until every exercise reaches 90% on time.');
+  assert.equal(c.nextText({ fixed: true, cleared: true, routine: true }), 'raise the @ tempos to go faster.');
+  const own = c.resolveExercises(c.parseRoutine('RLRL @50\nRRLL @90').exercises, { unit: 'pass', v: 1 }, { bpm: 60, subdiv: 4 });
+  const mixed = c.resolveExercises(c.parseRoutine('RLRL @50\nRRLL').exercises, { unit: 'pass', v: 1 }, { bpm: 60, subdiv: 4 });
+  assert.equal(c.ownTempos(own), true);
+  assert.equal(c.ownTempos(mixed), false, 'an exercise without @ plays at Tempo');
+  assert.equal(c.tempoSpan(own.map(b => b.bpm)), '50–90');
 });

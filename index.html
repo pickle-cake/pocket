@@ -84,7 +84,7 @@ header .headbtns{grid-area:btns} header .sub{grid-area:sub} header .tabs{grid-ar
 
 .transport{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
 .transport #startBtn{width:100%}
-#playSummary,#lastNote{text-align:right;margin:0;text-wrap:balance}
+#playSummary,#lastNote{margin:0;text-wrap:pretty}
 #playSummary:empty{display:none}
 .status{font:400 13px/1.4 var(--font-data);color:var(--muted);margin:0}
 .status:empty{display:none}
@@ -806,8 +806,6 @@ body:not([data-state=idle]) #ckKey,body[data-state=idle] #tmKey{display:none}   
 .key .k.box{padding:2px var(--s-1);background:linear-gradient(var(--ink),var(--ink)) bottom/100% 2px,linear-gradient(var(--ink),var(--ink)) bottom left/2px 5px,linear-gradient(var(--ink),var(--ink)) bottom right/2px 5px;background-repeat:no-repeat}   /* like a marked stroke on the staff: a bracket under it */
 @media (max-width:359px){.tabs button{font-size:13px;letter-spacing:0}}   /* four tab names fit the narrowest phones */
 .dur{display:grid;grid-template-columns:minmax(70px,1fr) minmax(110px,1.4fr);gap:8px}
-.maxline{margin:-10px 0 0;font-size:13px;color:var(--muted);text-align:right}
-.maxline:empty{display:none}
 #pickList{display:grid;gap:10px}
 .btn.icon.down svg{transition:transform .18s}
 :is(.hrow.open>.row,.row.open)>.ra .btn.icon.down svg{transform:rotate(180deg)}   /* an open row's chevron points up */
@@ -1462,7 +1460,6 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="exercises" id="exerciseList" role="listbox" aria-label="Exercises in this routine. Choose the exercise to start at."></div>
         <p class="hint">Tap an exercise to choose where to start.</p>
       </details>
-      <p class="maxline routine-only" id="maxLine"></p>
     </section>
     <div class="transport">
       <button class="btn primary" id="startBtn" type="button" aria-describedby="playSummary">Start</button>
@@ -1479,7 +1476,7 @@ RLRR LRLL RLRR LRLL</pre>
     <section class="panel cfg" id="quickRow" aria-label="Tempo, length and click">
       <div class="qgrid">
         <div class="field"><span class="lbl" id="tempoLbl">Tempo</span>
-          <div class="tempo" role="group" aria-labelledby="tempoLbl">
+          <div class="tempo" role="group" aria-labelledby="tempoLbl" aria-describedby="tempoNote">
             <button class="btn" id="bpmDown" type="button" aria-label="1 BPM slower, hold to keep going" title="Hold to keep going">&#8722;</button>
             <button class="btn bpmval" id="bpmOpen" type="button" aria-haspopup="dialog"><b id="bpmNum"></b> <span>BPM</span></button>
             <button class="btn" id="bpmUp" type="button" aria-label="1 BPM faster, hold to keep going" title="Hold to keep going">+</button>
@@ -1487,6 +1484,7 @@ RLRR LRLL RLRR LRLL</pre>
         <div class="field"><label for="eachVal"><span class="routine-only">Each exercise</span><span class="single-only">Length</span></label>
           <div class="dur"><input type="number" id="eachVal" min="1" max="200" step="1" inputmode="decimal"><select id="eachUnit" aria-label="Measured in"><option value="min">min</option><option value="pass">passes</option></select></div></div>
       </div>
+      <p class="notice" id="tempoNote" hidden></p>
       <p class="notice" id="eachNote" hidden></p>
       <div class="field"><span class="lbl" id="clickLbl">Click</span>
         <div class="seg wide" id="clickSeg" role="group" aria-labelledby="clickLbl" aria-describedby="clickHint">
@@ -2172,9 +2170,13 @@ function resolveExercises(exercises,def,o){
     beats=rb9(beats);
     const pass=beats*60/bpm,dur=b.dur||def;
     const passes=dur.unit==='pass'?dur.v:Math.max(1,Math.round(dur.v/pass));
-    return {idx:b.idx,notes:b.notes,groupStart:b.groupStart,subs:subs,defSub:o.subdiv,sig:b.sig||null,bpm:bpm,src:b.src||'',passBeats:beats,passes:passes,secs:passes*pass,passSecs:pass,own:!!b.dur};
+    return {idx:b.idx,notes:b.notes,groupStart:b.groupStart,subs:subs,defSub:o.subdiv,sig:b.sig||null,bpm:bpm,src:b.src||'',passBeats:beats,passes:passes,secs:passes*pass,passSecs:pass,own:!!b.dur,ownBpm:!!b.bpm};
   });
 }
+/* Every exercise has its own tempo (@), so the Tempo setting plays no part in what is played. */
+const ownTempos=list=>list.length>0&&list.every(b=>b.ownBpm);
+/* "50–90" from the tempos played, or "60" when they are all one */
+function tempoSpan(bpms){const lo=Math.min.apply(null,bpms),hi=Math.max.apply(null,bpms);return lo===hi?String(lo):lo+'–'+hi;}
 /* Lays out every click and every stroke slot of a session in seconds from the start of the first count-in. */
 function isInt(x){return Math.abs(x-Math.round(x))<1e-6;}
 /* Which bars have a click: 1 to 4 bars with the click, then 1 to 4 silent bars, over and over from the first bar of each exercise.
@@ -3016,6 +3018,7 @@ const onPct=v=>Math.floor(v*100+1e-9)+'%';
    played as a whole, so the note names no single exercise in it. */
 const TRY_STEP=5;
 function nextText(o){
+  if(o.fixed)return o.cleared?'raise '+(o.routine?'the @ tempos':'its @ tempo')+' to go faster.':'play it again until '+(o.routine?'every exercise reaches ':'it reaches ')+onPct(TARGET)+' on time.';   /* Tempo does not change what is played */
   if(o.cleared)return o.bpm+TRY_STEP<=220?'try '+(o.bpm+TRY_STEP)+' BPM.':'try less click or a tighter window.';
   return 'stay at '+o.bpm+' BPM until '+(o.routine?'every exercise reaches ':'it reaches ')+onPct(TARGET)+' on time.';
 }
@@ -3088,21 +3091,22 @@ function routineStats(runs,sum){
     e.runs++;if(run.t>=e.t)e.t=run.t;
     /* a run counts as one score: strokes on time over all its exercises, bias and loudness spread weighted by strokes */
     {let w=0,d=0,ba=0,bn=0,la=0,ln=0;run.exercises.forEach(b=>{w+=b.within;d+=b.due;if(heardEnough(b)){if(typeof b.avg==='number'&&!isNaN(b.avg)){ba+=b.avg*b.due;bn+=b.due;}if(typeof b.ls==='number'){la+=b.ls*b.due;ln+=b.due;}}});
-      if(d>0)e.recs.push({t:run.t,bpm:run.bpm,pct:w/d,avg:bn?ba/bn:NaN,ls:ln?la/ln:NaN});}
+      /* a run where every exercise had its own tempo has no routine tempo: bpm 0, and span gives the tempos it played */
+      if(d>0)e.recs.push({t:run.t,bpm:run.ft?0:run.bpm,span:run.ft?tempoSpan(run.exercises.map(b=>b.bpm)):'',pct:w/d,avg:bn?ba/bn:NaN,ls:ln?la/ln:NaN});}
     const ok=run.exercises.length>=run.ne&&run.exercises.every(b=>b.due>0&&b.within/b.due>=TARGET);
-    if(ok)e.cleared=Math.max(e.cleared,run.bpm);
+    if(ok){if(run.ft)e.ftc=1;else e.cleared=Math.max(e.cleared,run.bpm);}   /* ftc: cleared at its own tempos */
   });
   if(sum)Object.keys(sum.rt).forEach(key=>{
     const q=sum.rt[key],e=m.get(key);
-    if(!e)m.set(key,{rk:q.rk,lv:q.lv,dy:q.dy||'',ne:q.ne,runs:q.runs,t:q.t,cleared:q.cleared,recs:[]});
-    else{e.runs+=q.runs;e.cleared=Math.max(e.cleared,q.cleared);}
+    if(!e)m.set(key,{rk:q.rk,lv:q.lv,dy:q.dy||'',ne:q.ne,runs:q.runs,t:q.t,cleared:q.cleared,ftc:q.ftc,recs:[]});
+    else{e.runs+=q.runs;e.cleared=Math.max(e.cleared,q.cleared);if(q.ftc)e.ftc=1;}
   });
   m.forEach(e=>{
     e.recs.sort((a,b)=>a.t-b.t);
     const last=e.recs[e.recs.length-1];
     if(!last){e.bpm=null;e.recent=NaN;e.trend=[];e.bias=NaN;e.even=NaN;return;}
     const at=e.recs.filter(x=>x.bpm===last.bpm),recent=at.slice(-3),mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:NaN;
-    e.bpm=last.bpm;e.recent=mean(recent.map(x=>x.pct));e.trend=at.slice(-12).map(x=>x.pct);
+    e.bpm=last.bpm;e.span=last.span;e.recent=mean(recent.map(x=>x.pct));e.trend=at.slice(-12).map(x=>x.pct);
     e.bias=mean(recent.map(x=>x.avg).filter(x=>!isNaN(x)));e.even=mean(recent.map(x=>x.ls).filter(x=>!isNaN(x)));
   });
   return [...m.values()].sort((a,b)=>b.t-a.t);
@@ -3215,7 +3219,7 @@ function foldRun(sum,run){
     const key=statKey(run.rk,run.lv,run.dy);
     let e=sum.rt[key];if(!e){e={rk:run.rk,lv:run.lv,dy:run.dy||'',ne:run.ne,runs:0,t:0,cleared:0};sum.rt[key]=e;}
     e.runs++;e.t=run.t;
-    if(run.exercises.length>=run.ne&&run.exercises.every(b=>b.due>0&&b.within/b.due>=TARGET))e.cleared=Math.max(e.cleared,run.bpm);
+    if(run.exercises.length>=run.ne&&run.exercises.every(b=>b.due>0&&b.within/b.due>=TARGET)){if(run.ft)e.ftc=1;else e.cleared=Math.max(e.cleared,run.bpm);}
   }
 }
 /* Practice days. dayKey is the local date; minutes per day; the streak allows one rest day in any seven. */
@@ -3310,7 +3314,7 @@ function badgeValues(runs,sum){
   o.prf=(sum&&sum.pf||0)+runs.reduce((n,r)=>n+perfectN(r),0);
   o.tmp=st.reduce((m,e)=>Math.max(m,strokeRate(e.k,e.cleared)),0);
   o.min=Math.floor([...days.values()].reduce((a,x)=>a+x,0)/3600);   /* every practice minute, Practice runs included, as the streak counts them */
-  o.rtn=new Set(routineStats(runs,sum).filter(e=>e.cleared>0).map(e=>e.rk+'|'+e.lv)).size;
+  o.rtn=new Set(routineStats(runs,sum).filter(e=>e.cleared>0||e.ftc).map(e=>e.rk+'|'+e.lv)).size;
   o.med=LEVELS.reduce((n,l)=>n+[...by[l.v]].filter(([k,bpm])=>masteryTier(k,bpm)>=3).length,0);
   o.tgt=st.filter(e=>e.tc).length;
   o.evn=st.filter(e=>e.ec).length;
@@ -3586,7 +3590,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.223';                           /* shown beside the title */
+const VERSION='1.5.226';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3683,6 +3687,11 @@ function packStrokes(x){
   return o;
 }
 const SPMAX=4*40000;
+const ownTempoMemo=new Map();
+function textOwnTempos(x){
+  if(!ownTempoMemo.has(x)){let v=false;try{const p=parseRoutine(x);v=p.exercises.length>0&&p.exercises.every(b=>b.bpm);}catch(e){v=false;}ownTempoMemo.set(x,v);}
+  return ownTempoMemo.get(x);
+}
 function cleanRun(x){
   if(!x||typeof x!=='object'||typeof x.id!=='string'||!Array.isArray(x.exercises)||!isFinite(+x.t)||!isFinite(+x.bpm)||!['strokes','guide','beat','half','bar','none','off'].includes(x.lv))return null;
   const exercises=[];
@@ -3704,6 +3713,7 @@ function cleanRun(x){
   const q=x.rp;
   if(q&&typeof q.x==='string'&&q.x.length<=MAX_SNAP)o.rp={x:q.x,st:Math.max(1,Math.round(+q.st)||1),ev:isFinite(+q.ev)&&+q.ev>0?+q.ev:1,eu:q.eu==='pass'?'pass':'min',gp:+q.gp===4?4:0,
     o:Array.isArray(q.o)?q.o.map(n=>Math.round(+n)).filter(n=>n>=1&&n<=200):null};
+  if(x.ft===1||(o.rp&&textOwnTempos(o.rp.x)))o.ft=1;   /* every exercise had its own tempo, so bpm (the Tempo setting) was not played; runs from before 1.5.226 are told by their text */
   /* Exercises nothing was heard in were not played: they leave the scores and show as not played. A run with nothing heard at all goes. */
   if(o.lv!=='off'){
     const un=o.exercises.filter(b=>!(b.heard>0));
@@ -3743,7 +3753,7 @@ function unpackRecs(o){
       const dy=/^[gbm2-7RL]?s?$/.test(e.dy)?e.dy:'';
       sum.pat[statKey(k,e.lv,dy)]={k:k,lv:e.lv,dy:dy,runs:num(e.runs),t:num(e.t),bpm:num(e.bpm),tr:e.tr.slice(-12).map(num),cleared:num(e.cleared),clearedT:num(e.clearedT),avg:e.avg==null?null:num(e.avg),tc:e.tc?1:undefined,ec:e.ec?1:undefined};
     });
-    Object.keys(q.rt||{}).forEach(key=>{const e=q.rt[key];if(e&&typeof e.rk==='string'&&LEVELS.some(l=>l.v===e.lv))sum.rt[statKey(e.rk,e.lv,/^[gbm2-7RL]?s?$/.test(e.dy)&&e.dy)]={rk:e.rk.slice(0,40),lv:e.lv,dy:/^[gbm2-7RL]?s?$/.test(e.dy)?e.dy:'',ne:Math.max(1,num(e.ne)),runs:num(e.runs),t:num(e.t),cleared:num(e.cleared)};});
+    Object.keys(q.rt||{}).forEach(key=>{const e=q.rt[key];if(e&&typeof e.rk==='string'&&LEVELS.some(l=>l.v===e.lv))sum.rt[statKey(e.rk,e.lv,/^[gbm2-7RL]?s?$/.test(e.dy)&&e.dy)]={rk:e.rk.slice(0,40),lv:e.lv,dy:/^[gbm2-7RL]?s?$/.test(e.dy)?e.dy:'',ne:Math.max(1,num(e.ne)),runs:num(e.runs),t:num(e.t),cleared:num(e.cleared),ftc:e.ftc?1:undefined};});
   }
   const names={};
   if(o.names&&typeof o.names==='object')Object.keys(o.names).forEach(k=>{if(typeof o.names[k]==='string'&&o.names[k].trim())names[k.slice(0,400)]=o.names[k].trim().slice(0,80);});
@@ -6071,7 +6081,7 @@ function recordRun(r){
     else if(!recs.names[rk])recs.names[rk]='Untitled '+(recs.nu++);
   }
   const run={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:Date.now(),mode:S.mode,
-    rk:all?routineKeyOf(all):null,ne:all?all.length:1,bpm:S.bpm,tol:S.tol,lv:S.click,gb:r.gb||undefined,dy:r.dyc||'',rp:replaySnap(),sec:Math.max(0,Math.min(14400,Math.round((Date.now()-(r.w0||Date.now()))/1000))),
+    rk:all?routineKeyOf(all):null,ne:all?all.length:1,bpm:S.bpm,ft:ownTempos(allExercises())?1:undefined,tol:S.tol,lv:S.click,gb:r.gb||undefined,dy:r.dyc||'',rp:replaySnap(),sec:Math.max(0,Math.min(14400,Math.round((Date.now()-(r.w0||Date.now()))/1000))),
     exercises:rows.map(x=>({k:x.key,bpm:x.bpm,due:x.due,within:Math.round(x.pct*x.due),heard:x.heard,
       avg:isNaN(x.avg)?null:x.avg,sd:isNaN(x.spread)?null:x.spread,miss:x.miss,i:x.idx,
       ls:x.lvl&&x.lvl.sd!==null?Math.round(x.lvl.sd*10)/10:null,ld:x.lvl&&x.lvl.diff!==null?Math.round(x.lvl.diff*10)/10:null,
@@ -6162,7 +6172,7 @@ function renderAdvice(){
   {   /* a suggestion for the next run, under the share on time: text, not a button, as the next run may be another day */
     const nx=$('advNext');
     nx.hidden=!due;
-    if(due)nx.textContent='Next time: '+nextText({cleared:adv.cleared,bpm:L.run&&L.run.bpm||S.bpm,routine:!one});
+    if(due)nx.textContent='Next time: '+nextText({cleared:adv.cleared,bpm:L.run&&L.run.bpm||S.bpm,routine:!one,fixed:L.run?!!L.run.ft:ownTempos(allExercises())});
   }
   {   /* what was just earned gets its own moment at the top, once */
     const wins=[];
@@ -6561,7 +6571,7 @@ function renderRoutineRows(routines,replay){
     if(x.bpm===null){stat('\u2014','on time','muted');}
     else{
       const acc=accCell(x.recent);
-      stat(String(x.bpm),'BPM');stat(acc[0],'on time',acc[1]);
+      stat(x.bpm?String(x.bpm):x.span,'BPM');stat(acc[0],'on time',acc[1]);
       const sp=sparkline(x.trend);
       if(Array.isArray(sp))stat(sp[0],'trend','muted');else n.appendChild(sp);
       stat(isNaN(x.bias)?'\u2014':fmtMs(x.bias,1),'ms',biasCls(x.bias));
@@ -6573,7 +6583,8 @@ function renderRoutineRows(routines,replay){
     bits.push(x.ne+(x.ne===1?' exercise':' exercises'));
     bits.push(x.runs+(x.runs===1?' run':' runs'));
     if(x.cleared)bits.push('Cleared at '+x.cleared+' BPM.');
-    const nt=document.createElement('span');nt.className='rm'+(x.cleared&&x.bpm!==null&&x.cleared>=x.bpm?' go':'');nt.textContent=bits.join(' \u00B7 ');m.appendChild(nt);
+    if(x.ftc)bits.push('Cleared at its own tempos.');
+    const nt=document.createElement('span');nt.className='rm'+((x.cleared&&x.bpm!==null&&x.cleared>=x.bpm)||(x.ftc&&x.bpm===0)?' go':'');nt.textContent=bits.join(' \u00B7 ');m.appendChild(nt);
     row.append(m,ra);
     if(open){
       const mine=recs.runs.filter(r=>r.rk===x.rk&&r.lv===x.lv&&(r.dy||'')===(x.dy||'')).sort((a,b)=>b.t-a.t);
@@ -6840,7 +6851,7 @@ function runMeta(r,withTime,noScore){
   bits.push(r.lv==='off'?'Count-in only':levelName(r.lv));
   if(gapNorm(r.gb))bits.push('Click '+gapTxt(r.gb));
   if(r.mode==='routine'&&r.ne>1){const n=r.exercises.length;bits.push((n<r.ne?n+' of '+r.ne:r.ne)+' exercises');}   /* a partial run says how many were played */
-  bits.push(r.bpm+' BPM');
+  bits.push((r.ft?tempoSpan(r.exercises.map(b=>b.bpm)):r.bpm)+' BPM');
   if(r.tol&&r.tol!==20)bits.push('\u00b1'+r.tol+' ms');   /* a window other than the standard one */
   const m=runMins(r);if(m)bits.push(m);
   if(!noScore&&S.game&&r.lv!=='off'){const v=runScore(r);if(v)bits.push('Score: '+v.toLocaleString('en-US'));}
@@ -6904,7 +6915,7 @@ function renderHistoryDays(){
       const r=f[0],t=runTitle(r),fig=runFigures(r);
       if(f.length===1){panel.appendChild(listRow(t.text,t.mono,runMeta(r,true),dyLine(r),fig.acc,()=>openHist({run:r.id}),null,r));return;}
       const tm=x=>new Date(x.t).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
-      const bpms=f.map(x=>x.bpm),lo=Math.min.apply(null,bpms),hi=Math.max.apply(null,bpms);
+      const bpms=[].concat(...f.map(x=>x.ft?x.exercises.map(b=>b.bpm):[x.bpm])),lo=Math.min.apply(null,bpms),hi=Math.max.apply(null,bpms);
       const best=bestPct(f);
       const sub=f.length+' runs · '+tm(f[f.length-1])+' – '+tm(r)+' · '+(r.lv==='off'?'Count-in only':levelName(r.lv))+' · '+(lo===hi?lo:lo+'–'+hi)+' BPM'+(best!==null?' · best '+onPct(best):'');
       groupRow(panel,t.text,t.mono,sub,dyLine(r),fig.acc,f);
@@ -7708,11 +7719,11 @@ function routineInfoOf(parsed){
   return {max:maxPoints(ex.map((b,i)=>[b.passes*b.notes.filter(x=>x!=='_').length,strokeMult(keys[i],b.bpm,S.tol,barsOn())]),S.click),rk:routineKeyOf(keys)};   /* at the window set now */
 }
 const maxText=max=>'Max score: '+max.toLocaleString('en-US');
-function syncMaxScore(){
-  const el=$('maxLine');el.textContent='';
-  if(!S.game||S.mode!=='routine'||!routineParsed.exercises.length)return;   /* a score, so only with scores and rewards on */
+/* " · max score 3,578" for the line under Start */
+function maxNote(){
+  if(!S.game||S.mode!=='routine'||!routineParsed.exercises.length)return '';   /* a score, so only with scores and rewards on */
   const i=routineInfoOf(routineParsed);
-  if(i.max)el.textContent=maxText(i.max);
+  return i.max?' · max score '+i.max.toLocaleString('en-US'):'';
 }
 function syncPlayName(){
   $('playName').textContent=curName();
@@ -8176,7 +8187,7 @@ function setRunning(on){
 }
 function playsFor(){return ' · plays for '+(S.eachUnit==='pass'?S.eachVal+(S.eachVal===1?' pass':' passes'):S.eachVal+(S.eachVal===1?' minute':' minutes'));}
 /* How long a run of these exercises takes: each exercise, the gaps between them and the opening count-in. */
-function playTime(list){let t=0;list.forEach(b=>{t+=b.secs;});return t+(list.length>1?list.length-1:0)*S.gap*(60/S.bpm)+4*(60/S.bpm);}
+function playTime(list){let t=0;list.forEach((b,i)=>{t+=b.secs+(i?S.gap:(b.sig?b.sig.n:4))*60/b.bpm;});return t;}   /* each count-in at its exercise's tempo, as buildPlan plays it */
 /* Set up: a Mic check (it opens the microphone and records the room noise) and latency calibrated. Start waits for both. A keyboard needs none of them. */
 const setupNeeded=()=>S.input==='mic'&&!(S.noise!==null&&S.latCal);
 let welcome=false;   /* the welcome is open: from a first visit, or after Device setup is cleared, until Start practising */
@@ -8230,19 +8241,23 @@ function syncInfo(){
     const errs=routineParsed.errors;
     $('routineErr').textContent=n===0&&!S.routineText.trim()?'':(errs.length?errs.slice(0,3).join(' ')+(errs.length>3?' (+'+(errs.length-3)+' more)':''):(n===0?'No exercises found. Type one exercise per line using L and R.':''));
     $('routineInfo').textContent=ok?n+(n===1?' exercise':' exercises')+(S.startExercise>1?' · from '+S.startExercise:''):'';
-    syncMaxScore();
     const en=$('eachNote');
     en.hidden=!routineParsed.each;
     if(routineParsed.each)en.textContent='This routine sets the length of each exercise (each:), so Each exercise is not used. An exercise with its own x or time keeps that, and Tempo applies to every exercise without its own @.';
     $('eachVal').disabled=!!routineParsed.each||(run&&!run.ended);
     $('eachUnit').disabled=!!routineParsed.each||(run&&!run.ended);
   }
+  {   /* Tempo is not used when every exercise has its own */
+    const all=allExercises(),fx=ownTempos(all),tn=$('tempoNote');
+    tn.hidden=!fx;tn.textContent=fx?(all.length>1?'Every exercise in this routine has its own tempo (@), so Tempo is not used. Change the tempos in the editor.':'This exercise has its own tempo (@), so Tempo is not used. Change it in the editor.'):'';
+    ['bpmDown','bpmUp','bpmOpen'].forEach(id=>{$(id).disabled=fx||!!(run&&!run.ended);});
+  }
   syncLastNote();
   $('startBtn').disabled=(!ok||setupNeeded())&&!(run&&!run.ended);   /* while set-up is needed the welcome hides Start; disabled still stops the Space shortcut */
   const sum=$('playSummary');
   if(!exercises.length)sum.textContent=S.mode==='single'?'Type an exercise in the editor, then press Start.':'Add some exercises in the editor, then press Start.';
-  else if(S.mode==='single')sum.textContent=S.bpm+' BPM'+pulseNote(exercises)+playsFor();
-  else sum.textContent=S.bpm+' BPM'+pulseNote(exercises)+' · about '+fmtTime(playTime(exercises))+routineGuide();
+  else if(S.mode==='single')sum.textContent=exercises[0].bpm+' BPM'+pulseNote(exercises)+playsFor();
+  else sum.textContent=(ownTempos(exercises)?tempoSpan(exercises.map(b=>b.bpm)):S.bpm)+' BPM'+pulseNote(exercises)+' · about '+fmtTime(playTime(exercises))+maxNote()+routineGuide();
   {const b=exercises[0];$('playPat').textContent=exercises.length&&S.mode==='single'?showPattern(b.notes,b.groupStart,b.subs,b.defSub,b.sig,b.src):'';}
   if(document.activeElement!==$('bpm'))$('bpm').value=S.bpm;   /* not while it is being typed */
   $('bpmNum').textContent=S.bpm;$('bpmOpen').setAttribute('aria-label',S.bpm+' BPM, change the tempo');
@@ -8297,7 +8312,7 @@ function pulseNote(exercises){
 }
 /* The last saved run of what is loaded, at this click and accent rule, and what to play next: "Last time: 88% at 90 BPM. Stay at 90 BPM." */
 function syncLastNote(){
-  const el=$('lastNote'),ex=allExercises();let e=null,pct=NaN,ok=false;
+  const el=$('lastNote'),ex=allExercises(),fixed=ownTempos(ex);let e=null,pct=NaN,ok=false;
   if(ex.length&&!(run&&!run.ended)&&!lastRun){   /* not beside the result it repeats */
     const keys=ex.map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig)),cd=S.click,dy=dynCode();
     if(S.mode==='single'||keys.length===1){e=guide().pat.get(statKey(keys[0],cd,dy));if(e){pct=e.last;ok=pct>=TARGET;}}
@@ -8311,11 +8326,12 @@ function syncLastNote(){
   }
   el.hidden=!ex.length||!!(run&&!run.ended)||!!lastRun;
   if(el.hidden)return;
-  if(!(e&&e.bpm&&!isNaN(pct))){el.textContent='No saved run with these settings yet.';return;}
-  {const t=nextText({cleared:ok,bpm:e.bpm,routine:ex.length>1});el.textContent='Last time: '+onPct(pct)+' on time at '+e.bpm+' BPM. '+t[0].toUpperCase()+t.slice(1);}
+  if(!(e&&(e.bpm||fixed)&&!isNaN(pct))){el.textContent='No saved run with these settings yet.';return;}
+  {const t=nextText({cleared:ok,bpm:e.bpm,routine:ex.length>1,fixed:fixed});el.textContent='Last time: '+onPct(pct)+' on time'+(fixed?'':' at '+e.bpm+' BPM')+'. '+t[0].toUpperCase()+t.slice(1);}
 }
 function routineGuide(){
   const e=guide().rt.get(statKey(routineKeyOf(allExercises().map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig))),S.click,dynCode()));
+  if(ownTempos(allExercises()))return e&&e.ftc?' · routine cleared':'';   /* Tempo is not played, so a clear at a Tempo setting says nothing */
   return e&&e.cleared?' · routine cleared at '+e.cleared+' BPM':'';
 }
 function refreshPreview(){
@@ -8930,7 +8946,7 @@ function wire(){
   $('palette').addEventListener('change',e=>{S.palette=e.target.value;applyTheme();save();});
   $('layout').addEventListener('change',e=>{S.layout=e.target.value;save();syncLayout();});
   if(wideMQ)wideMQ.addEventListener('change',syncLayout);
-  $('game').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||(b.dataset.v==='on')===S.game)return;S.game=b.dataset.v==='on';syncGame();syncMaxScore();save();if(!S.game&&!$('pvAch').hidden)setPview('hist');renderAll();});
+  $('game').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||(b.dataset.v==='on')===S.game)return;S.game=b.dataset.v==='on';syncGame();syncInfo();save();if(!S.game&&!$('pvAch').hidden)setPview('hist');renderAll();});
   $('view').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.v===S.view)return;S.view=b.dataset.v;syncView();applyView();save();if(run&&!run.ended)drawHwy(run);});
   $('pulse').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.pulse=b.dataset.v==='on';setPressed('pulse',b.dataset.v);save();if(!S.pulse)clearPulse();});
   $('csvBtn').addEventListener('click',downloadCsv);
