@@ -1319,6 +1319,34 @@ audioTest('a routine below the target is told to stay until every exercise reach
   assert.equal(await p.textContent('#lastNote'), 'Last time: 75% on time at 120 BPM. Stay at 120 BPM until every exercise reaches 90% on time.');
 });
 
+test('a routine where every exercise has its own tempo shows those tempos, and says Tempo is not used', async () => {
+  const p = await open({ input: 'kb', bpm: 60, routineText: `8 RLRL @50
+8 RRLL @90`, mode: 'routine', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
+  assert.match(await p.textContent('#playSummary'), /^50–90 BPM · about /);
+  assert.ok(await p.isVisible('#tempoNote'));
+  assert.equal(await p.isDisabled('#bpmOpen'), true);
+  await p.evaluate(() => { const t = document.getElementById('routineText'); t.value = `8 RLRL @50
+8 RRLL`; t.dispatchEvent(new Event('input')); });
+  await p.waitForFunction(() => document.getElementById('tempoNote').hidden);
+  assert.match(await p.textContent('#playSummary'), /^60 BPM · about /, 'one exercise plays at Tempo, so Tempo is shown');
+  assert.equal(await p.isDisabled('#bpmOpen'), false);
+});
+
+audioTest('a run of a routine with its own tempos is saved without a routine tempo, and the advice does not name one', async () => {
+  const p = await open({ input: 'kb', bpm: 120, routineText: `8 RLRL @100
+8 RRLL @110`, mode: 'routine', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
+  await press(p, /^Start/);
+  await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
+  await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach((s, i) => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + (s.seg && i % 2 ? 0.04 : 0.005), kb: true, f: null, det: { hand, conf: 1 } }); }); });
+  await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
+  await p.waitForTimeout(300);
+  assert.equal(await p.textContent('#advNext'), 'Next time: play it again until every exercise reaches 90% on time.');
+  await p.evaluate(() => document.getElementById('advDone').click());
+  await p.waitForTimeout(200);
+  assert.match(await p.textContent('#lastNote'), /^Last time: \d+% on time\. Play it again until every exercise reaches 90% on time\.$/);
+  assert.equal(await p.evaluate(() => { const r = JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')).runs; return r[r.length - 1].ft; }), 1);
+});
+
 audioTest('rests keep the streak and score nothing unless hit, and a hit on a rest is a miss', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'R_L_ R_L_', eachUnit: 'pass', eachVal: 2, seeded: true });
   await press(p, /^Start/);
@@ -1357,8 +1385,8 @@ test('Play settings: Scoring beside Accent, tops level; Other strokes only once 
 
 audioTest('a routine shows the most a flawless run could score, and a flawless run reaches it', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL\nLRLR LRLR', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true, game: true });
-  const max = await p.evaluate(() => document.getElementById('maxLine').textContent);
-  assert.match(max, /^Max score: [\d,]+$/);
+  const max = (/ · max score ([\d,]+)/.exec(await p.textContent('#playSummary')) || [])[1];
+  assert.ok(max, 'the line under Start gives the max score');
   await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } }); }); });
@@ -1366,7 +1394,7 @@ audioTest('a routine shows the most a flawless run could score, and a flawless r
   await p.waitForTimeout(400);
   const got = await p.evaluate(() => document.getElementById('advScore').textContent + '|' + document.getElementById('advMax').textContent);
   const [sc, mx] = got.split('|');
-  assert.equal(sc, max.replace('Max score: ', ''), 'a flawless run scores the maximum');
+  assert.equal(sc, max, 'a flawless run scores the maximum');
   assert.equal(mx, '/ ' + sc);
 });
 
@@ -1532,14 +1560,14 @@ audioTest('the result\'s actions are in view without scrolling, in one row of eq
 
 test('a routine shows no Max score with scores and rewards off, and shows it as soon as they are turned on', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL\nLRLR LRLR', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true, game: false });
-  assert.equal(await p.textContent('#maxLine'), '');
+  assert.doesNotMatch(await p.textContent('#playSummary'), /max score/);
   await p.evaluate(() => document.getElementById('gameOn').click());
-  assert.match(await p.textContent('#maxLine'), /^Max score: [\d,]+$/);
+  assert.match(await p.textContent('#playSummary'), / · max score [\d,]+/);
 });
 
 test('changing the on-time window updates the routine\'s Max score at once', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: 'RLRL RLRL\nLRLR LRLR', eachUnit: 'pass', eachVal: 1, click: 'half', tol: 20, seeded: true, game: true });
-  const max = () => p.evaluate(() => +document.getElementById('maxLine').textContent.replace(/\D/g, ''));
+  const max = () => p.evaluate(() => +/max score ([\d,]+)/.exec(document.getElementById('playSummary').textContent)[1].replace(/\D/g, ''));
   const at20 = await max();
   await p.evaluate(() => { const s = document.getElementById('tol'); s.value = '50'; s.dispatchEvent(new Event('change')); });
   const at50 = await max();
