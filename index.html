@@ -3585,7 +3585,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.229';                           /* shown beside the title */
+const VERSION='1.5.230';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3764,25 +3764,107 @@ function packRun(r,hk){
 function packRecs(sel){   /* sel says which parts to include; none given means the records as kept in this browser (no settings) */
   sel=sel||{hist:true,lib:true,lists:true,set:false};
   const items={},hk=t=>{const h=hashOf(t);items[h]=t;return h;};
-  const runs=(sel.hist?recs.runs:[]).map(r=>packRun(r,hk));
+  const runs=(sel.hist&&sel.runs!==false?recs.runs:[]).map(r=>packRun(r,hk));
   const q=recs.sum,out={v:2};
   if(sel.hist)out.sum={runs:q.runs,sec:q.sec,cr:q.cr||0,cs:q.cs||0,pf:q.pf||0,hs:q.hs||{},hr:q.hr||{},days:q.days,rt:q.rt,pat:Object.keys(q.pat).map(k=>Object.assign({},q.pat[k],{k:hk(q.pat[k].k)}))};
   if(sel.lib)out.lib=recs.lib.map(e=>({id:e.id,x:hk(e.x),t:e.t}));
   if(sel.lists)out.lists=S.lists.map(l=>({url:l.url,name:l.name||undefined}));
   if(sel.set){out.settings={};PORTABLE.forEach(k=>{out.settings[k]=S[k];});}
   if(sel.hist||sel.lib){out.names=recs.names;out.nu=recs.nu;}
-  if(sel.hist)out.runs=runs;
+  if(sel.hist&&sel.runs!==false)out.runs=runs;
   out.items=items;
   return out;
 }
-try{
-  const o=JSON.parse(localStorage.getItem(RKEY)||'null');
-  if(o&&Array.isArray(o.runs)){const u=unpackRecs(o);recs.runs=u.runs;recs.sum=u.sum;recs.names=u.names;recs.nu=u.nu;recs.lib=u.lib;}
-  else{
-    const old=JSON.parse(localStorage.getItem(OLDKEY)||'null');
-    if(old&&Array.isArray(old.runs))old.runs.forEach(x=>{const c=cleanRun(x);if(c)recs.runs.push(c);});
+const useRecs=u=>{recs.runs=u.runs;recs.sum=u.sum;recs.names=u.names;recs.nu=u.nu;recs.lib=u.lib;};
+/* Records as kept before 1.5.230, and still where IndexedDB cannot open. */
+function loadLocal(){
+  try{
+    const o=JSON.parse(localStorage.getItem(RKEY)||'null');
+    if(o&&Array.isArray(o.runs))useRecs(unpackRecs(o));
+    else{
+      const old=JSON.parse(localStorage.getItem(OLDKEY)||'null');
+      if(old&&Array.isArray(old.runs))old.runs.forEach(x=>{const c=cleanRun(x);if(c)recs.runs.push(c);});
+    }
+  }catch(e){}
+}
+/* Records live in IndexedDB: one entry for each run, and one (meta, 'recs') for the totals, names and saved routines.
+   A save writes only the runs that changed, in the background, so a long history no longer slows each save.
+   Where IndexedDB cannot open (some private windows), records stay in localStorage with its smaller limits.
+   Settings stay in localStorage either way: they are small, and the page reads them before it draws. */
+const DB_NAME='pocket',MAX_RUNS_DB=2000,DETAIL_DB=10000000;   /* 2,000 runs, and 20 MB of stroke detail at two bytes a character */
+let db=null;   /* null: records are kept in localStorage */
+const stored=new Map();   /* run id -> signature of the copy IndexedDB holds. '' means it has to be written, or deleted, again. */
+let lastWrite=Promise.resolve(true);
+/* Changes whenever a run is changed in place: an exercise taken out, its routine key changed, its detail trimmed. */
+const runSig=r=>[r.t,r.rk,r.ne,r.exercises.map(b=>b.i+':'+(b.sp?b.sp.length:0)).join(','),r.sk?r.sk.map(b=>b.i).join(','):'',r.rp?r.rp.x.length+'.'+r.rp.st+'.'+(r.rp.o||[]).join(','):''].join('|');
+const idbReq=q=>new Promise((res,rej)=>{q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});
+function openDb(ver){
+  return new Promise(res=>{
+    let q,done=false;
+    const end=d=>{if(done){if(d)d.close();return;}done=true;res(d);};
+    setTimeout(()=>end(null),4000);   /* a browser that never answers: records stay in localStorage */
+    try{q=ver?indexedDB.open(DB_NAME,ver):indexedDB.open(DB_NAME);}catch(e){end(null);return;}
+    q.onupgradeneeded=()=>{const d=q.result;if(!d.objectStoreNames.contains('runs'))d.createObjectStore('runs',{keyPath:'id'});if(!d.objectStoreNames.contains('meta'))d.createObjectStore('meta');};
+    q.onsuccess=()=>{
+      const d=q.result;
+      if(d.objectStoreNames.contains('runs')&&d.objectStoreNames.contains('meta')){d.onversionchange=()=>d.close();end(d);return;}
+      const v=d.version+1;d.close();openDb(v).then(end);   /* a database made without its stores: open it one version up, which makes them */
+    };
+    q.onerror=q.onblocked=()=>end(null);
+  });
+}
+async function loadRecs(){
+  try{if(window.indexedDB)db=await openDb();}catch(e){db=null;}
+  if(db){
+    try{
+      const tx=db.transaction(['runs','meta']);
+      const [meta,raw]=await Promise.all([idbReq(tx.objectStore('meta').get('recs')),idbReq(tx.objectStore('runs').getAll())]);
+      if(meta){
+        const items=Object.assign({},meta.items),hk=t=>{const h=hashOf(t);items[h]=t;return h;},runs=[];
+        raw.forEach(r=>{if(r&&typeof r.id==='string')stored.set(r.id,'');try{runs.push(packRun(r,hk));}catch(e){}});
+        const u=unpackRecs(Object.assign({},meta,{v:2,items:items,runs:runs}));
+        u.runs.sort((a,b)=>a.t-b.t);useRecs(u);
+        u.runs.forEach(r=>stored.set(r.id,runSig(r)));   /* a run that did not pass the checks keeps '', and goes at the next save */
+        try{localStorage.removeItem(RKEY);localStorage.removeItem(OLDKEY);}catch(e){}   /* left by an older version: already moved */
+        return;
+      }
+    }catch(e){db=null;loadLocal();return;}
   }
-}catch(e){}
+  loadLocal();
+  if(!db)return;
+  /* The first load with IndexedDB: the records in localStorage move across, and the old key goes once they are written. */
+  if(await writeRecs())try{localStorage.removeItem(RKEY);localStorage.removeItem(OLDKEY);}catch(e){}
+}
+/* Writes the runs that changed, and the meta entry, in one transaction. Resolves true once written. A full disk folds the oldest
+   quarter of runs into the totals and tries again, as the localStorage save does. */
+function writeRecs(tries){
+  tries=tries||0;
+  const live=new Set(),put=[],del=[];
+  recs.runs.forEach(r=>{live.add(r.id);const g=runSig(r);if(stored.get(r.id)!==g)put.push([r,g]);});
+  stored.forEach((g,id)=>{if(!live.has(id))del.push(id);});
+  const p=new Promise(res=>{
+    let tx=null;
+    const failed=e=>{
+      put.forEach(x=>stored.set(x[0].id,''));del.forEach(id=>stored.set(id,''));   /* written again at the next save */
+      if(tries<3&&e&&e.name==='QuotaExceededError'){foldOld(Math.floor(recs.runs.length*0.75));writeRecs(tries+1).then(res);return;}
+      res(false);
+    };
+    try{
+      tx=db.transaction(['runs','meta'],'readwrite');
+      const rs=tx.objectStore('runs');
+      put.forEach(x=>rs.put(JSON.parse(JSON.stringify(x[0]))));   /* as JSON would keep it: nothing held only in memory */
+      del.forEach(id=>rs.delete(id));
+      tx.objectStore('meta').put(packRecs({hist:true,lib:true,lists:false,set:false,runs:false}),'recs');
+    }catch(e){try{if(tx)tx.abort();}catch(x){}failed(e);return;}
+    put.forEach(x=>stored.set(x[0].id,x[1]));del.forEach(id=>stored.delete(id));
+    tx.oncomplete=()=>res(true);
+    tx.onabort=()=>failed(tx.error);
+  });
+  lastWrite=p.then(ok=>{if(!ok)setStatus('Could not save your records. Browser storage may be full.');return ok;});
+  return lastWrite;
+}
+/* Waits for the last save to be written, before the page reloads. */
+const recsWritten=()=>lastWrite.catch(()=>false);
 /* Keeps the newest MAX_RUNS runs in full. Older ones are folded into the permanent summary. */
 function foldOld(keep){
   while(recs.runs.length>keep)foldRun(recs.sum,recs.runs.shift());
@@ -3804,15 +3886,17 @@ function entryText(e){const k=libKey(e);return recs.names[k]?setHeader(e.x,'titl
 /* Stroke detail may use 40% of the space the browser gives this page (about 5 MB, two bytes a character). When it is over, the oldest runs lose theirs first; their totals stay.
    One run keeps at most a quarter of that share. */
 const QUOTA=Math.floor(5*1024*1024/2),DETAIL_SHARE=0.4;
+const detailBudget=()=>db?DETAIL_DB:Math.floor(QUOTA*DETAIL_SHARE);   /* in characters. IndexedDB has room for far more. */
 const detailChars=()=>recs.runs.reduce((n,r)=>n+r.exercises.reduce((m,b)=>m+(b.sp?b.sp.length:0),0),0);
 function trimDetail(){
-  const budget=Math.floor(QUOTA*DETAIL_SHARE),one=Math.floor(budget/4);
+  const budget=detailBudget(),one=Math.floor(budget/4);
   recs.runs.forEach(r=>{let left=one;r.exercises.forEach(b=>{if(!b.sp)return;if(b.sp.length<=left){left-=b.sp.length;return;}if(left>=4)b.sp=b.sp.slice(0,left-left%4);else delete b.sp;left=0;});});
   let n=detailChars();
   for(let i=0;i<recs.runs.length&&n>budget;i++)recs.runs[i].exercises.forEach(b=>{if(b.sp){n-=b.sp.length;delete b.sp;}});
 }
 function saveRecs(){
-  foldOld(MAX_RUNS);pruneNames();trimDetail();
+  foldOld(db?MAX_RUNS_DB:MAX_RUNS);pruneNames();trimDetail();
+  if(db){writeRecs();return true;}   /* written in the background; a failure says so in the status line */
   for(let i=0;i<4;i++){
     try{localStorage.setItem(RKEY,JSON.stringify(packRecs()));try{localStorage.removeItem(OLDKEY);}catch(e){}return true;}
     catch(e){foldOld(Math.floor(recs.runs.length*0.75));}
@@ -6629,23 +6713,25 @@ function setSview(v){
   if(v==='data')renderStorage();
   showTabs(v,[['pref','svPref','svBtnPref'],['dev','svDev','svBtnDev'],['data','svData','svBtnData']]);
 }
-/* What the saved data takes. Sizes are characters written to browser storage, two bytes each; the limit is the browser's, about 5 MB, and is only an estimate. */
+/* What the saved data takes. Sizes are characters, two bytes each. In localStorage the limit is the browser's, about 5 MB, and is only an estimate.
+   In IndexedDB the browser allows far more, so the bar is drawn against Pocket's own limit for stroke detail. */
 function renderStorage(){
   let rk=0,kk=0;
-  try{rk=(localStorage.getItem(RKEY)||'').length;kk=(localStorage.getItem(KEY)||'').length;}catch(e){}
   const detail=detailChars(),p=packRecs();
+  try{rk=db?JSON.stringify(p).length:(localStorage.getItem(RKEY)||'').length;kk=(localStorage.getItem(KEY)||'').length;}catch(e){}
+  const scale=db?Math.floor(detailBudget()/DETAIL_SHARE):QUOTA;
   const runs=Math.max(0,JSON.stringify(p.runs||[]).length-detail)+JSON.stringify(p.sum||{}).length;
   const libs=JSON.stringify(S.lists||[]).length,sets=Math.max(0,kk-libs),routines=Math.max(0,rk-detail-runs);
   const parts=[['Stroke detail',detail,'var(--accent)'],['Runs',runs,'var(--ok)'],['Routines',routines,'var(--late)'],['Libraries',libs,'var(--early)'],['Settings',sets,'var(--muted)']];
   const used=parts.reduce((n,x)=>n+x[1],0),fmt=c=>{const b=c*2;return b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(0.1,b/1024).toFixed(b<10240?1:0)+' KB';};
-  $('stoTotal').textContent=fmt(used)+' of about '+fmt(QUOTA)+' used on this device.';
+  $('stoTotal').textContent=db?fmt(used)+' used on this device. Pocket keeps up to '+MAX_RUNS_DB.toLocaleString('en-AU')+' runs in full.':fmt(used)+' of about '+fmt(QUOTA)+' used on this device.';
   const bar=$('stoBar');bar.textContent='';bar.setAttribute('aria-label',$('stoTotal').textContent);
-  parts.forEach(x=>{if(!x[1])return;const e=document.createElement('i');e.style.width=(x[1]/QUOTA*100)+'%';e.style.background=x[2];e.title=x[0];bar.appendChild(e);});
-  const mk=document.createElement('i');mk.className='stomk';mk.style.left=(QUOTA*DETAIL_SHARE/QUOTA*100)+'%';mk.title='Limit for stroke detail';bar.appendChild(mk);
+  parts.forEach(x=>{if(!x[1])return;const e=document.createElement('i');e.style.width=(x[1]/scale*100)+'%';e.style.background=x[2];e.title=x[0];bar.appendChild(e);});
+  const mk=document.createElement('i');mk.className='stomk';mk.style.left=(detailBudget()/scale*100)+'%';mk.title='Limit for stroke detail';bar.appendChild(mk);
   const leg=$('stoLeg');leg.textContent='';
   parts.forEach(x=>{const d=document.createElement('div');const dot=document.createElement('span');dot.style.background=x[2];d.append(dot,x[0]+' '+fmt(x[1]));leg.appendChild(d);});
   const n=recs.runs.filter(r=>r.exercises.some(b=>b.sp)).length;
-  $('stoNote').textContent='Stroke detail is what lets a run show its staff and strokes again. It may use up to '+fmt(Math.floor(QUOTA*DETAIL_SHARE))+'. Past that the oldest runs lose their detail first and keep their totals. '+n+(n===1?' run has':' runs have')+' its detail now.';
+  $('stoNote').textContent='Stroke detail is what lets a run show its staff and strokes again. It may use up to '+fmt(detailBudget())+'. Past that the oldest runs lose their detail first and keep their totals. '+n+(n===1?' run has':' runs have')+' its detail now.';
 }
 function showSetup(v){setSview(v);showTab('setup');}
 let histShown=20,histDays=7,hview='day';
@@ -7276,7 +7362,7 @@ function importSelected(){
   if(sel.set&&o.settings&&typeof o.settings==='object')PORTABLE.forEach(k=>{const v=o.settings[k];if(v!==undefined&&typeof v===typeof S[k]){S[k]=v;setN++;}});
   if(addS||savedCopy||setN)save();
   saveRecs();renderProgress();
-  if(setN){sayRec('Imported settings. Reloading…');setTimeout(()=>location.reload(),900);return;}
+  if(setN){sayRec('Imported settings. Reloading…');Promise.all([recsWritten(),new Promise(r=>setTimeout(r,900))]).then(()=>location.reload());return;}
   const pl=(n,w)=>n+' '+w+(n===1?'':'s'),bits=[];
   if(add)bits.push(pl(add,'new run'));if(addL)bits.push(pl(addL,'routine'));if(addS)bits.push(pl(addS,'library'));
   sayRec(bits.length?'Imported '+bits.join(' and ')+(dup?' ('+dup+' already here)':'')+'.':'Nothing new in what you ticked.');
@@ -7291,7 +7377,7 @@ function clearSelected(){
   if(sel.lists){S.lists=hostedLists();S.listSel='';}
   if(sel.set)PORTABLE.forEach(k=>{delete S[k];});   /* the page reloads, and every one falls back to its starting value */
   if(sel.dev){micOff(true);S.clockLog=[];S.noise=null;S.latCal=false;S.latency=null;delete S.sens;delete S.settle;delete S.input;}   /* shows the Set up card again */
-  save();saveRecs();location.reload();
+  save();saveRecs();recsWritten().then(()=>location.reload());
 }
 
 /* ---------- results by exercise ---------- */
@@ -9131,7 +9217,7 @@ function init(){
   onRoutineChanged();
   seedLibraries();
 }
-init();
+loadRecs().then(init,init);
 })();
 </script>
 </body>
