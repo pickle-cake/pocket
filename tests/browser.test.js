@@ -1247,6 +1247,55 @@ test('Import asks what to bring in, offers only what the file holds, and imports
   assert.equal(after.lib, 1);
 });
 
+test('Importing records from a newer format keeps the totals by device and the fields this version does not know', async () => {
+  const p = await open();
+  const file = path.join(os.tmpdir(), 'pocket-imp-v3.json'), now = Date.now(), stamp = (t, n, d) => t.toString(36).padStart(9, '0') + '-' + n.toString(36).padStart(6, '0') + '-' + d;
+  fs.writeFileSync(file, JSON.stringify({
+    v: 9, future: { a: 1 }, items: { h1: 'RLRL' },
+    runs: [{ id: stamp(now - 6e4, 3, 'otherdev'), t: now - 6e4, sec: 60, bpm: 60, lv: 'beat', mood: 'good', exercises: [{ k: 'h1', due: 16, within: 16, heard: 16, tilt: 2 }] }],
+    sums: { otherdev: { v: stamp(now - 1e5, 2, 'otherdev'), runs: 4, sec: 240, days: {}, pat: [], rt: {}, cov: { otherdev: 2 } } },
+    lib: [{ id: 'zz9', x: 'h1', t: 1, u: stamp(5, 1, 'otherdev'), tag: 'mine' }]
+  }));
+  await p.click('#tabProgress');
+  await p.setInputFiles('#recFile', file);
+  await p.waitForTimeout(300);
+  await p.click('#exGo');
+  await p.waitForTimeout(400);
+  const r = await p.evaluate(async () => window.__recs());
+  assert.equal(r.v, 3, 'written in the format this version knows');
+  assert.deepEqual(r.future, { a: 1 }, 'a field it does not know is kept');
+  assert.equal(r.runs.length, 1);
+  assert.equal(r.runs[0].mood, 'good');
+  assert.equal(r.runs[0].exercises[0].tilt, 2);
+  assert.equal(r.sums.otherdev.runs, 4, "the other device's totals");
+  assert.ok(r.lib.some(e => e.id === 'zz9' && e.tag === 'mine'), 'and on a saved routine');
+  assert.equal(await p.textContent('#recMsg'), 'Imported 1 new run and 1 routine.');
+  await p.reload();
+  await p.click('#tabProgress');
+  await p.waitForTimeout(300);
+  assert.match(await p.textContent('#recMsg'), /^1 run in history, 5 in all\./, "the other device's 4 runs count, read back from storage");
+});
+
+test('A 25 MB import of 1,600 runs comes in whole, with stroke detail cut to its budget', async () => {
+  const p = await open();
+  const file = path.join(os.tmpdir(), 'pocket-imp-big.json'), now = Date.now(), N = 1600, stamp = (t, n, d) => t.toString(36).padStart(9, '0') + '-' + n.toString(36).padStart(6, '0') + '-' + d;
+  const sp = 'AbC_'.repeat(3900), q = 'obmr'.repeat(100);
+  const runs = Array.from({ length: N }, (_, i) => { const t = now - (N - i) * 36e5; return { id: stamp(t, i + 1, 'otherdev'), t, sec: 60, bpm: 60, lv: 'beat', exercises: [{ k: 'h1', due: 16, within: 16, heard: 16, sp, q }] }; });
+  fs.writeFileSync(file, JSON.stringify({ v: 3, items: { h1: 'RLRL' }, runs }));
+  assert.ok(fs.statSync(file).size > 25e6, 'the file is over 25 MB');
+  await p.click('#tabProgress');
+  await p.setInputFiles('#recFile', file);
+  await p.waitForSelector('#exGo', { state: 'visible', timeout: 30000 });
+  await p.click('#exGo');
+  await p.waitForFunction(() => /^Imported/.test(document.getElementById('recMsg').textContent), null, { timeout: 60000 });
+  assert.match(await p.textContent('#recMsg'), /^Imported 1,600 new runs/);
+  const r = await p.evaluate(async () => { const r = await window.__recs(); return { n: r.runs.length, sp: r.runs.reduce((a, x) => a + x.exercises.reduce((b, e) => b + (e.sp || '').length, 0), 0), newest: !!r.runs.reduce((a, x) => (x.t > a.t ? x : a)).exercises[0].sp }; });
+  assert.equal(r.n, N, 'every run is kept');
+  assert.ok(r.sp <= 10e6, 'stroke detail (sp; q is not counted yet) is within its 10M-character budget');
+  assert.ok(r.newest, 'the newest run keeps its stroke detail');
+  fs.unlinkSync(file);
+});
+
 audioTest('a scored run shows its score against the maximum, and flags a new high score', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true, game: true });
   await press(p, /^Start/);
@@ -1512,7 +1561,9 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   await p.waitForTimeout(300);
   assert.equal(await libN(), n0 + 1, 'the routine joins the library');
   const runsN = () => p.evaluate(async () => ((await window.__recs()) || { runs: [] }).runs.length);
-  const daySec = () => p.evaluate(async () => { const r = (await window.__recs()); return Object.values(r.sum.days).reduce((t, v) => t + v, 0) + r.runs.reduce((t, x) => t + (x.sec || 0), 0); });
+  const daySec = () => p.evaluate(async () => { const r = (await window.__recs()); return Object.values(r.sums || {}).reduce((t, e) => t + Object.values(e.days).reduce((s, v) => s + v, 0), 0) + Object.values(r.xs || {}).reduce((t, x) => t + x[1], 0) + r.runs.reduce((t, x) => t + (x.sec || 0), 0); });
+  const runId = await p.evaluate(async () => (await window.__recs()).runs[0].id);
+  const marks = () => p.evaluate(async id => { const r = await window.__recs(); return { gone: !!(r.gone || {})[id], xs: !!(r.xs || {})[id] }; }, runId);
   const sec0 = await daySec(), runSec = await p.evaluate(async () => (await window.__recs()).runs[0].sec);
   assert.ok(runSec > 0, 'the run has a time: ' + runSec);
   await p.click('#advDiscard');
@@ -1523,6 +1574,7 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   assert.equal(await libN(), n0, 'discarding takes it back out');
   assert.equal(await runsN(), 0);
   assert.equal(await daySec(), sec0, 'its time still counts towards the day');
+  assert.deepEqual(await marks(), { gone: true, xs: true }, 'a deleted marker stays, so a sync does not bring the run back, and its time is kept by id');
   assert.equal(await p.evaluate(() => document.body.dataset.state), 'idle', 'back to the start screen');
   assert.match(await p.textContent('#status'), /^Run discarded\./);
   assert.equal(await p.evaluate(() => document.activeElement.textContent), 'Undo', 'focus moves to Undo, not lost with the Discard button');
@@ -1530,6 +1582,7 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   await p.waitForTimeout(300);
   assert.equal(await runsN(), 1, 'Undo puts the run back');
   assert.equal(await daySec(), sec0, 'and its time is not counted twice');
+  assert.deepEqual(await marks(), { gone: false, xs: false }, 'Undo takes the marker and the kept time off');
   assert.equal(await libN(), n0 + 1, 'and the routine saved with it');
   assert.equal(await p.evaluate(() => document.body.dataset.state), 'done', 'and shows the result again');
   assert.equal(await p.isVisible('#advDiscard'), true);
