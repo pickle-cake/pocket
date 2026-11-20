@@ -439,13 +439,12 @@ details.how[open]>summary::after{margin:4px 4px 0 0}
 .hear{display:flex;align-items:center;gap:var(--s-3)}
 .hear .btn{flex:none;margin-left:calc((24px - var(--hit))/2)}   /* the 24px speaker lines up with the key above it */
 body:not([data-state=idle]) #hearRow{display:none}   /* Listen is for before a run */
-#barsBox>summary span,#bOptsSum,#bRoutSum{margin-left:auto;font-weight:400;color:var(--muted)}   /* what is set, beside the chevron */
+#bOptsSum,#bRoutSum{margin-left:auto;font-weight:400;color:var(--muted)}   /* what is set, beside the chevron */
 #bOpts>.bset,#bRout>.bset{padding-bottom:var(--s-2)}
 #bRoutName{white-space:nowrap}
 #bRout:not([open]) #bRoutName,#bRout[open] #bRoutSum,#bOpts:not([open]) #bOptsName,#bOpts[open] #bOptsSum{display:none}   /* like More settings: closed shows what is set, open just the name */
 #bRout:not([open]) #bRoutSum,#bOpts:not([open]) #bOptsSum{margin-left:0;font-weight:inherit;color:inherit}
-#barsBox .sbody{gap:var(--s-3);padding-bottom:var(--s-3)}
-#barsBox .tempo{max-width:220px}
+#barsField .tempo{max-width:220px}
 .how dl{margin:0 0 var(--s-3);display:grid;gap:var(--s-1) 0}
 .how dt{font:600 var(--t-small) var(--font-body);margin-top:var(--s-2)}
 .how dd{margin:0;font:var(--t-small) var(--font-body);color:var(--muted)}
@@ -798,7 +797,6 @@ body:not([data-review="1"]) #leadBox{display:none}   /* a result: while playing 
 .res .sacc{display:flex;gap:14px;align-items:center;border-top:1px solid var(--line);padding-top:10px}
 .res .sacc b{font:800 var(--t-display) var(--font-display);font-variant-numeric:tabular-nums;white-space:nowrap}
 .res .sacc>span{font-size:13px;color:var(--muted)}
-.res .swarm{margin:0}   /* a warm-up says so first: nothing below it is kept */
 .res .snext{margin:0;font:500 var(--t-small) var(--font-body);color:var(--ink)}   /* what to play next time, under the share on time: a note, not a button */
 .res.solo .slab,.res.solo .shd,.res.solo .sbar,.res.solo .scap,.res.solo .swin{display:none}
 .res.solo .sacc{border-top:0;padding-top:0}
@@ -1399,12 +1397,12 @@ RLRR LRLL RLRR LRLL</pre>
       <ul>
         <li><b>On time</b> is the share of due strokes inside your on-time window. With an accent or ghost rule a stroke must also be played as written: an accent clearly louder and a ghost clearly softer than its neighbours. An exercise needs at least one full pass to be scored.</li>
         <li><b>Score:</b> with Scores and rewards on, every saved run is scored. Each stroke earns points by its timing and the click level: on time scores most, off time a little, and a miss scores nothing (it costs 2 on Master and 5 on Solo). A rest keeps the streak going and scores nothing, and a hit on it is a miss. Strokes on time in a row add a quarter to a multiplier, up to five times. An off-time stroke takes the streak back two steps, and a miss resets it. Faster strokes score more: 240 strokes a minute (sixteenths at 60 BPM) counts once, and the range is half to double. A narrower on-time window earns a bonus: ±50 ms counts once, ±20 ms one and a half times and ±10 ms twice. Silent bars earn a bonus too (see Click levels). The maximum uses the same multipliers, so a flawless run is 100% at any window, and your best score, that share, is kept for each level, window and bars with a click setting. Best on time is your on-time % at a tempo. The streak carries from one exercise to the next. The total never goes below zero. Your high score in points at each click level is an achievement, and a new one is announced when the run ends.</li>
-        <li><b>Scores and rewards:</b> on unless you choose Off under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements. For a run you do not want kept at all, choose <b>Warm-up, not saved</b> under History on the Play page; it resets each time you open Pocket.</li>
+        <li><b>Scores and rewards:</b> on unless you choose Off under Game in Settings, Preferences. They add a live score and streak meter while you play, a score on each result, high scores, medals and achievements.</li>
         <li><b>Medals:</b> each exercise gets a medal for each click level, from the fastest tempo you have cleared it at. It is measured in strokes a minute, so sixteenths count for more than eighths at the same BPM. Hickory is cleared at any speed, then Bronze at 120 strokes a minute, Silver 180, Gold 240, Platinum 320, Sapphire 400, Ruby 480 and Diamond 600. Sixteenths at 60 BPM is 240, so Gold. A run that clears an exercise faster than before shows its medal and the tempo of the next one.</li>
         <li><b>Exercise table:</b> after a routine run, each exercise gets its accuracy, average error and spread, plus your earlier best at that tempo.</li>
         <li><b>The target is 90%.</b> An exercise is "cleared" at a tempo when it reaches 90% there. After a run a note says what to play next time: stay at that tempo until every exercise reaches 90%, or, once cleared, try 5 BPM faster. Play shows it again, with your last result, when you next open that exercise or routine. On time is rounded down, so 89.6% reads 89%. Any tempo is always allowed.</li>
         <li><b>Coaching</b> after a run names the strokes that go wrong most often, such as one that is always late. It needs at least 3 passes of an exercise to tell a habit from chance, so set Each exercise to 3 passes or more.</li>
-        <li><b>Discard</b>, under a result, removes the run from your records, for example after a bad microphone read. Undo puts it back.</li>
+        <li><b>Discard</b>, under a result, removes the run from your records, for example after a bad microphone read or a warm-up. Its time still counts towards today and your streak. Undo puts it back.</li>
         <li><b>Progress page:</b> every exercise, sorted by accuracy, with accuracy at your last tempo, trend and early/late bias, grouped by click level. Play loads that exercise. A routine is cleared at a tempo when one run covered every exercise and all reached 90%.</li>
         <li><b>Tempo guidance:</b> each exercise in the start list shows the tempo it has cleared, or "new". The summary shows where the whole routine has been cleared.</li>
         <li><b>Staff of a run:</b> each run keeps the result of every stroke. A run's page has a <b>Staff</b> group showing the notation with each stroke coloured and read out, and the Play page rebuilds its review from the same record.</li>
@@ -1505,31 +1503,20 @@ RLRR LRLL RLRR LRLL</pre>
           <button type="button" id="ckNone" data-v="none" aria-pressed="false">Solo</button>
         </div>
         <p class="hint" id="clickHint"></p></div>
-      <details id="barsBox" class="how">
-        <summary>Harder: silent bars<span id="barsSum"></span></summary>
-        <div class="sbody">
-          <p class="hint">After each bar with the click, the click drops out. Keep playing and counting; the click comes back on beat 1.</p>
-          <div class="field"><span class="lbl" id="barsLbl">Silent bars<span class="gapdots" id="barsDots" aria-hidden="true"></span></span>
-            <div class="tempo" role="group" aria-labelledby="barsLbl" aria-describedby="barsHint">
-              <button class="btn" id="barsOffDown" type="button" aria-label="One silent bar fewer">&#8722;</button>
-              <output class="stepval" id="barsOffN"><b>0</b><span>silent</span></output>
-              <button class="btn" id="barsOffUp" type="button" aria-label="One silent bar more">+</button>
-            </div>
-            <p class="hint" id="barsHint"></p></div>
-        </div>
-      </details>
     </section>
     <details id="setBox" class="setbox">
       <summary id="setSum"></summary>
       <div class="sbody">
     <section class="panel cfg" aria-label="More settings">
-      <div class="fields">
-        <div class="field"><label for="score">History</label>
-          <select id="score">
-            <option value="1">Save the run</option>
-            <option value="0">Warm-up, not saved</option>
-          </select></div>
-        <div class="field"><label for="accent">Accent</label>
+      <div class="field" id="barsField"><span class="lbl" id="barsLbl">Silent bars<span class="gapdots" id="barsDots" aria-hidden="true"></span></span>
+        <div class="tempo" role="group" aria-labelledby="barsLbl" aria-describedby="barsAbout barsHint">
+          <button class="btn" id="barsOffDown" type="button" aria-label="One silent bar fewer">&#8722;</button>
+          <output class="stepval" id="barsOffN"><b>0</b><span>silent</span></output>
+          <button class="btn" id="barsOffUp" type="button" aria-label="One silent bar more">+</button>
+        </div>
+        <p class="hint" id="barsAbout">After each bar with the click, the click drops out. Keep playing and counting; the click comes back on beat 1.</p>
+        <p class="hint" id="barsHint"></p></div>
+      <div class="field"><label for="accent">Accent</label>
           <select id="accent">
             <option value="">Off</option>
             <optgroup label="Structure">
@@ -1550,7 +1537,6 @@ RLRR LRLL RLRR LRLL</pre>
               <option value="7">Every 7th stroke</option>
             </optgroup>
           </select></div>
-      </div>
       <div class="field" id="othersField"><span class="lbl" id="othersLbl">Other strokes</span>
         <div class="seg wide" id="othersSeg" role="group" aria-labelledby="othersLbl" aria-describedby="othersHint">
           <button type="button" id="othN" data-v="n" aria-pressed="false">Normal</button>
@@ -1588,7 +1574,6 @@ RLRR LRLL RLRR LRLL</pre>
         <button class="btn link" type="button" data-help="help-play">More in Help</button>
       </div>
       <div class="card res" id="advRes">
-        <p class="eyebrow swarm" id="advWarm" hidden>Warm-up &middot; not saved</p>
         <p class="hsbar" id="advHs" hidden>New high score</p>
         <span class="slab">Score</span>
         <div class="shd"><b id="advScore"></b><span id="advMax"></span></div>
@@ -3600,7 +3585,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.227';                           /* shown beside the title */
+const VERSION='1.5.229';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -3852,7 +3837,6 @@ registerProcessor('onset',class extends AudioWorkletProcessor{
 });`;
 
 /* ---------- state ---------- */
-let scoreOn=true;   /* a switch for this visit only: it is on again at every launch */
 let ctx=null,node=null,micSrc=null,workletReady=false,noWorklet=false,stream=null,sendDet=null,wake=null;
 let run=null,view=null,timer=0,raf=0;
 let routineParsed=parseRoutine(S.routineText),prevPlan=null,rowMap=new Map(),rowTop=0,slideTimer=0,curTab='play';
@@ -4201,7 +4185,7 @@ function beginRun(mode){
   const r={
     mode:mode,plan:plan,gb:lat?'':gapNorm(barsOn()),w0:Date.now(),t0:ctx.currentTime+0.25,kb:S.input==='kb',
     nextClick:0,pulseIdx:-1,nextFin:0,pending:new Map(),cur:-1,showSeg:0,gridSeg:-1,
-    errs:[],lv:[],seq:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,streak:0,best:0,checked:0,bad:0,trace:[],res:new Map(),showG:0,missRun:0,trail:[],live:'',pts:0,sk:0,hud:S.game&&scoreOn&&mode==='play'&&!!LV_PTS[S.click],tm:[],
+    errs:[],lv:[],seq:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,streak:0,best:0,checked:0,bad:0,trace:[],res:new Map(),showG:0,missRun:0,trail:[],live:'',pts:0,sk:0,hud:S.game&&mode==='play'&&!!LV_PTS[S.click],tm:[],
     fin:new Set(),paused:false,ci:null,bnc:[],bzn:new Map(),lastPk:0,dyc:lat?'':dynCode(),dyl:[],
     seg:plan.segs.map(sg=>({errs:[],lv:[],hand:{L:[],R:[]},within:0,slots:0,miss:0,extras:0,checked:0,bad:0,sc:[],sm:[],sb:[],sy:[],sw:[],ev:[],da:0,dg:0})),
     dirty:true,ended:false,totalExercises:routineParsed.exercises.length,
@@ -4964,6 +4948,19 @@ const withPasses=(b,n)=>Object.assign({},b,{passes:n});
 /* Before a run the staff shows where the click falls, so the preview carries the clicks of the run, marked to draw them. */
 function previewPlan(exercises){if(!exercises.length)return null;const p=buildPlan(exercises,{gapBeats:S.gap,clickMode:S.click,bars:gapNorm(barsOn()),dyn:dynOpt()});p.ticks=true;return p;}
 const routinePlan=()=>previewPlan(allExercises().map(b=>withPasses(b,1)));
+/* Before a run, with silent bars, each exercise shows as many passes as it takes the click and the silent bars to come round to
+   the first bar again (at most 8), so every silent bar is on the staff, as it is during Listen. Without them, one pass each. */
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+function cyclePasses(sg){
+  if(!sg.gb)return 1;
+  const r=(sg.end-sg.t0)/(sg.beat*sg.gbB),m=Math.round(r),L=sg.gb.length;
+  return Math.min(8,Math.abs(r-m)<1e-6&&m>0?L/gcd(L,m):Math.ceil(L/r-1e-6));
+}
+function routinePreviewPlan(){
+  const all=allExercises(),one=previewPlan(all.map(b=>withPasses(b,1)));
+  if(!one||!one.segs.some(sg=>sg.gb))return one;
+  return previewPlan(all.map((b,i)=>withPasses(b,cyclePasses(one.segs[i]))));
+}
 function layoutPlan(plan){return S.mode==='routine'?(routinePlan()||plan):plan;}
 function applyLayout(plan){
   const avail=staffAvail();
@@ -5041,7 +5038,7 @@ function roleRows(){
        A single exercise keeps one tempo, so only the row being played names it; the others keep an empty label, so every row is the same height. */
     /* The tempo is bold on the row being played, and on an upcoming row only where it differs from the row above, so bold means a change is coming. */
     const sgs=o.sg.sig?' · '+sigText(o.sg.sig):'',hot=d===0||(!!prev&&prev.sg.bpm!==o.sg.bpm);
-    if(prevL)rowLabel(o.lab,o.sg.bpm,(d===0?'Start · exercise ':'Exercise ')+o.sg.idx+' of '+routineParsed.exercises.length+sgs+' · '+exerciseGuide(o.sg),hot);
+    if(prevL)rowLabel(o.lab,o.sg.bpm,(d===0?'Start · exercise ':'Exercise ')+o.sg.idx+' of '+routineParsed.exercises.length+sgs+' · '+(o.p?'pass '+(o.p+1):exerciseGuide(o.sg)),hot);   /* with silent bars, the rows after an exercise's first pass show the rest of the bars */
     else if(latL)o.lab.textContent=d===0?'Round '+(o.p+1):'';
     else if(multi)rowLabel(o.lab,o.sg.bpm,'Exercise '+o.sg.idx+' of '+routineParsed.exercises.length+sgs+' · pass '+(o.p+1)+' of '+o.sg.passes,hot);   /* every row is described the same way as the current one */
     else if(one&&d===0)rowLabel(o.lab,o.sg.bpm,'',true);
@@ -5559,9 +5556,9 @@ function previewRows(animate){
   endHear();
   if(S.mode==='routine'){
     /* Before a run each row is one exercise, so you can scroll to any exercise and start there. */
-    prevPlan=routinePlan();
+    prevPlan=routinePreviewPlan();
     applyLayout(prevPlan);rowsShown=ROWS;labelsOn=true;labelMode='preview';
-    const g=prevPlan?clamp(S.startExercise-1,0,totalPasses(prevPlan)-1):0;
+    const sg=prevPlan&&prevPlan.segs[clamp(S.startExercise-1,0,prevPlan.segs.length-1)],g=sg?sg.g0:0;
     setRows(prevPlan,g,!!animate);
   }else{
     const all=currentExercises();
@@ -6024,7 +6021,6 @@ function guide(){
   return guideMemo;
 }
 function exerciseGuide(sg){
-  if(!scoreOn)return 'warm-up';
   const e=guide().pat.get(statKey(patKey(sg.notes,sg.groupStart,sg.subs,sg.defSub,sg.sig),S.click,dynCode()));
   if(!e)return 'new';
   return e.cleared?'cleared at '+e.cleared:'not cleared yet';
@@ -6061,7 +6057,7 @@ function recordRun(r){
   if(!rows.length)return;
   const all=S.mode==='routine'?allExercises().map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig)):null;
   const rk=all?routineKeyOf(all):null;
-  if(rk&&scoreOn){   /* a title in the text wins, else the name it already has, else the next Untitled number */
+  if(rk){   /* a title in the text wins, else the name it already has, else the next Untitled number */
     if(routineParsed.title)recs.names[rk]=routineParsed.title.slice(0,80);
     else if(!recs.names[rk])recs.names[rk]='Untitled '+(recs.nu++);
   }
@@ -6077,17 +6073,16 @@ function recordRun(r){
   }
   const prevBest=new Map();
   rows.forEach(x=>{const b=bestBefore(recs.runs,x.key,x.bpm,S.click,r.dyc);if(b!==null)prevBest.set(x.key,b);});
-  const newTempo=rows.filter(x=>x.pct>=TARGET&&x.bpm>(x.was=clearedBefore(recs.runs,x.key,S.click,recs.sum,r.dyc))&&scoreOn);   /* was: the fastest clear before, for the medal it held */
+  const newTempo=rows.filter(x=>x.pct>=TARGET&&x.bpm>(x.was=clearedBefore(recs.runs,x.key,S.click,recs.sum,r.dyc)));   /* was: the fastest clear before, for the medal it held */
   const bv0=badgeValues(recs.runs,recs.sum),score=runScore(run),hs0=highScores(recs.runs,recs.sum)[run.lv]||0,share0=bestShares(recs.runs,recs.sum)[shareKey(run.lv,run.tol,run.gb)]||0;
-  if(scoreOn)recs.runs.push(run);   /* a practice run is shown but not kept */
+  recs.runs.push(run);
   let autoLib=null;   /* a kept routine goes to the library, where Delete removes it; discarding the run takes it back out */
-  if(scoreOn&&rk&&run.rp&&run.rp.x&&!libFor(rk)&&recs.lib.length<MAX_LIB){autoLib={id:libId(),x:run.rp.x,t:Date.now()};recs.lib.push(autoLib);}
+  if(rk&&run.rp&&run.rp.x&&!libFor(rk)&&recs.lib.length<MAX_LIB){autoLib={id:libId(),x:run.rp.x,t:Date.now()};recs.lib.push(autoLib);}
   const bv1=badgeValues(recs.runs,recs.sum),won=[];
   BADGES.forEach(b=>b.at.forEach((n,i)=>{if(bv0[b.id]<n&&bv1[b.id]>=n)won.push({id:b.id,i:i,v:bv1[b.id]});}));
-  if(!scoreOn){const dk=dayKey(run.t);recs.sum.days[dk]=(recs.sum.days[dk]||0)+run.sec;}   /* the time of a practice run still counts towards today and the streak */
   const saved=saveRecs();
-  if(scoreOn)askPersist();
-  lastRun={run:run,autoLib:autoLib,prevBest:prevBest,newTempo:newTempo,won:won,rows:rows,skipped:skipped,saved:saved,practice:!scoreOn,score:score,share0:share0,hs0:hs0,hsNew:scoreOn&&score>hs0};
+  askPersist();
+  lastRun={run:run,autoLib:autoLib,prevBest:prevBest,newTempo:newTempo,won:won,rows:rows,skipped:skipped,saved:saved,score:score,share0:share0,hs0:hs0,hsNew:score>hs0};
 }
 /* After a run the score is brought into view. The run layout is still being undone, so the jump repeats once the page has settled. */
 function showResult(){
@@ -6102,7 +6097,7 @@ function renderAdvice(){
   $('advFirst').hidden=true;
   const L=lastRun,adv=adviceFor(L.rows.map(x=>({idx:x.idx,pct:x.pct,passes:x.passes})));
   const tgt=Math.round(TARGET*100)+'%';
-  $('advDiscard').hidden=!!L.practice||!L.saved;   /* a practice run, or one the browser would not save, has nothing to discard */
+  $('advDiscard').hidden=!L.saved;   /* a run the browser would not save has nothing to discard */
   const n=adv.played,one=n===1;
   let body;
   const played=L.rows.filter(x=>x.passes>=1&&x.due>0),due=played.reduce((t,x)=>t+x.due,0);
@@ -6117,7 +6112,6 @@ function renderAdvice(){
     const share=played.reduce((t,x)=>t+x.pct*x.due,0)/due,pb=x=>L.prevBest&&L.prevBest.has(x.key)?L.prevBest.get(x.key):null;
     $('advPct').textContent=onPct(share);
     $('advRes').dataset.ok=adv.cleared?'1':'0';
-    $('advWarm').hidden=!L.practice;$('advSubW').hidden=!!L.practice;   /* a warm-up is not saved, so it is not compared with your bests */
     if(one){
       const x=played[0],b=pb(x);
       $('advStat').textContent=adv.cleared?'Cleared the '+tgt+' target':'Target is '+tgt;
@@ -6128,7 +6122,7 @@ function renderAdvice(){
       $('advSub').textContent=nb?nb+(nb===1?' new best on time':' new bests on time'):(played.every(x=>pb(x)===null)?'First run at this tempo':'No new bests on time');
     }
     {   /* how the score came about */
-      const sb=$('scoreBox'),on=!L.practice&&S.game;sb.hidden=!on;
+      const sb=$('scoreBox'),on=S.game;sb.hidden=!on;
       if(on){
         const d=scoreBreakdown(L.run),p=LV_PTS[L.run.lv],f=n=>n.toLocaleString('en-US');
         $('bDue').textContent=f(d.due);$('bRestBox').hidden=!d.rest;$('bRest').textContent=f(d.rest);$('bOn').textContent=f(d.on);$('bEarly').textContent=f(d.early);$('bLate').textContent=f(d.late);$('bSplit').textContent=f(d.split);$('bDyn').textContent=f(d.dyn);
@@ -6138,7 +6132,7 @@ function renderAdvice(){
       }
     }
     {   /* the score, against a flawless run of what was played and against the best before */
-      const mx=L.practice||!S.game?0:runMax(L.run),r=$('advRes');   /* the same maximum as the run's page */
+      const mx=S.game?runMax(L.run):0,r=$('advRes');   /* the same maximum as the run's page */
       r.classList.toggle('solo',!mx);
       if(mx){
         const f=n=>n.toLocaleString('en-US');
@@ -6168,7 +6162,6 @@ function renderAdvice(){
   }
   if(L.skipped)body+=' '+L.skipped+(L.skipped===1?' exercise was':' exercises were')+' stopped before one full pass and not scored.';
   if(!L.saved)body+=' Your browser would not save the records.';
-  if(L.practice)body='Your time still counts today. '+body;
   coachNote($('advHead'),fix);$('advBody').textContent=body;
   renderOffer(L,!!due&&adv.cleared);
 }
@@ -6176,7 +6169,7 @@ function renderAdvice(){
    Try sets it for the next run; Not now hides the offer for the rest of the day. */
 const OFFER_GB='10';
 function offerFor(L,cleared){
-  return cleared&&!L.practice&&!L.offerOff&&!!L.run&&L.run.lv==='bar'&&!gapNorm(L.run.gb||'')&&S.click==='bar'&&!gapNorm(S.bars)&&S.gapLater!==dayKey(Date.now());
+  return cleared&&!L.offerOff&&!!L.run&&L.run.lv==='bar'&&!gapNorm(L.run.gb||'')&&S.click==='bar'&&!gapNorm(S.bars)&&S.gapLater!==dayKey(Date.now());
 }
 function renderOffer(L,cleared){
   const box=$('advOffer'),on=offerFor(L,cleared);
@@ -6203,21 +6196,27 @@ function takeOffer(yes){
   $('advAgain').focus();
 }
 /* Discard takes the run out of your records and goes back to the start, as Done does: a discarded run has nothing
-   left to review. Undo in the status line puts the run, and a routine saved with it, back and shows the result again. */
+   left to review. Its time stays in the day's minutes, so it still counts towards today and the streak: it was played.
+   Undo in the status line puts the run, and a routine saved with it, back, takes those minutes off again and shows the result again. */
 /* What the result on screen was drawn for: the mode and every exercise of the routine. */
 const setupSig=()=>S.mode+'|'+allExercises().map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig)).join('|');
 function discardRun(){
-  const L=lastRun,V=view,sig=setupSig();if(!L||L.practice)return;
+  const L=lastRun,V=view,sig=setupSig();if(!L)return;
   const i=recs.runs.findIndex(x=>x.id===L.run.id),gone=i>=0?recs.runs.splice(i,1)[0]:null;
+  const dk=gone?dayKey(gone.t):'',sec=gone&&gone.sec||0,days=recs.sum.days;
+  if(sec)days[dk]=(days[dk]||0)+sec;
   const al=L.autoLib,dropLib=!!(al&&recs.lib.includes(al)&&!recs.runs.some(x=>x.rk===L.run.rk)),wasCur=dropLib&&S.libId===al.id;
   if(dropLib)removeLibEntry(al);
   saveRecs();
   lastRun=null;refreshPreview();renderAdvice();setReview(false);window.scrollTo(0,0);
-  setStatus('Run discarded. It is not in your records. ',true);
+  setStatus('Run discarded. It is not in your records, but its time still counts today. ',true);
   const u=textBtn('Undo',()=>{
     u.remove();
     if(run&&!run.ended)return;
-    if(gone&&!recs.runs.some(x=>x.id===gone.id))recs.runs.splice(Math.min(i,recs.runs.length),0,gone);
+    if(gone&&!recs.runs.some(x=>x.id===gone.id)){
+      recs.runs.splice(Math.min(i,recs.runs.length),0,gone);
+      if(sec){const d=recs.sum.days,v=(d[dk]||0)-sec;if(v>0)d[dk]=v;else delete d[dk];}   /* the run counts its own time again */
+    }
     /* As the Library's own Undo: not if the routine was saved again meanwhile, and the selection only if none was made since. */
     if(dropLib&&!recs.lib.includes(al)&&!libFor(libKey(al))&&recs.lib.length<MAX_LIB){recs.lib.push(al);if(wasCur&&!S.libId){S.libId=al.id;save();}}
     saveRecs();
@@ -8252,13 +8251,16 @@ function syncInfo(){
   $('ckKey').hidden=$('hearRow').hidden=S.click==='none';$('ckKeySb').hidden=!gapNorm(barsOn());
   syncBars();
   syncDyCtl();
-  {   /* what the closed drawer holds, so a setting that matters is never hidden */
-    const ac=$('accent');
-    const parts=[scoreOn?'Saved':'Warm-up',S.accent?'Accent: '+ac.options[ac.selectedIndex].text.toLowerCase():'No accents'];
-    if(S.accent&&S.others==='g')parts.push('Ghost notes');
-    if(S.mode==='routine')parts.push(S.gap?'Count-in between':'Straight on');
-    $('setSum').textContent=$('setBox').open?'More settings':parts.join(' · ');   /* open: just the name; closed: what is inside */
-  }
+  syncSetSum();
+}
+/* What the closed More settings drawer holds, so a setting that matters is never hidden. Open, it shows just its name. */
+function syncSetSum(){
+  const ac=$('accent'),sil=gapNorm(S.bars||'')?gapOff(S.bars):0;
+  const parts=[!sil?'No silent bars':S.click==='none'?'Silent bars off on Solo':sil+(sil>1?' silent bars':' silent bar'),
+    S.accent?'Accent: '+ac.options[ac.selectedIndex].text.toLowerCase():'No accents'];
+  if(S.accent&&S.others==='g')parts.push('Ghost notes');
+  if(S.mode==='routine')parts.push(S.gap?'Count-in between':'Straight on');
+  $('setSum').textContent=$('setBox').open?'More settings':parts.join(' · ');
 }
 /* Medium clicks the beat and the half beat. With two strokes a beat (eighth notes) that is every stroke, so it is the same as Easy,
    and the hint says so. One pass of each exercise, without silent bars, is enough to compare the two. */
@@ -8277,7 +8279,6 @@ function syncBars(){
   $('barsOffN').firstChild.textContent=String(sil);
   $('barsOffDown').disabled=off||!sil;$('barsOffUp').disabled=off||sil>=GAP_MAX;
   $('barsDots').innerHTML=g?'<i></i>'.repeat(on)+'<i class="off"></i>'.repeat(sil):'';
-  $('barsSum').textContent=solo?'Off on Solo':g?sil+(sil>1?' bars':' bar'):'Off';
   /* a pattern of 1.5.199 with more than one bar with the click is kept, and said */
   $('barsHint').textContent=solo?'Off on Solo: it has no click after the count-in.'
     :g?(on>1?'The click plays '+gapTxt(g)+'. ':'')+'Faded notes are a silent bar. Silent bars are still scored: points ×'+gapMult(g)+'.'
@@ -8857,7 +8858,6 @@ function wire(){
   $('tmDone').addEventListener('click',closeTempo);
   window.addEventListener('resize',placeTempo);
   dismissable($('tempoModal'),closeTempo);
-  $('score').addEventListener('change',e=>{scoreOn=e.target.value==='1';syncInfo();});
   /* underlined, plain and faded notes follow the click, before a run */
   $('ckHear').addEventListener('click',()=>{if(hear)stopHear();else startHear();});
   $('offerTry').addEventListener('click',()=>takeOffer(true));

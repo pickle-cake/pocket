@@ -218,23 +218,25 @@ test('the tempo steps by 1, opens a sheet to type it or step by 10, stops at 40 
   assert.deepEqual(p.errors, []);
 });
 
-test('Harder: silent bars: clicked notes underlined, one stepper in a closed disclosure, silent bars faded, a key that says so, kept, and off on Solo with the reason', async () => {
+test('Silent bars: clicked notes underlined, one stepper in More settings, said in its closed summary, silent bars faded, a key that says so, kept, and off on Solo with the reason', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat' }, { width: 390, height: 844 });
   const marks = () => p.evaluate(() => { const c = [...document.querySelectorAll('#rowsTrack .staff .cd')].filter(g => g.querySelector('.lt').textContent); const n = k => c.filter(g => g.classList.contains(k)).length; return [n('ck'), n('sb')]; });
   const wt = () => p.evaluate(() => ['.ck', ':not(.ck):not(.sb)', '.sb'].map(k => { const g = document.querySelector('#rowsTrack .staff .cd' + k + ' .lt'); return g ? getComputedStyle(g).textDecorationLine : ''; }));
   const key = () => p.evaluate(() => [...document.querySelectorAll('.cap.key')].filter(e => e.offsetParent).map(e => e.innerText.replace(/\s+/g, ' ').trim()));
-  const val = () => p.evaluate(() => document.getElementById('barsOffN').firstChild.textContent + ' ' + document.getElementById('barsDots').children.length + ' ' + document.getElementById('barsSum').textContent);
-  assert.equal(await p.getAttribute('#barsBox', 'open'), null, 'closed to start with');
-  assert.equal(await val(), '0 0 Off');
+  const val = () => p.evaluate(() => document.getElementById('barsOffN').firstChild.textContent + ' ' + document.getElementById('barsDots').children.length);
+  const sum = () => p.evaluate(() => document.getElementById('setSum').textContent.split(' · ')[0]);
+  assert.equal(await p.getAttribute('#setBox', 'open'), null, 'closed to start with');
+  assert.equal(await sum(), 'No silent bars');
+  assert.equal(await val(), '0 0');
   const [ck0, sil0] = await marks();
   assert.ok(ck0 > 0 && sil0 === 0, 'clicked notes underlined, no silent bars: ' + ck0 + '/' + sil0);
   assert.deepEqual(await wt(), ['underline', 'none', ''], 'underlined with a click, plain without');
   assert.deepEqual(await key(), ['R click · R no click'], 'before a run the key is the click key, not the timing key');
-  await p.click('#barsBox>summary');
+  await p.click('#setBox>summary');
   assert.equal(await p.textContent('#barsHint'), 'Add a silent bar with +. The exercise above shows where it goes.');
   assert.ok(await p.isDisabled('#barsOffDown'));
   await p.click('#barsOffUp');
-  assert.equal(await val(), '1 2 1 bar');
+  assert.equal(await val(), '1 2');
   assert.equal(await p.evaluate(() => window.__T.S().bars), '10');
   assert.equal(await p.textContent('#barsHint'), 'Faded notes are a silent bar. Silent bars are still scored: points ×1.25.');
   const [ck1, sil1] = await marks();
@@ -244,25 +246,44 @@ test('Harder: silent bars: clicked notes underlined, one stepper in a closed dis
   assert.ok((await marks())[0] > ck1, 'Easy underlines more notes');
   await p.click('#ckBeat');
   for (let i = 0; i < 3; i++) await p.click('#barsOffUp');
-  assert.equal(await val(), '4 5 4 bars', 'up to 4 silent bars');
+  assert.equal(await val(), '4 5', 'up to 4 silent bars');
   assert.ok(await p.isDisabled('#barsOffUp'));
   assert.match(await p.textContent('#barsHint'), /×2.$/);
-  const w = await p.evaluate(() => ({ page: document.documentElement.scrollWidth, btn: [...document.querySelectorAll('#barsBox>summary, #barsOffDown, #barsOffUp')].map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }) }));
+  const w = await p.evaluate(() => ({ page: document.documentElement.scrollWidth, btn: [...document.querySelectorAll('#setBox>summary, #barsOffDown, #barsOffUp')].map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }) }));
   assert.ok(w.btn.every(x => x >= 44), '44px targets: ' + w.btn);
   assert.ok(w.page <= 390, 'no sideways scroll');
   await p.click('#ckNone');
   assert.ok(await p.isDisabled('#barsOffDown'), 'off on Solo');
-  assert.equal(await p.textContent('#barsSum'), 'Off on Solo');
   assert.equal(await p.textContent('#barsHint'), 'Off on Solo: it has no click after the count-in.');
+  await p.click('#setBox>summary');
+  await p.waitForFunction(() => document.getElementById('setSum').textContent !== 'More settings');
+  assert.equal(await sum(), 'Silent bars off on Solo', 'the closed summary says why');
   assert.deepEqual(await marks(), [0, 0], 'Solo underlines nothing');
   assert.deepEqual(await key(), [], 'and no click key');
   await p.click('#ckBeat');
   assert.equal(await p.evaluate(() => window.__T.S().bars), '10000', 'the setting comes back after Solo');
   await p.reload();
-  assert.equal(await val(), '4 5 4 bars', 'kept');
-  await p.click('#barsBox>summary');
+  assert.equal(await val(), '4 5', 'kept');
+  assert.equal(await sum(), '4 silent bars');
+  await p.click('#setBox>summary');
   for (let i = 0; i < 4; i++) await p.click('#barsOffDown');
-  assert.equal(await val(), '0 0 Off', 'no silent bars is every bar again');
+  assert.equal(await val(), '0 0', 'no silent bars is every bar again');
+  assert.deepEqual(p.errors, []);
+});
+
+test('Silent bars in a routine: before a run, each exercise shows the passes it takes the silent bars to come round, and the next exercise follows', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat', mode: 'routine', routineText: ['8 RLRLRLRL', '8 RRLLRRLL', '8 RLLRRLLR'].join('\n'), bars: '100' }, { width: 1280, height: 900 });
+  const rows = () => p.evaluate(() => [...document.querySelectorAll('#rowsTrack .prow')].map(r => r.querySelector('.rl').textContent + ' | ' + r.querySelectorAll('.cd.sb').length));
+  const r = await rows();
+  assert.match(r[0], /Start · exercise 1 of 3 .*\| 0$/, 'the first pass has the click: ' + r);
+  assert.match(r[1], /Exercise 1 of 3 · pass 2 \| [1-9]/, 'the next passes are silent: ' + r);
+  assert.match(r[2], /Exercise 1 of 3 · pass 3 \| [1-9]/, 'and show the silent bars: ' + r.join(' / '));
+  await p.click('#barsOffDown');
+  const r1 = await rows();
+  assert.match(r1[1], /Exercise 1 of 3 · pass 2 \|/, 'one silent bar, two passes: ' + r1);
+  assert.match(r1[2], /Exercise 2 of 3 · /, r1.join(' / '));
+  await p.click('#barsOffDown');
+  assert.match((await rows())[1], /Exercise 2 of 3 · /, 'no silent bars, one row an exercise');
   assert.deepEqual(p.errors, []);
 });
 
@@ -278,7 +299,7 @@ audioTest('Listen, under the staff, plays the click with no count-in and the cur
   assert.ok(pos.r >= 44, '44px target: ' + pos.r);
   assert.ok(pos.name < pos.start && pos.start < pos.click, 'Start sits under the routine, above the settings: ' + JSON.stringify(pos));
   assert.ok(pos.hear > pos.rows, 'Listen sits under the staff: ' + JSON.stringify(pos));
-  await p.click('#barsBox>summary');
+  await p.click('#setBox>summary');
   await p.click('#barsOffUp');
   assert.equal(await p.textContent('#ckHearNote'), 'Hear the click at 120 BPM, twice round the bars with the click and the silent bars.');
   await p.click('#ckNone');
@@ -818,9 +839,8 @@ audioTest('a finding after a run marks its strokes on the review staff, in brack
   assert.deepEqual(p.errors, []);
 });
 
-async function runOnce(settings, practice, init) {
+async function runOnce(settings, init) {
   const p = await open(Object.assign({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, seeded: true }, settings), null, init);
-  if (practice) await p.evaluate(() => { const s = document.getElementById('score'); s.value = '0'; s.dispatchEvent(new Event('change')); });
   await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   await p.evaluate(() => {
@@ -835,10 +855,8 @@ async function runOnce(settings, practice, init) {
   const out = await p.evaluate(() => ({
     saved: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).map(r => r.lv),
     text: document.getElementById('advice').innerText,
-    warm: document.getElementById('advWarm').hidden ? '' : document.getElementById('advWarm').textContent,
     discard: !document.getElementById('advDiscard').hidden,
     badge: document.getElementById('advBadge').hidden ? '' : document.getElementById('advBadge').innerText,
-    days: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).sum || {}).days || {},
   }));
   assert.deepEqual(p.errors, []);
   return out;
@@ -1096,23 +1114,9 @@ audioTest('the first result explains itself once', async () => {
 });
 
 audioTest('Solo (count-in only) is scored and saved', async () => {
-  const o = await runOnce({ click: 'none' }, false);
+  const o = await runOnce({ click: 'none' });
   assert.deepEqual(o.saved, ['none']);
   assert.ok(o.discard);
-});
-
-audioTest('a practice run shows its result but saves nothing', async () => {
-  const o = await runOnce({ click: 'beat' }, true);
-  assert.deepEqual(o.saved, []);
-  assert.equal(o.warm, 'Warm-up · not saved', 'the card says so at the top');
-  assert.match(o.text, /Your time still counts today/);
-  assert.doesNotMatch(o.text, /First run at this tempo|New best|Best at this tempo/, 'not compared with saved runs');
-  assert.ok(!o.discard);
-});
-
-audioTest('a practice run still counts its time toward the day', async () => {
-  const o = await runOnce({ click: 'beat' }, true);
-  assert.equal(Object.keys(o.days).length, 1);
 });
 
 audioTest('a new badge is announced on the result', async () => {
@@ -1123,7 +1127,7 @@ audioTest('a new badge is announced on the result', async () => {
       exercises: [{ k: '8 RLRL', bpm: 60, due: 16, within: 8, heard: 16, avg: 0, sd: 3, miss: 0, i: 1 }] });
     localStorage.setItem('stick-timing-trainer.records.v2', JSON.stringify({ v: 1, names: {}, nu: 1, lib: [], runs: [0, 1, 2, 3].map(run) }));
   };
-  const o = await runOnce({ click: 'beat', game: true }, false, seed);
+  const o = await runOnce({ click: 'beat', game: true }, seed);
   assert.match(o.badge, /Unlocked/i);
   assert.match(o.badge, /Next: /);
   assert.match(o.badge, /step \d+ of \d+/i);
@@ -1238,7 +1242,7 @@ test('Import asks what to bring in, offers only what the file holds, and imports
   assert.equal(after.lib, 1);
 });
 
-audioTest('a scored run shows its score against the maximum, flags a new high score, and a practice run has no score', async () => {
+audioTest('a scored run shows its score against the maximum, and flags a new high score', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true, game: true });
   await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
@@ -1256,8 +1260,6 @@ audioTest('a scored run shows its score against the maximum, flags a new high sc
   const bd = await p.evaluate(() => ({ shown: !document.getElementById('scoreBox').hidden, on: document.getElementById('bOn').textContent, note: document.getElementById('scoreNote').textContent, row: [...document.getElementById('advBtns1').children].filter(b => !b.hidden).map(b => b.id) }));
   assert.ok(bd.shown); assert.match(bd.on, /^\d+$/); assert.match(bd.note, /Extreme: 10 points on time/);
   assert.deepEqual(bd.row, ['advDiscard', 'advDone', 'advAgain'], 'Discard, Done and Again share one row');
-  const p0 = await runOnce({ click: 'half', game: true }, true);
-  assert.doesNotMatch(p0.text, /high score/i, 'a practice run is not scored');
 });
 
 test('scores and rewards start on for a new install, and a saved Off is kept', async () => {
@@ -1364,14 +1366,14 @@ audioTest('rests keep the streak and score nothing unless hit, and a hit on a re
   assert.ok(/r/.test(q), 'the other rests are kept: ' + q);
 });
 
-test('Play settings: Scoring beside Accent, tops level; Other strokes only once an accent is set', async () => {
+test('More settings: silent bars first, then Accent, and no History; Other strokes only once an accent is set', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true }, { width: 390, height: 900 });
-  assert.equal(await p.textContent('#setSum'), 'Saved · No accents');
+  assert.equal(await p.textContent('#setSum'), 'No silent bars · No accents');
+  assert.equal(await p.$('#score'), null, 'no History setting: Discard under the result does its job');
   await p.evaluate(() => { document.getElementById('setBox').open = true; });   /* closed at phone width */
-  const r = await p.evaluate(() => { const a = document.getElementById('score').getBoundingClientRect(), b = document.getElementById('accent').getBoundingClientRect(); return { dy: Math.abs(a.top - b.top), side: b.left > a.right - 1 }; });
-  assert.ok(await p.isVisible('#score'), 'Scoring is visible');
-  assert.ok(r.side, 'Accent is beside Scoring');
-  assert.ok(r.dy < 1, 'tops are level');
+  const r = await p.evaluate(() => { const y = id => document.getElementById(id).getBoundingClientRect().top; return { bars: y('barsOffUp'), accent: y('accent'), click: y('clickSeg') }; });
+  assert.ok(await p.isVisible('#barsOffUp'), 'silent bars are in the drawer');
+  assert.ok(r.click < r.bars && r.bars < r.accent, 'under Click, above Accent: ' + JSON.stringify(r));
   assert.ok(!(await p.isVisible('#othersSeg')), 'no Other strokes without an accent');
   await p.selectOption('#accent', 'b');
   assert.ok(await p.isVisible('#othersSeg'), 'Other strokes shows with an accent');
@@ -1379,7 +1381,7 @@ test('Play settings: Scoring beside Accent, tops level; Other strokes only once 
   assert.equal(await p.evaluate(() => window.__T.S().others), 'g');
   await p.evaluate(() => { document.getElementById('setBox').open = false; });
   await p.waitForFunction(() => document.getElementById('setSum').textContent !== 'More settings');
-  assert.equal(await p.textContent('#setSum'), 'Saved · Accent: each beat · Ghost notes');
+  assert.equal(await p.textContent('#setSum'), 'No silent bars · Accent: each beat · Ghost notes');
   assert.deepEqual(p.errors, []);
 });
 
@@ -1439,11 +1441,6 @@ audioTest('the live score counts up as strokes are judged, drops the streak on a
   const end = await p.evaluate(() => ({ live: window.__T.run().pts, hidden: document.getElementById('live').hidden, score: document.getElementById('advScore').textContent }));
   assert.ok(end.hidden, 'the live score gives way to the result');
   assert.equal(Math.round(end.live).toLocaleString('en-US'), end.score, 'the live score matches the final score');
-  const q = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true, game: true });
-  await q.evaluate(() => { const s = document.getElementById('score'); s.value = '0'; s.dispatchEvent(new Event('change')); });
-  await press(q, /^Start/);
-  await q.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
-  assert.equal(await q.evaluate(() => document.getElementById('live').hidden), true, 'no live score in practice');
 });
 
 audioTest('the audio output wakes when Start resumes a paused run, even if it was put to sleep meanwhile', async () => {
@@ -1499,7 +1496,7 @@ audioTest('History shows each run\'s score in the list and on the run page', asy
   assert.match(page, /[\d,]+\s*of [\d,]+/);
 });
 
-audioTest('A kept routine is saved to the library on its own, and discarding the run takes it back out', async () => {
+audioTest('A kept routine is saved to the library on its own, and discarding the run takes it back out but keeps its time for the day', async () => {
   const p = await open({ input: 'kb', bpm: 120, mode: 'routine', routineText: '8 RLRL RLRL\n8 RLLR RLLR', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
   const libN = () => p.evaluate(() => (JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || { lib: [] }).lib.length);
   const n0 = await libN();
@@ -1510,6 +1507,9 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   await p.waitForTimeout(300);
   assert.equal(await libN(), n0 + 1, 'the routine joins the library');
   const runsN = () => p.evaluate(() => (JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || { runs: [] }).runs.length);
+  const daySec = () => p.evaluate(() => { const r = JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')); return Object.values(r.sum.days).reduce((t, v) => t + v, 0) + r.runs.reduce((t, x) => t + (x.sec || 0), 0); });
+  const sec0 = await daySec(), runSec = await p.evaluate(() => JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')).runs[0].sec);
+  assert.ok(runSec > 0, 'the run has a time: ' + runSec);
   await p.click('#advDiscard');
   assert.equal(await p.textContent('#advDiscard'), 'Tap again to discard');
   assert.equal(await runsN(), 1, 'one tap only arms it');
@@ -1517,12 +1517,14 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   await p.waitForTimeout(300);
   assert.equal(await libN(), n0, 'discarding takes it back out');
   assert.equal(await runsN(), 0);
+  assert.equal(await daySec(), sec0, 'its time still counts towards the day');
   assert.equal(await p.evaluate(() => document.body.dataset.state), 'idle', 'back to the start screen');
   assert.match(await p.textContent('#status'), /^Run discarded\./);
   assert.equal(await p.evaluate(() => document.activeElement.textContent), 'Undo', 'focus moves to Undo, not lost with the Discard button');
   await p.click('#status >> text=Undo');
   await p.waitForTimeout(300);
   assert.equal(await runsN(), 1, 'Undo puts the run back');
+  assert.equal(await daySec(), sec0, 'and its time is not counted twice');
   assert.equal(await libN(), n0 + 1, 'and the routine saved with it');
   assert.equal(await p.evaluate(() => document.body.dataset.state), 'done', 'and shows the result again');
   assert.equal(await p.isVisible('#advDiscard'), true);
