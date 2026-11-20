@@ -9,7 +9,7 @@ const ENGINE = process.env.POCKET_ENGINE || 'chromium';
 const contextFor = viewport => Object.assign(ENGINE === 'webkit' && viewport.width < 720 ? { ...playwright.devices['iPhone 13'] } : {}, { viewport });
 const { ROOT, html } = require('./helpers');
 
-const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo(),unlocked:renderUnlocked};let heardTimer=0;');
+const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo(),unlocked:renderUnlocked};window.__recs=()=>recsWritten().then(()=>new Promise((res,rej)=>{const tx=db.transaction(["runs","meta"]),m=tx.objectStore("meta").get("recs"),r=tx.objectStore("runs").getAll();tx.oncomplete=()=>res(m.result?Object.assign({},m.result,{runs:r.result.sort((x,y)=>x.t-y.t)}):null);tx.onerror=()=>rej(tx.error);}));let heardTimer=0;');
 assert.ok(page !== html, 'the test hook did not attach: has handleHit moved?');
 
 let server, base, browser, served = 0;
@@ -763,8 +763,13 @@ test('a stray exercise is deleted from a run, and an unheard one is not scored',
   t = await text();
   assert.doesNotMatch(t, /\d not played/);
   assert.match(t, /87%/);                      /* both exercises were played, so the run now has an overall score, rounded down */
-  const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')).runs[0]);
+  const saved = await p.evaluate(async () => (await window.__recs()).runs[0]);
   assert.equal(saved.ne, 2);
+  /* The records seeded in localStorage moved to IndexedDB, and the old key went. After a reload, the change is still there. */
+  assert.equal(await p.evaluate(() => localStorage.getItem('stick-timing-trainer.records.v2')), null);
+  await p.reload();
+  await p.waitForTimeout(300);
+  assert.equal(await p.evaluate(async () => (await window.__recs()).runs[0].ne), 2);
   assert.deepEqual(p.errors, []);
   await ctx.close();
 });
@@ -852,8 +857,8 @@ async function runOnce(settings, init) {
   });
   await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
   await p.waitForTimeout(300);
-  const out = await p.evaluate(() => ({
-    saved: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).map(r => r.lv),
+  const out = await p.evaluate(async () => ({
+    saved: (((await window.__recs()) || {}).runs || []).map(r => r.lv),
     text: document.getElementById('advice').innerText,
     discard: !document.getElementById('advDiscard').hidden,
     badge: document.getElementById('advBadge').hidden ? '' : document.getElementById('advBadge').innerText,
@@ -999,8 +1004,8 @@ audioTest('a run whose sound falls behind the screen is stopped, not saved, and 
   await p.evaluate(() => { window.__ctx0 = window.__T.ctx(); });
   await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 8000 });
   assert.match(await p.textContent('#status'), /out of step with the screen, so this run was stopped and not saved/);
-  const after = await p.evaluate(() => ({
-    saved: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).length,
+  const after = await p.evaluate(async () => ({
+    saved: (((await window.__recs()) || {}).runs || []).length,
     rebuilt: window.__T.ctx() !== window.__ctx0,
     log: JSON.parse(localStorage.getItem('stick-timing-trainer.v1')).settings.clockLog,
   }));
@@ -1237,7 +1242,7 @@ test('Import asks what to bring in, offers only what the file holds, and imports
   await p.evaluate(() => { document.querySelector('#exOpts input[data-k=set]').click(); });
   await p.click('#exGo');
   await p.waitForTimeout(400);
-  const after = await p.evaluate(() => ({ bpm: JSON.parse(localStorage.getItem('stick-timing-trainer.v1')).settings.bpm, lib: JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')).lib.length }));
+  const after = await p.evaluate(async () => ({ bpm: JSON.parse(localStorage.getItem('stick-timing-trainer.v1')).settings.bpm, lib: (await window.__recs()).lib.length }));
   assert.notEqual(after.bpm, 77, 'settings were unticked');
   assert.equal(after.lib, 1);
 });
@@ -1269,14 +1274,14 @@ test('scores and rewards start on for a new install, and a saved Off is kept', a
 
 audioTest('with scores and rewards off, a run is saved and cleared, and shows on time with no score, streak meter or medals', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true, game: false });
-  const n0 = await p.evaluate(() => ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).length);
+  const n0 = await p.evaluate(async () => (((await window.__recs()) || {}).runs || []).length);
   await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
   assert.ok(await p.evaluate(() => document.getElementById('live').hidden), 'no live score or streak meter');
   await p.evaluate(() => { const T = window.__T, r = T.run(), pl = r.plan; pl.slots.forEach(s => { const hand = pl.segs[s.seg].notes[s.pos].slice(-1); T.hit({ t: r.t0 + s.t + 0.005, kb: true, f: null, det: { hand, conf: 1 } }); }); });
   await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
   await p.waitForTimeout(300);
-  const o = await p.evaluate(() => ({ solo: document.getElementById('advRes').classList.contains('solo'), box: document.getElementById('scoreBox').hidden, medal: !!document.querySelector('#advBadge:not([hidden]) .medal'), runs: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).length, ach: document.getElementById('pvBtnAch').hidden, tol: [...document.querySelectorAll('#tol option')].map(o => o.textContent).join('|') }));
+  const o = await p.evaluate(async () => ({ solo: document.getElementById('advRes').classList.contains('solo'), box: document.getElementById('scoreBox').hidden, medal: !!document.querySelector('#advBadge:not([hidden]) .medal'), runs: (((await window.__recs()) || {}).runs || []).length, ach: document.getElementById('pvBtnAch').hidden, tol: [...document.querySelectorAll('#tol option')].map(o => o.textContent).join('|') }));
   assert.ok(o.solo, 'on time is the hero'); assert.ok(o.box, 'no score breakdown'); assert.ok(!o.medal, 'no medal');
   assert.equal(o.runs, n0 + 1, 'the run is still saved');
   assert.ok(o.ach, 'no Achievements tab');
@@ -1346,7 +1351,7 @@ audioTest('a run of a routine with its own tempos is saved without a routine tem
   await p.evaluate(() => document.getElementById('advDone').click());
   await p.waitForTimeout(200);
   assert.match(await p.textContent('#lastNote'), /^Last time: \d+% on time\. Play it again until every exercise reaches 90% on time\.$/);
-  assert.equal(await p.evaluate(() => { const r = JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')).runs; return r[r.length - 1].ft; }), 1);
+  assert.equal(await p.evaluate(async () => { const r = (await window.__recs()).runs; return r[r.length - 1].ft; }), 1);
 });
 
 audioTest('rests keep the streak and score nothing unless hit, and a hit on a rest is a miss', async () => {
@@ -1360,7 +1365,7 @@ audioTest('rests keep the streak and score nothing unless hit, and a hit on a re
   });
   await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
   await p.waitForTimeout(300);
-  const q = await p.evaluate(() => JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')).runs[0].exercises[0].q);
+  const q = await p.evaluate(async () => (await window.__recs()).runs[0].exercises[0].q);
   assert.ok(q && q.length > 8, 'rests are in the sequence: ' + q);
   assert.equal((q.match(/m/g) || []).length, 1, 'one rest was hit: ' + q);
   assert.ok(/r/.test(q), 'the other rests are kept: ' + q);
@@ -1474,7 +1479,7 @@ audioTest('Done clears the result and the details, and the run stays in History'
   assert.equal(await p.evaluate(() => !document.getElementById('advice').hidden), true, 'the result shows after a run');
   await p.evaluate(() => document.getElementById('advDone').click());
   await p.waitForTimeout(200);
-  const o = await p.evaluate(() => ({ advice: document.getElementById('advice').hidden, within: document.getElementById('sWithin').textContent, runs: ((JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || {}).runs || []).length }));
+  const o = await p.evaluate(async () => ({ advice: document.getElementById('advice').hidden, within: document.getElementById('sWithin').textContent, runs: (((await window.__recs()) || {}).runs || []).length }));
   assert.equal(o.advice, true, 'the result card goes');
   assert.equal(o.within, '\u2014', 'the details go back to empty');
   assert.equal(o.runs, 1, 'the run is still saved');
@@ -1498,7 +1503,7 @@ audioTest('History shows each run\'s score in the list and on the run page', asy
 
 audioTest('A kept routine is saved to the library on its own, and discarding the run takes it back out but keeps its time for the day', async () => {
   const p = await open({ input: 'kb', bpm: 120, mode: 'routine', routineText: '8 RLRL RLRL\n8 RLLR RLLR', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true });
-  const libN = () => p.evaluate(() => (JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || { lib: [] }).lib.length);
+  const libN = () => p.evaluate(async () => ((await window.__recs()) || { lib: [] }).lib.length);
   const n0 = await libN();
   await press(p, /^Start/);
   await p.waitForFunction(() => window.__T.run() && window.__T.run().plan, null, { timeout: 8000 });
@@ -1506,9 +1511,9 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   await p.waitForFunction(() => window.__T.run().ended, null, { timeout: 40000 });
   await p.waitForTimeout(300);
   assert.equal(await libN(), n0 + 1, 'the routine joins the library');
-  const runsN = () => p.evaluate(() => (JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')) || { runs: [] }).runs.length);
-  const daySec = () => p.evaluate(() => { const r = JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')); return Object.values(r.sum.days).reduce((t, v) => t + v, 0) + r.runs.reduce((t, x) => t + (x.sec || 0), 0); });
-  const sec0 = await daySec(), runSec = await p.evaluate(() => JSON.parse(localStorage.getItem('stick-timing-trainer.records.v2')).runs[0].sec);
+  const runsN = () => p.evaluate(async () => ((await window.__recs()) || { runs: [] }).runs.length);
+  const daySec = () => p.evaluate(async () => { const r = (await window.__recs()); return Object.values(r.sum.days).reduce((t, v) => t + v, 0) + r.runs.reduce((t, x) => t + (x.sec || 0), 0); });
+  const sec0 = await daySec(), runSec = await p.evaluate(async () => (await window.__recs()).runs[0].sec);
   assert.ok(runSec > 0, 'the run has a time: ' + runSec);
   await p.click('#advDiscard');
   assert.equal(await p.textContent('#advDiscard'), 'Tap again to discard');
