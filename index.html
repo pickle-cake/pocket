@@ -3585,7 +3585,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.228';                           /* shown beside the title */
+const VERSION='1.5.229';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -4948,6 +4948,19 @@ const withPasses=(b,n)=>Object.assign({},b,{passes:n});
 /* Before a run the staff shows where the click falls, so the preview carries the clicks of the run, marked to draw them. */
 function previewPlan(exercises){if(!exercises.length)return null;const p=buildPlan(exercises,{gapBeats:S.gap,clickMode:S.click,bars:gapNorm(barsOn()),dyn:dynOpt()});p.ticks=true;return p;}
 const routinePlan=()=>previewPlan(allExercises().map(b=>withPasses(b,1)));
+/* Before a run, with silent bars, each exercise shows as many passes as it takes the click and the silent bars to come round to
+   the first bar again (at most 8), so every silent bar is on the staff, as it is during Listen. Without them, one pass each. */
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+function cyclePasses(sg){
+  if(!sg.gb)return 1;
+  const r=(sg.end-sg.t0)/(sg.beat*sg.gbB),m=Math.round(r),L=sg.gb.length;
+  return Math.min(8,Math.abs(r-m)<1e-6&&m>0?L/gcd(L,m):Math.ceil(L/r-1e-6));
+}
+function routinePreviewPlan(){
+  const all=allExercises(),one=previewPlan(all.map(b=>withPasses(b,1)));
+  if(!one||!one.segs.some(sg=>sg.gb))return one;
+  return previewPlan(all.map((b,i)=>withPasses(b,cyclePasses(one.segs[i]))));
+}
 function layoutPlan(plan){return S.mode==='routine'?(routinePlan()||plan):plan;}
 function applyLayout(plan){
   const avail=staffAvail();
@@ -5025,7 +5038,7 @@ function roleRows(){
        A single exercise keeps one tempo, so only the row being played names it; the others keep an empty label, so every row is the same height. */
     /* The tempo is bold on the row being played, and on an upcoming row only where it differs from the row above, so bold means a change is coming. */
     const sgs=o.sg.sig?' · '+sigText(o.sg.sig):'',hot=d===0||(!!prev&&prev.sg.bpm!==o.sg.bpm);
-    if(prevL)rowLabel(o.lab,o.sg.bpm,(d===0?'Start · exercise ':'Exercise ')+o.sg.idx+' of '+routineParsed.exercises.length+sgs+' · '+exerciseGuide(o.sg),hot);
+    if(prevL)rowLabel(o.lab,o.sg.bpm,(d===0?'Start · exercise ':'Exercise ')+o.sg.idx+' of '+routineParsed.exercises.length+sgs+' · '+(o.p?'pass '+(o.p+1):exerciseGuide(o.sg)),hot);   /* with silent bars, the rows after an exercise's first pass show the rest of the bars */
     else if(latL)o.lab.textContent=d===0?'Round '+(o.p+1):'';
     else if(multi)rowLabel(o.lab,o.sg.bpm,'Exercise '+o.sg.idx+' of '+routineParsed.exercises.length+sgs+' · pass '+(o.p+1)+' of '+o.sg.passes,hot);   /* every row is described the same way as the current one */
     else if(one&&d===0)rowLabel(o.lab,o.sg.bpm,'',true);
@@ -5543,9 +5556,9 @@ function previewRows(animate){
   endHear();
   if(S.mode==='routine'){
     /* Before a run each row is one exercise, so you can scroll to any exercise and start there. */
-    prevPlan=routinePlan();
+    prevPlan=routinePreviewPlan();
     applyLayout(prevPlan);rowsShown=ROWS;labelsOn=true;labelMode='preview';
-    const g=prevPlan?clamp(S.startExercise-1,0,totalPasses(prevPlan)-1):0;
+    const sg=prevPlan&&prevPlan.segs[clamp(S.startExercise-1,0,prevPlan.segs.length-1)],g=sg?sg.g0:0;
     setRows(prevPlan,g,!!animate);
   }else{
     const all=currentExercises();

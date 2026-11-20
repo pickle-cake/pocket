@@ -271,6 +271,22 @@ test('Silent bars: clicked notes underlined, one stepper in More settings, said 
   assert.deepEqual(p.errors, []);
 });
 
+test('Silent bars in a routine: before a run, each exercise shows the passes it takes the silent bars to come round, and the next exercise follows', async () => {
+  const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat', mode: 'routine', routineText: ['8 RLRLRLRL', '8 RRLLRRLL', '8 RLLRRLLR'].join('\n'), bars: '100' }, { width: 1280, height: 900 });
+  const rows = () => p.evaluate(() => [...document.querySelectorAll('#rowsTrack .prow')].map(r => r.querySelector('.rl').textContent + ' | ' + r.querySelectorAll('.cd.sb').length));
+  const r = await rows();
+  assert.match(r[0], /Start · exercise 1 of 3 .*\| 0$/, 'the first pass has the click: ' + r);
+  assert.match(r[1], /Exercise 1 of 3 · pass 2 \| [1-9]/, 'the next passes are silent: ' + r);
+  assert.match(r[2], /Exercise 1 of 3 · pass 3 \| [1-9]/, 'and show the silent bars: ' + r.join(' / '));
+  await p.click('#barsOffDown');
+  const r1 = await rows();
+  assert.match(r1[1], /Exercise 1 of 3 · pass 2 \|/, 'one silent bar, two passes: ' + r1);
+  assert.match(r1[2], /Exercise 2 of 3 · /, r1.join(' / '));
+  await p.click('#barsOffDown');
+  assert.match((await rows())[1], /Exercise 2 of 3 · /, 'no silent bars, one row an exercise');
+  assert.deepEqual(p.errors, []);
+});
+
 audioTest('Listen, under the staff, plays the click with no count-in and the cursor moving, says what it plays, and stops on a setting change or a tab change', async () => {
   const p = await open({ seeded: true, noise: -50, latCal: true, click: 'beat', bpm: 120 }, { width: 390, height: 844 });
   const lab = () => p.getAttribute('#ckHear', 'aria-label');
