@@ -154,6 +154,7 @@ input[type=range]:disabled,input[type=text]:disabled,input[type=number]:disabled
 .panel>p:empty,.panel>ul:empty{display:none}   /* empty message slots would add a grid gap each */
 .hint{font-size:13px;color:var(--muted);margin:0}
 .notice{margin:var(--s-2) 0 0;padding:var(--s-3);border-left:3px solid var(--accent);font:var(--t-small) var(--font-body)}   /* flat, with an accent rail */
+.notice.warn{border-left-color:var(--warn)}
 .notice ul{margin:var(--s-2) 0;padding-left:var(--s-5)}.notice li{margin:var(--s-1) 0}.notice p{margin:0}
 .btn.link{background:none;border-color:transparent;color:var(--accent);padding-inline:var(--s-1);min-width:var(--hit)}   /* tertiary: brass text, no box */
 .btn.link.inl{margin-block:calc(-1*var(--s-3));padding-block:0;vertical-align:baseline}   /* in a line of text: still a 44px target, without opening up the line */
@@ -843,6 +844,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     </nav>
   </header>
   <p class="notice" id="updNote" hidden><span id="updText"></span> <button class="btn link" id="updGo" type="button">Update</button> <button class="btn link" id="updLater" type="button">Later</button></p>
+  <p class="notice warn" id="dbNote" role="alert" hidden><span id="dbText"></span> <button class="btn link" id="dbGo" type="button">Reload</button></p>
 
   <div id="stTop"><p class="status" id="status" role="status" aria-live="polite"></p></div>
 
@@ -1406,7 +1408,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Progress page:</b> every exercise, sorted by accuracy, with accuracy at your last tempo, trend and early/late bias, grouped by click level. Play loads that exercise. A routine is cleared at a tempo when one run covered every exercise and all reached 90%.</li>
         <li><b>Tempo guidance:</b> each exercise in the start list shows the tempo it has cleared, or "new". The summary shows where the whole routine has been cleared.</li>
         <li><b>Staff of a run:</b> each run keeps the result of every stroke. A run's page has a <b>Staff</b> group showing the notation with each stroke coloured and read out, and the Play page rebuilds its review from the same record.</li>
-        <li><b>History:</b> on the Progress page, switch to History for your last 300 runs, by exercise or routine, newest first. Tap a group for its runs and a run for its exercises. <b>Play</b> loads the same routine, tempo, click level and settings, ready to start. <b>Delete</b> deletes the run. The ⋮ beside an exercise deletes just that exercise from the run, for one that was in the editor by mistake. An exercise nothing was heard in is listed as not played and is never scored. An untitled routine is called "Untitled 1", "Untitled 2" and so on. The pencil renames it everywhere, and a title typed in the editor replaces it. Runs beyond 300 are folded into your totals, streaks, achievements and cleared tempos, which are kept for good, but they can no longer be replayed.</li>
+        <li><b>History:</b> on the Progress page, switch to History for every run, by exercise or routine, newest first. Tap a group for its runs and a run for its exercises. <b>Play</b> loads the same routine, tempo, click level and settings, ready to start. <b>Delete</b> deletes the run. The ⋮ beside an exercise deletes just that exercise from the run, for one that was in the editor by mistake. An exercise nothing was heard in is listed as not played and is never scored. An untitled routine is called "Untitled 1", "Untitled 2" and so on. The pencil renames it everywhere, and a title typed in the editor replaces it. Every run is kept, so any of them can be replayed. When storage runs short, the oldest runs lose their stroke detail first; their scores stay.</li>
       </ul>
     </section>
 
@@ -3355,6 +3357,7 @@ function foldRun(sum,run){
    counter: every one up to the last made on or before the day of the newest that has to go, so the counter in cov covers exactly the
    runs folded, even after the clock went back. The time of its discarded runs goes with them. Other devices' runs are left for their own
    device to fold, and lose only their stroke detail here. */
+// eslint-disable-next-line no-unused-vars -- no longer called since 1.5.233 (every run is kept); the tests still use it, and step 2 of SYNC-PLAN.md decides its future
 function foldRuns(r,me,keep){
   const need=r.runs.length-keep;if(need<=0)return null;
   const own=r.runs.filter(x=>!isStamp(x.id)||stampDev(x.id)===me).sort((x,y)=>x.t-y.t);
@@ -3741,7 +3744,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.232';                           /* shown beside the title */
+const VERSION='1.5.233';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 /* This device: a random id, made once and kept only here (never exported or synced), its stamp counter, and the latest time it stamped. */
 const DKEY=KEY+'.dev';
@@ -3847,7 +3850,7 @@ function latUse(){
 /* A calibration has been done, so the reminder at the top goes away. */
 function markCal(){S.latCal=true;save();syncInfo();}
 /* Scores live under their own key so clearing them never touches your settings or calibration. */
-const RKEY='stick-timing-trainer.records.v2',OLDKEY='stick-timing-trainer.records.v1',MAX_RUNS=300,MAX_SNAP=20000;
+const RKEY='stick-timing-trainer.records.v2',OLDKEY='stick-timing-trainer.records.v1',MAX_SNAP=20000;
 /* A short hash of a text. Each distinct pattern or routine is stored once and runs point to it. */
 function hashOf(t){
   let h1=0xdeadbeef,h2=0x41c6ce57;
@@ -4008,7 +4011,7 @@ function packRecs(sel){   /* sel says which parts to include; none given means t
 /* The totals as shown (recs.sum) are worked out again from every device's entry whenever one changes. */
 const resum=()=>{recs.sum=sumView(recs);};
 const useRecs=u=>{recs.runs=u.runs;recs.sums=u.sums;recs.z=u.z;recs.xs=u.xs;recs.x=u.x;recs.names=u.names;recs.nt=u.nt;recs.nu=u.nu;recs.lib=u.lib;recs.gone=u.gone;recs.libGone=u.libGone;resum();};
-/* Records as kept before 1.5.230, and still where IndexedDB cannot open. */
+/* Records as kept before 1.5.230, and still where the browser has no IndexedDB. */
 function loadLocal(){
   try{
     const o=JSON.parse(localStorage.getItem(RKEY)||'null');
@@ -4021,64 +4024,123 @@ function loadLocal(){
 }
 /* Records live in IndexedDB: one entry for each run, and one (meta, 'recs') for the totals, names and saved routines.
    A save writes only the runs that changed, in the background, so a long history no longer slows each save.
-   Where IndexedDB cannot open (some private windows), records stay in localStorage with its smaller limits.
+   Only a browser with no IndexedDB at all keeps records in localStorage, with its smaller limits. An error opening the
+   database never falls back to it: that would show an old or empty history, and save new runs where nothing reads them.
+   Every run is kept: nothing is folded into the totals any more. Only stroke detail has a limit.
    Settings stay in localStorage either way: they are small, and the page reads them before it draws. */
-const DB_NAME='pocket',MAX_RUNS_DB=2000,DETAIL_DB=10000000;   /* 2,000 runs, and 20 MB of stroke detail at two bytes a character */
-let db=null;   /* null: records are kept in localStorage */
+const DB_NAME='pocket',DB_VER=1,DB_STORES=['meta','runs'],DETAIL_DB=10000000;   /* 20 MB of stroke detail at two bytes a character */
+/* A newer version that changes the database must add a store, not only change one: an older version takes a database
+   with exactly its own stores as its own, whatever its version number (see openDb). */
+let db=null;   /* null: records are kept in localStorage, or, while recsOff is set, not at all */
+let recsOff='';   /* why records cannot be saved here until the page reloads: 'newer', 'update', 'lost' or 'error'. Nothing is written meanwhile. */
 const stored=new Map();   /* run id -> signature of the copy IndexedDB holds. '' means it has to be written, or deleted, again. */
 let lastWrite=Promise.resolve(true);
 /* Changes whenever a run is changed in place: an exercise taken out, its routine key changed, its detail trimmed. */
 const runSig=r=>[r.t,r.u||'',r.rk,r.ne,r.exercises.map(b=>b.i+':'+(b.sp?b.sp.length:0)).join(','),r.sk?r.sk.map(b=>b.i).join(','):'',r.rp?r.rp.x.length+'.'+r.rp.st+'.'+(r.rp.o||[]).join(','):''].join('|');
 const idbReq=q=>new Promise((res,rej)=>{q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});
+const isFull=e=>!!e&&(e.name==='QuotaExceededError'||e.name==='NS_ERROR_DOM_QUOTA_REACHED'||e.code===22);
+const hasStores=d=>DB_STORES.every(n=>d.objectStoreNames.contains(n));
+/* The notice under the header, for records that cannot be opened or saved. Reload fetches the page afresh, as Update does,
+   so a cached older copy is not what comes back. */
+function dbNote(t,reload){$('dbNote').hidden=!t;$('dbText').textContent=t?'⚠ '+t:'';$('dbGo').hidden=!reload;}
+const DB_SAYS={
+  newer:'Your records here were saved by a newer version of Pocket. Reload to get it. Until then, nothing is saved.',
+  update:'Pocket was updated in another tab. Reload this one to keep saving your runs.',
+  lost:'Pocket lost access to your records. Reload to keep saving your runs.',
+  error:'Pocket could not open your records. Reload to try again. Until then, nothing is saved.'
+};
+function stopRecs(why){
+  recsOff=why;
+  if(db){const d=db;db=null;try{d.close();}catch(e){}}
+  dbNote(DB_SAYS[why],true);
+}
+/* A newer version in another tab wants to upgrade the database: this tab lets go, and stops saving until it reloads.
+   The browser closing the database by itself (storage cleared, for one) stops saving too. */
+function watchDb(d){d.onversionchange=()=>{if(db===d)stopRecs('update');else d.close();};d.onclose=()=>{if(db===d)stopRecs('lost');};}
+/* Opens the database at this version's number. Resolves with it, or with why not: 'newer' (a newer version upgraded it),
+   'error', or 'slow' (no answer). An older version open in another tab can hold an upgrade up: this tab says so and waits. */
 function openDb(ver){
   return new Promise(res=>{
-    let q,done=false;
-    const end=d=>{if(done){if(d)d.close();return;}done=true;res(d);};
-    setTimeout(()=>end(null),4000);   /* a browser that never answers: records stay in localStorage */
-    try{q=ver?indexedDB.open(DB_NAME,ver):indexedDB.open(DB_NAME);}catch(e){end(null);return;}
-    q.onupgradeneeded=()=>{const d=q.result;if(!d.objectStoreNames.contains('runs'))d.createObjectStore('runs',{keyPath:'id'});if(!d.objectStoreNames.contains('meta'))d.createObjectStore('meta');};
+    let q,done=false,blocked=false;
+    const end=d=>{
+      if(done){if(d&&typeof d==='object')d.close();return;}
+      done=true;if(blocked)dbNote('');res(d);
+    };
+    setTimeout(()=>{if(!blocked)end('slow');},4000);   /* a browser that never answers */
+    try{q=indexedDB.open(DB_NAME,ver||DB_VER);}catch(e){end('error');return;}
+    q.onupgradeneeded=()=>{const d=q.result;DB_STORES.forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n,n==='runs'?{keyPath:'id'}:undefined);});};
     q.onsuccess=()=>{
       const d=q.result;
-      if(d.objectStoreNames.contains('runs')&&d.objectStoreNames.contains('meta')){d.onversionchange=()=>d.close();end(d);return;}
+      if(done){d.close();return;}
+      if(hasStores(d)){watchDb(d);end(d);return;}
       const v=d.version+1;d.close();openDb(v).then(end);   /* a database made without its stores: open it one version up, which makes them */
     };
-    q.onerror=q.onblocked=()=>end(null);
+    q.onblocked=()=>{blocked=true;dbNote('Pocket is open in another tab on an older version. Close or reload that tab to continue.',false);};
+    q.onerror=e=>{
+      if(e&&e.preventDefault)e.preventDefault();
+      if(!(q.error&&q.error.name==='VersionError')){end('error');return;}
+      /* The database has a higher version than this one asks for. Before 1.5.233 Pocket opened a database it found without its
+         stores one version up; with exactly this version's stores it is still this version's. Anything more is a newer version's. */
+      let a;
+      try{a=indexedDB.open(DB_NAME);}catch(x){end('error');return;}
+      a.onsuccess=()=>{const d=a.result;if(d.objectStoreNames.length===DB_STORES.length&&hasStores(d)){watchDb(d);end(d);}else{d.close();end('newer');}};
+      a.onerror=x=>{if(x&&x.preventDefault)x.preventDefault();end('error');};
+    };
   });
 }
 async function loadRecs(){
-  try{if(window.indexedDB)db=await openDb();}catch(e){db=null;}
-  if(db){
-    try{
-      const tx=db.transaction(['runs','meta']);
-      const [meta,raw]=await Promise.all([idbReq(tx.objectStore('meta').get('recs')),idbReq(tx.objectStore('runs').getAll())]);
-      if(meta){
-        const items=Object.assign({},meta.items),hk=t=>{const h=hashOf(t);items[h]=t;return h;},runs=[];
-        raw.forEach(r=>{if(r&&typeof r.id==='string')stored.set(r.id,'');try{runs.push(packRun(r,hk));}catch(e){}});
-        const u=unpackRecs(Object.assign({},meta,{v:Math.max(2,num(meta.v)),items:items,runs:runs}));   /* the runs were packed here, so their stickings are hashed */
-        u.runs.sort((a,b)=>a.t-b.t);useRecs(u);
-        u.runs.forEach(r=>stored.set(r.id,runSig(r)));   /* a run that did not pass the checks keeps '', and goes at the next save */
-        try{localStorage.removeItem(RKEY);localStorage.removeItem(OLDKEY);}catch(e){}   /* left by an older version: already moved */
-        return;
-      }
-    }catch(e){db=null;loadLocal();return;}
-  }
-  loadLocal();
-  if(!db)return;
+  if(!window.indexedDB){loadLocal();return;}
+  let d=await openDb();
+  if(d==='slow')d=await openDb();   /* WebKit can leave the first open of a session unanswered; a second one gets through */
+  if(!d||typeof d!=='object'){stopRecs(d==='newer'?'newer':'error');return;}
+  db=d;
+  try{
+    const tx=db.transaction(['runs','meta']);
+    const [meta,raw]=await Promise.all([idbReq(tx.objectStore('meta').get('recs')),idbReq(tx.objectStore('runs').getAll())]);
+    if(meta){
+      const items=Object.assign({},meta.items),hk=t=>{const h=hashOf(t);items[h]=t;return h;},runs=[];
+      raw.forEach(r=>{if(r&&typeof r.id==='string')stored.set(r.id,'');try{runs.push(packRun(r,hk));}catch(e){}});
+      const u=unpackRecs(Object.assign({},meta,{v:Math.max(2,num(meta.v)),items:items,runs:runs}));   /* the runs were packed here, so their stickings are hashed */
+      u.runs.sort((a,b)=>a.t-b.t);useRecs(u);
+      u.runs.forEach(r=>stored.set(r.id,runSig(r)));   /* a run that did not pass the checks keeps '', and goes at the next save */
+      try{localStorage.removeItem(RKEY);localStorage.removeItem(OLDKEY);}catch(e){}   /* left by an older version: already moved */
+      return;
+    }
+  }catch(e){stopRecs('error');return;}
   /* The first load with IndexedDB: the records in localStorage move across, and the old key goes once they are written. */
+  loadLocal();
   if(await writeRecs())try{localStorage.removeItem(RKEY);localStorage.removeItem(OLDKEY);}catch(e){}
 }
-/* Writes the runs that changed, and the meta entry, in one transaction. Resolves true once written. A full disk folds the oldest
-   quarter of runs into the totals and tries again, as the localStorage save does. */
+/* Storage is full: the oldest stroke detail goes, so the newest runs can still be saved. First the oldest half of it, then all
+   but the newest run's. Says whether anything went. */
+function dropDetail(step){
+  let n=detailChars(),any=false;
+  const goal=step?0:Math.floor(n/2);
+  for(let i=0;i<recs.runs.length-1&&n>goal;i++)recs.runs[i].exercises.forEach(b=>{if(b.sp){n-=b.sp.length;delete b.sp;any=true;}});
+  return any;
+}
+/* A save failed, even after dropping old detail. The records stay in memory while the page is open, so an export still keeps them. */
+function saveFailed(full){
+  const el=$('status');
+  setStatus((full?'Browser storage is full, so Pocket':'Pocket')+' could not save your records. They are kept while Pocket stays open: export them to keep a copy. ');
+  if(!el.querySelector('[data-exp]')){const b=textBtn('Export',openExport,'btn link');b.dataset.exp='1';el.appendChild(b);}
+  if(lastRun&&lastRun.saved&&(!db||stored.get(lastRun.run.id)!==runSig(lastRun.run))){lastRun.saved=false;if(!$('advice').hidden)renderAdvice();}
+}
+/* Writes the runs that changed, and the meta entry, in one transaction. Resolves true once written. A full disk drops the
+   oldest stroke detail and tries again (dropDetail); if that fails too, the person is told (saveFailed). */
 function writeRecs(tries){
   tries=tries||0;
+  if(!db)return Promise.resolve(false);
   const live=new Set(),put=[],del=[];
   recs.runs.forEach(r=>{live.add(r.id);const g=runSig(r);if(stored.get(r.id)!==g)put.push([r,g]);});
   stored.forEach((g,id)=>{if(!live.has(id))del.push(id);});
+  let full=false;
   const p=new Promise(res=>{
     let tx=null;
     const failed=e=>{
       put.forEach(x=>stored.set(x[0].id,''));del.forEach(id=>stored.set(id,''));   /* written again at the next save */
-      if(tries<3&&e&&e.name==='QuotaExceededError'){foldOld(Math.floor(recs.runs.length*0.75));writeRecs(tries+1).then(res);return;}
+      full=isFull(e);
+      if(full&&tries<2&&db&&dropDetail(tries)){writeRecs(tries+1).then(ok=>{if(ok)full=false;res(ok);});return;}
       res(false);
     };
     try{
@@ -4092,13 +4154,12 @@ function writeRecs(tries){
     tx.oncomplete=()=>res(true);
     tx.onabort=()=>failed(tx.error);
   });
-  lastWrite=p.then(ok=>{if(!ok)setStatus('Could not save your records. Browser storage may be full.');return ok;});
+  if(tries)return p;   /* a retry: the first attempt reports */
+  lastWrite=p.then(ok=>{if(!ok&&!recsOff)saveFailed(full);return ok;});
   return lastWrite;
 }
 /* Waits for the last save to be written, before the page reloads. */
 const recsWritten=()=>lastWrite.catch(()=>false);
-/* Keeps the newest runs in full; this device's older ones are folded into its totals (foldRuns). */
-function foldOld(keep){const e=foldRuns(recs,dev.id,keep);if(e){e.v=newStamp(e.v);resum();}}
 /* A routine's name is kept only while it has runs or totals. */
 function pruneNames(){
   const live=new Set();recs.runs.forEach(r=>{if(r.rk)live.add(r.rk);});Object.keys(recs.sum.rt).forEach(k=>live.add(recs.sum.rt[k].rk));
@@ -4131,12 +4192,15 @@ function trimDetail(){
   for(let i=0;i<recs.runs.length&&n>budget;i++)recs.runs[i].exercises.forEach(b=>{if(b.sp){n-=b.sp.length;delete b.sp;}});
 }
 function saveRecs(){
-  foldOld(db?MAX_RUNS_DB:MAX_RUNS);pruneNames();trimDetail();
+  if(recsOff)return false;   /* records cannot be saved until the page reloads: the notice says why */
+  pruneNames();trimDetail();
   if(db){writeRecs();return true;}   /* written in the background; a failure says so in the status line */
-  for(let i=0;i<4;i++){
+  let full=false;
+  for(let i=0;i<3;i++){
     try{localStorage.setItem(RKEY,JSON.stringify(packRecs()));try{localStorage.removeItem(OLDKEY);}catch(e){}return true;}
-    catch(e){foldOld(Math.floor(recs.runs.length*0.75));}
+    catch(e){full=isFull(e);if(full&&i<2&&dropDetail(i))continue;break;}
   }
+  saveFailed(full);
   return false;
 }
 let lastRun=null;
@@ -6960,7 +7024,7 @@ function renderStorage(){
   const libs=JSON.stringify(S.lists||[]).length,sets=Math.max(0,kk-libs),routines=Math.max(0,rk-detail-runs);
   const parts=[['Stroke detail',detail,'var(--accent)'],['Runs',runs,'var(--ok)'],['Routines',routines,'var(--late)'],['Libraries',libs,'var(--early)'],['Settings',sets,'var(--muted)']];
   const used=parts.reduce((n,x)=>n+x[1],0),fmt=c=>{const b=c*2;return b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(0.1,b/1024).toFixed(b<10240?1:0)+' KB';};
-  $('stoTotal').textContent=db?fmt(used)+' used on this device. Pocket keeps up to '+MAX_RUNS_DB.toLocaleString('en-AU')+' runs in full.':fmt(used)+' of about '+fmt(QUOTA)+' used on this device.';
+  $('stoTotal').textContent=db?fmt(used)+' used on this device. Pocket keeps every run.':fmt(used)+' of about '+fmt(QUOTA)+' used on this device.';
   const bar=$('stoBar');bar.textContent='';bar.setAttribute('aria-label',$('stoTotal').textContent);
   parts.forEach(x=>{if(!x[1])return;const e=document.createElement('i');e.style.width=(x[1]/scale*100)+'%';e.style.background=x[2];e.title=x[0];bar.appendChild(e);});
   const mk=document.createElement('i');mk.className='stomk';mk.style.left=(detailBudget()/scale*100)+'%';mk.title='Limit for stroke detail';bar.appendChild(mk);
@@ -7563,6 +7627,7 @@ const MAX_IMPORT=100e6;
 function sayRec(t){$('recMsg').textContent=t;$('recMsg').classList.add('flash');}
 async function importRecs(file){
   if(!file)return;
+  if(recsOff){sayRec('Your records cannot be saved here until Pocket reloads.');return;}
   if(file.size>MAX_IMPORT){sayRec('That file is over 100 MB, too large to import.');return;}
   try{
     const o=JSON.parse(await file.text());
@@ -9402,6 +9467,7 @@ function wire(){
     if(run&&!run.ended)return;
     fetch(location.pathname,{cache:'reload'}).catch(()=>{}).then(()=>location.reload());   /* with cookies, as a page load is: Safari keeps the two in separate cache entries */
   });
+  $('dbGo').addEventListener('click',()=>{fetch(location.pathname,{cache:'reload'}).catch(()=>{}).then(()=>location.reload());});   /* as Update does: not the cached copy */
   $('updLater').addEventListener('click',()=>{updLater=true;showUpd();});
   setTimeout(checkUpdate,2000);
   window.addEventListener('focus',checkUpdate);setInterval(checkUpdate,1800000);

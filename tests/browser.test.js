@@ -9,7 +9,7 @@ const ENGINE = process.env.POCKET_ENGINE || 'chromium';
 const contextFor = viewport => Object.assign(ENGINE === 'webkit' && viewport.width < 720 ? { ...playwright.devices['iPhone 13'] } : {}, { viewport });
 const { ROOT, html } = require('./helpers');
 
-const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo(),unlocked:renderUnlocked};window.__recs=()=>recsWritten().then(()=>new Promise((res,rej)=>{const tx=db.transaction(["runs","meta"]),m=tx.objectStore("meta").get("recs"),r=tx.objectStore("runs").getAll();tx.oncomplete=()=>res(m.result?Object.assign({},m.result,{runs:r.result.sort((x,y)=>x.t-y.t)}):null);tx.onerror=()=>rej(tx.error);}));let heardTimer=0;');
+const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,save:saveRecs,recs:()=>recs,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo(),unlocked:renderUnlocked};window.__recs=()=>recsWritten().then(()=>new Promise((res,rej)=>{const tx=db.transaction(["runs","meta"]),m=tx.objectStore("meta").get("recs"),r=tx.objectStore("runs").getAll();tx.oncomplete=()=>res(m.result?Object.assign({},m.result,{runs:r.result.sort((x,y)=>x.t-y.t)}):null);tx.onerror=()=>rej(tx.error);}));let heardTimer=0;');
 assert.ok(page !== html, 'the test hook did not attach: has handleHit moved?');
 
 let server, base, browser, served = 0;
@@ -773,6 +773,95 @@ test('a stray exercise is deleted from a run, and an unheard one is not scored',
   assert.deepEqual(p.errors, []);
   await ctx.close();
 });
+
+/* The storage release (1.5.233): records are never opened in a way that could lose or split them. */
+const note = p => p.evaluate(() => ({ shown: !document.getElementById('dbNote').hidden, text: document.getElementById('dbText').textContent, reload: !document.getElementById('dbGo').hidden }));
+const importFile = async (p, name, o) => { const f = path.join(os.tmpdir(), name); fs.writeFileSync(f, JSON.stringify(o)); await p.click('#tabProgress'); await p.setInputFiles('#recFile', f); return f; };
+const withDetail = runs => runs.reduce((a, r, i) => (r.exercises[0].sp ? a.concat(i) : a), []);
+
+test('an upgrade from another tab stops this one saving, and a newer database is left alone', async () => {
+  const p = await open({ seeded: true });
+  assert.equal((await note(p)).shown, false);
+  /* Another tab, on a newer version, upgrades the database and adds a store. */
+  await p.evaluate(() => new Promise((res, rej) => { const q = indexedDB.open('pocket', 2); q.onupgradeneeded = () => q.result.createObjectStore('more'); q.onsuccess = () => { q.result.close(); res(); }; q.onerror = () => rej(q.error); q.onblocked = () => rej(new Error('blocked: the page did not let go')); }));
+  let n = await note(p);
+  assert.ok(n.shown && n.reload, 'the reload prompt shows');
+  assert.match(n.text, /^⚠ Pocket was updated in another tab/);
+  assert.equal(await p.evaluate(() => window.__T.save()), false, 'nothing is saved');
+  /* After a reload, this older build meets the newer database: it says so, and writes nothing, not even to localStorage. */
+  await p.reload();
+  await p.waitForTimeout(300);
+  n = await note(p);
+  assert.ok(n.shown && n.reload);
+  assert.match(n.text, /newer version of Pocket/);
+  const f = await importFile(p, 'pocket-imp-newer.json', { v: 3, items: { h1: 'RLRL' }, runs: [] });
+  assert.equal(await p.textContent('#recMsg'), 'Your records cannot be saved here until Pocket reloads.');
+  const left = await p.evaluate(() => new Promise(res => { const q = indexedDB.open('pocket'); q.onsuccess = () => { const d = q.result, o = { v: d.version, stores: [...d.objectStoreNames].sort() }; d.close(); res(o); }; }));
+  assert.deepEqual(left, { v: 2, stores: ['meta', 'more', 'runs'] });
+  assert.equal(await p.evaluate(() => localStorage.getItem('stick-timing-trainer.records.v2')), null, 'no fallback to localStorage');
+  assert.deepEqual(p.errors, []);
+  fs.unlinkSync(f);
+});
+
+test('an older tab holding the database up is named, and the page carries on once it goes', async () => {
+  const ctx = await browser.newContext(contextFor({ width: 390, height: 900 }));
+  /* A tab that opened the database before its stores were made, and does not let go when asked. */
+  const old = await ctx.newPage();
+  await old.goto(base + 'landing/index.html');
+  await old.evaluate(() => new Promise(res => { const q = indexedDB.open('pocket'); q.onsuccess = () => { window.__db = q.result; res(); }; }));
+  const p = await ctx.newPage();
+  p.errors = [];
+  p.on('pageerror', e => p.errors.push(e.message));
+  await p.goto(base);
+  await p.waitForFunction(() => !document.getElementById('dbNote').hidden);
+  const n = await note(p);
+  assert.equal(n.text, '⚠ Pocket is open in another tab on an older version. Close or reload that tab to continue.');
+  assert.equal(n.reload, false, 'reloading this tab would not help');
+  await old.evaluate(() => window.__db.close());
+  await p.waitForFunction(() => document.getElementById('dbNote').hidden);
+  assert.equal(await p.evaluate(() => window.__T.save()), true, 'the database is open');
+  /* It is now at version 2 with only this version's stores: still this version's database after a reload. */
+  await p.reload();
+  await p.waitForTimeout(300);
+  assert.equal((await note(p)).shown, false);
+  assert.equal(await p.evaluate(() => window.__T.save()), true);
+  assert.ok(await p.evaluate(async () => !!(await window.__recs())), 'and saves to it');
+  assert.deepEqual(p.errors, []);
+});
+
+test('every run is kept past 2,000, and a full disk drops the oldest stroke detail before giving up', async () => {
+  const p = await open({ seeded: true });
+  const now = Date.now(), N = 2100, stamp = (t, n, d) => t.toString(36).padStart(9, '0') + '-' + n.toString(36).padStart(6, '0') + '-' + d;
+  const runs = Array.from({ length: N }, (_, i) => { const t = now - (N - i) * 36e5, e = { k: 'h1', due: 16, within: 16, heard: 16 }; if (i % 500 === 499 || i === N - 1) e.sp = 'AbC_'.repeat(50); return { id: stamp(t, i + 1, 'otherdev'), t, sec: 60, bpm: 60, lv: 'beat', exercises: [e] }; });
+  const f = await importFile(p, 'pocket-imp-2100.json', { v: 3, items: { h1: 'RLRL' }, runs });
+  await p.waitForSelector('#exGo', { state: 'visible', timeout: 30000 });
+  await p.click('#exGo');
+  await p.waitForFunction(() => /^Imported/.test(document.getElementById('recMsg').textContent), null, { timeout: 60000 });
+  const saved = async () => withDetail((await p.evaluate(async () => (await window.__recs()).runs)));
+  assert.equal(await p.evaluate(async () => (await window.__recs()).runs.length), N, 'nothing is folded');
+  assert.deepEqual(await saved(), [499, 999, 1499, 1999, 2099]);
+  /* Writes fail for lack of space n times, then work again. */
+  const fail = n => p.evaluate(n => {
+    const t = IDBDatabase.prototype.transaction;
+    let left = n;
+    IDBDatabase.prototype.transaction = function (s, m) { if (m === 'readwrite' && left-- > 0) throw new DOMException('full', 'QuotaExceededError'); return t.call(this, s, m); };
+    window.__T.recs().runs[0].exercises[0].sp = 'AbC_';   /* a change, so there is something to write */
+    window.__T.save();
+  }, n);
+  /* Once: the oldest half of the stroke detail goes, and the second write gets through. */
+  await fail(1);
+  await p.waitForTimeout(500);
+  assert.deepEqual(await saved(), [1999, 2099]);
+  assert.doesNotMatch(await p.textContent('#status'), /could not save/);
+  /* Every time: all but the newest run's detail goes, and then the person is told, with a way to export. */
+  await fail(99);
+  await p.waitForFunction(() => /could not save/.test(document.getElementById('status').textContent));
+  assert.equal(await p.textContent('#status'), 'Browser storage is full, so Pocket could not save your records. They are kept while Pocket stays open: export them to keep a copy. Export');
+  assert.deepEqual(withDetail(await p.evaluate(() => window.__T.recs().runs)), [2099], 'in memory, only the newest run keeps its detail');
+  assert.deepEqual(p.errors, []);
+  fs.unlinkSync(f);
+});
+
 
 audioTest('coaching says when the exercises were too short for notes on single strokes', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: ['16 RLRL RLRL RLRL RLRL', '16 LRLR LRLR LRLR LRLR'].join(String.fromCharCode(10)), eachUnit: 'pass', eachVal: 2, seeded: true });
