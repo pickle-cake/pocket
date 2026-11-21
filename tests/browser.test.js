@@ -863,6 +863,50 @@ test('every run is kept past 2,000, and a full disk drops the oldest stroke deta
 });
 
 
+test('a clear starts a new generation: records cleared before 1.5.236 are in generation 1, and an older file brings nothing back', async () => {
+  const ctx = await browser.newContext(contextFor({ width: 390, height: 900 }));
+  const p = await ctx.newPage();
+  p.errors = [];
+  p.on('pageerror', e => p.errors.push(e.message));
+  const t0 = Date.now() - 864e5, ex = () => [{ k: 'RLRL', bpm: 60, due: 16, within: 16, heard: 16 }];
+  const run = (id, t, g) => Object.assign({ id, t, mode: 'single', lv: 'beat', bpm: 60, tol: 20, sec: 60, exercises: ex() }, g === undefined ? {} : { g });
+  await p.addInitScript(r => {
+    if (localStorage.getItem('seeded-by-test')) return;
+    localStorage.setItem('seeded-by-test', '1');
+    /* Cleared by a version before 1.5.236, with a clock that was ahead: a clear time far after the run kept since. */
+    localStorage.setItem('stick-timing-trainer.records.v2', JSON.stringify({ v: 1, z: 9e12, names: {}, nu: 1, lib: [], runs: [r] }));
+    localStorage.setItem('stick-timing-trainer.v1', JSON.stringify({ settings: { seeded: true, noise: -50, latCal: true }, cal: null }));
+  }, run('kept', t0));
+  await p.goto(base);
+  await p.waitForTimeout(300);
+  let m = await p.evaluate(async () => { const o = await window.__recs(); return { gen: o.gen, runs: o.runs.map(r => r.id + ':' + r.g), z: o.z }; });
+  assert.deepEqual(m, { gen: { n: 1, v: '000000000-000000-00000000' }, runs: ['kept:1'], z: undefined }, 'the run kept after the old clear is in generation 1');
+  /* Clear the history: generation 2, at a version after everything seen. */
+  await p.click('#tabSettings').catch(() => {});
+  await p.evaluate(() => document.getElementById('recClear').click());
+  await p.evaluate(() => document.querySelector('#exOpts input[data-k=hist]').click());
+  await Promise.all([p.waitForEvent('load'), p.evaluate(() => { const b = document.getElementById('exGo'); b.click(); b.click(); })]);
+  await p.waitForTimeout(300);
+  m = await p.evaluate(async () => { const o = await window.__recs(); return { n: o.gen.n, v: o.gen.v, runs: o.runs.length }; });
+  assert.equal(m.n, 2);
+  assert.equal(m.runs, 0);
+  assert.notEqual(m.v, '000000000-000000-00000000');
+  /* A file from before the clear (generation 0, played by its clock after it) brings in no runs; one from a later generation comes into this one. */
+  let f = await importFile(p, 'pocket-imp-gen0.json', { v: 1, runs: [run('old', Date.now())] });
+  await p.click('#exGo');
+  await p.waitForFunction(() => /\S/.test(document.getElementById('recMsg').textContent));
+  assert.equal(await p.textContent('#recMsg'), 'Nothing new in what you ticked.');
+  fs.unlinkSync(f);
+  f = await importFile(p, 'pocket-imp-gen5.json', { v: 1, gen: { n: 5, v: '00000000z-000001-bbbbbbbb' }, runs: [run('new', Date.now(), 5)] });
+  await p.click('#exGo');
+  await p.waitForFunction(() => /^Imported/.test(document.getElementById('recMsg').textContent));
+  m = await p.evaluate(async () => { const o = await window.__recs(); return { n: o.gen.n, runs: o.runs.map(r => r.id + ':' + r.g) }; });
+  assert.deepEqual(m, { n: 2, runs: ['new:2'] }, 'an import never changes the generation');
+  fs.unlinkSync(f);
+  assert.deepEqual(p.errors, []);
+});
+
+
 audioTest('coaching says when the exercises were too short for notes on single strokes', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: ['16 RLRL RLRL RLRL RLRL', '16 LRLR LRLR LRLR LRLR'].join(String.fromCharCode(10)), eachUnit: 'pass', eachVal: 2, seeded: true });
   await press(p, /^Start/);

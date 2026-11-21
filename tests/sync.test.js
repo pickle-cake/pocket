@@ -3,12 +3,12 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['mergeRecs', 'mergeSettings', 'mergeMarks', 'newSum', 'newEntry', 'practiceDays', 'cleanMarks', 'MAX_MARKS',
-  'makeStamp', 'isStamp', 'ZERO', 'stampTime', 'sumView', 'coverage', 'nextTime', 'latestVersion', 'tieWins', 'foldRuns', 'MAX_TIME']);
+  'makeStamp', 'isStamp', 'ZERO', 'stampTime', 'sumView', 'coverage', 'nextTime', 'latestVersion', 'tieWins', 'foldRuns', 'MAX_TIME', 'genOf', 'genWins']);
 
 const key = x => x.trim();
 const ex = () => [{ k: 'RLRL', due: 16, within: 16 }];
 const run = (id, t, extra) => Object.assign({ id, t, sec: 60, exercises: ex() }, extra);
-const side = o => Object.assign({ runs: [], sums: {}, z: 0, xs: {}, x: {}, names: {}, nt: {}, nu: 1, lib: [], gone: {}, libGone: {} }, o);
+const side = o => Object.assign({ runs: [], sums: {}, xs: {}, x: {}, names: {}, nt: {}, nu: 1, lib: [], gone: {}, libGone: {} }, o);
 const ids = l => l.map(x => x.id);
 /* A stamp from device d at time t and counter n, for tests that need exact values. */
 const st = (t, n, d) => c.makeStamp(t, n, d || 'aaaaaaaa');
@@ -84,18 +84,40 @@ test('totals are kept by device: the newer copy of each, added up, and runs in t
   assert.ok(old(run('x1', 20)) && !old(run('x2', 30)) && !old(run(st(10, 1), 10)), 'totals from before 1.5.231 cover old ids by time only');
 });
 
-test('a cleared history wins over an older copy, and nothing from before it comes back', () => {
+test('a cleared history wins over an older generation, whatever the clocks, and nothing from before it comes back', () => {
+  /* The old copy's runs, totals, names and discarded times are all from generation 0, some played (by its clock) long after the clear. */
   const old = side({
-    runs: [run('a', 10), run(st(200, 7), 200)], sums: { aaaaaaaa: entry(st(50, 2), { runs: 9 }), bbbbbbbb: entry(st(300, 1, 'bbbbbbbb'), { runs: 1 }) },
-    names: { x: 'Old', y: 'New' }, nt: { x: st(50, 3), y: st(150, 4) }, xs: { d1: [60, 30], d2: [160, 30] }
+    runs: [run('a', 10), run(st(9e9, 7), 9e9)], sums: { aaaaaaaa: entry(st(50, 2), { runs: 9 }), bbbbbbbb: entry(st(300, 1, 'bbbbbbbb'), { runs: 1 }) },
+    names: { x: 'Old' }, nt: { x: st(150, 3) }, xs: { d1: [60, 30] }, gone: { q: st(5, 1) }, lib: [{ id: 'L', x: 'RLRL', t: 1 }]
   });
-  const m = c.mergeRecs(side({ z: 100 }), old, key);
-  assert.equal(m.z, 100);
-  assert.deepEqual(Object.keys(m.sums), ['bbbbbbbb'], 'totals folded after the clear are kept');
-  assert.equal(c.sumView(m).runs, 1);
-  assert.deepEqual(plain(ids(m.runs)), [st(200, 7)], 'a run after the clear is kept');
-  assert.deepEqual(plain(m.names), { y: 'New' });
-  assert.deepEqual(Object.keys(m.xs), ['d2']);
+  const cleared = side({ gen: { n: 1, v: st(20, 1, 'cccccccc') }, runs: [run(st(5, 1, 'cccccccc'), 5, { g: 1 })], names: { y: 'New' }, nt: { y: st(21, 2, 'cccccccc') } });
+  for (const m of [c.mergeRecs(cleared, old, key), c.mergeRecs(old, cleared, key)]) {
+    assert.deepEqual(plain(m.gen), { n: 1, v: st(20, 1, 'cccccccc') });
+    assert.deepEqual(plain(ids(m.runs)), [st(5, 1, 'cccccccc')], 'only the run from after the clear, though its clock said 5');
+    assert.deepEqual(plain(m.sums), {});
+    assert.deepEqual(plain(m.names), { y: 'New' });
+    assert.deepEqual(plain(m.xs), {});
+    assert.deepEqual(plain(m.gone), {});
+    assert.deepEqual(plain(ids(m.lib)), ['L'], 'saved routines are not history');
+  }
+  /* A run of an older generation goes even from the winning copy. */
+  const mixed = side({ gen: { n: 2, v: st(30, 1) }, runs: [run('p', 1, { g: 1 }), run('q', 2, { g: 2 }), run('r', 3)] });
+  assert.deepEqual(plain(ids(c.mergeRecs(mixed, side({}), key).runs)), ['q', 'r'], 'a run without g is in its copy\'s generation');
+});
+
+test('two clears that did not see each other: the same number, the newer version kept, and both fresh histories combine', () => {
+  const a = side({ gen: { n: 1, v: st(40, 1, 'aaaaaaaa') }, runs: [run('a1', 100, { g: 1 })] });
+  const b = side({ gen: { n: 1, v: st(41, 1, 'bbbbbbbb') }, runs: [run('b1', 50, { g: 1 })] });
+  const ab = c.mergeRecs(a, b, key), ba = c.mergeRecs(b, a, key);
+  assert.deepEqual(plain(ab.gen), plain(ba.gen));
+  assert.equal(ab.gen.v, st(41, 1, 'bbbbbbbb'));
+  assert.deepEqual(plain(ids(ab.runs)), ['b1', 'a1']);
+  /* A second clear beats both, whatever its version. */
+  const c2 = side({ gen: { n: 2, v: st(1, 1, 'cccccccc') } });
+  assert.deepEqual(plain(c.mergeRecs(ab, c2, key).runs), []);
+  assert.ok(c.genWins({ n: 2, v: c.ZERO }, { n: 1, v: st(99, 1) }) && !c.genWins({ n: 1, v: st(1, 1) }, { n: 1, v: st(2, 1) }));
+  assert.deepEqual(plain(c.genOf({})), { n: 0, v: c.ZERO });
+  assert.deepEqual(plain(c.genOf({ gen: { n: -3, v: 'bad' } })), { n: 0, v: c.ZERO });
 });
 
 test('discarded time is counted once, whichever copies have it, and not at all once the run is back', () => {
@@ -259,13 +281,14 @@ test('a version from a clock far ahead is a number like any other, and the next 
   assert.ok(c.isStamp(c.makeStamp(c.nextTime(c.MAX_TIME), 1, 'aaaaaaaa')));
 });
 
-test('the latest version is found in versions, markers, totals and the clear time, never in ids', () => {
+test('the latest version is found in versions, markers, totals and the generation, never in ids', () => {
   const s = t => st(t, 1, 'bbbbbbbb');
   assert.equal(c.latestVersion({ runs: [{ id: s(5), u: s(7) }], lib: [{ id: 'x', u: s(3) }] }), 7);
   assert.equal(c.latestVersion({ gone: { a: s(9) } }, { nt: { k: s(4) } }), 9);
   assert.equal(c.latestVersion({ sums: { bbbbbbbb: { v: s(11) } }, setT: { bpm: s(10) } }), 11);
   assert.equal(c.latestVersion({ runs: [{ id: 'lq3x8k2pab12' }, { id: s(99) }], lib: [{ id: s(98) }] }), 0, 'ids are not versions');
-  assert.equal(c.latestVersion({ z: 40, gone: { a: s(9) } }), 40, 'versions made after a clear are after it');
+  assert.equal(c.latestVersion({ gen: { n: 1, v: s(40) }, gone: { a: s(9) } }), 40, 'versions made after a clear are after it');
+  assert.equal(c.latestVersion({ z: 1e12 }), 0, 'the clear time from before 1.5.236 is not a version');
 });
 
 test('two devices with different data from before sync settle every tie the same way, whichever merges', () => {

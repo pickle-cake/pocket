@@ -3135,20 +3135,26 @@ const verOf=x=>isStamp(x.u)?x.u:ZERO;   /* an item's version: its stamp u, set w
    unique, which the counter and device make sure of. Versions are counted from versions only, never from ids. */
 const MAX_TIME=36**9-1;   /* nine base-36 digits: past it, a version could not be newer by its time part */
 const nextTime=(seen,...after)=>{let m=Math.max(0,+seen||0);after.forEach(s=>{if(isStamp(s))m=Math.max(m,stampTime(s));});return Math.min(MAX_TIME,m+1);};
-/* The highest version in records or settings: versions, markers, setting and name times, totals entries, and the clear time (until
-   the history is cleared by generation, the versions made after a clear have to be after it). After taking in another copy, a device
-   counts up from it (seeVersions), so an edit it makes next is newer than every version it has seen. */
+/* The highest version in records or settings: versions, markers, setting and name times, totals entries and the generation. After
+   taking in another copy, a device counts up from it (seeVersions), so an edit it makes next is newer than every version it has seen. */
 function latestVersion(...os){
   let m=0;const see=s=>{if(isStamp(s))m=Math.max(m,stampTime(s));},marks=o=>{if(o&&typeof o==='object')Object.keys(o).forEach(k=>see(o[k]));};
   os.forEach(o=>{
     if(!o||typeof o!=='object')return;
-    if(+o.z>0)m=Math.max(m,Math.min(MAX_TIME,Math.floor(+o.z)));
+    if(o.gen)see(o.gen.v);
     [o.runs,o.lib,o.lists].forEach(l=>{if(Array.isArray(l))l.forEach(x=>{if(x)see(x.u);});});
     [o.gone,o.libGone,o.listGone,o.nt,o.setT].forEach(marks);
     if(o.sums&&typeof o.sums==='object')Object.keys(o.sums).forEach(d=>see(o.sums[d]&&o.sums[d].v));
   });
   return m;
 }
+/* ---------- generations ----------
+   Clearing the history starts a new generation: gen is {n, v}, its number and the version of the clear. Every run records the
+   generation it was played in (g). A merge keeps the higher generation, and of two clears that did not see each other (the same
+   number), the newer version. Everything in the history from an older generation goes: a clear is a fresh start everywhere, no clock
+   involved. Two copies in the same generation both started afresh, and combine as usual. */
+const genOf=o=>{const g=o&&o.gen,n=g?Math.floor(+g.n):0;return {n:n>0&&n<=1e9?n:0,v:g&&isStamp(g.v)?g.v:ZERO};};
+const genWins=(x,y)=>x.n!==y.n?x.n>y.n:x.v>y.v;
 /* Of two different copies at the same version (data from before sync is all at version zero), the one to keep, the same on every
    device: a value over none, then the larger as JSON. */
 const tieWins=(x,y)=>x!==undefined&&(y===undefined||JSON.stringify(x)>JSON.stringify(y));
@@ -3186,10 +3192,10 @@ function coverage(sums){
   Object.keys(sums||{}).forEach(d=>{const e=sums[d];Object.keys(e.cov||{}).forEach(k=>{if(!(cov[k]>=e.cov[k]))cov[k]=e.cov[k];});(e.ids||[]).forEach(i=>ids.add(i));upTo=Math.max(upTo,e.upTo||0);});
   return r=>isStamp(r.id)?cov[stampDev(r.id)]>=stampN(r.id):r.t<=upTo||ids.has(r.id);
 }
-/* Each device's entry is the newer of two copies; none from before the history was cleared at z. */
-function mergeSums(a,b,z){
+/* Each device's entry is the newer of two copies. */
+function mergeSums(a,b){
   const out={};
-  [a||{},b||{}].forEach(o=>Object.keys(o).forEach(d=>{const e=o[d];if(z&&stampTime(e.v)<=z)return;if(!out[d]||e.v>out[d].v||(e.v===out[d].v&&tieWins(e,out[d])))out[d]=e;}));
+  [a||{},b||{}].forEach(o=>Object.keys(o).forEach(d=>{const e=o[d];if(!out[d]||e.v>out[d].v||(e.v===out[d].v&&tieWins(e,out[d])))out[d]=e;}));
   return out;
 }
 /* ---------- merging two copies of the records ----------
@@ -3218,26 +3224,28 @@ const MAX_MARKS=5000;   /* old folded ids and discarded times read back; deleted
 /* Markers and version maps read back from storage: key to a trusted stamp, all of them. */
 const cleanMarks=m=>{const out={};if(m&&typeof m==='object'&&!Array.isArray(m))Object.keys(m).forEach(k=>{if(isStamp(m[k]))out[k.slice(0,400)]=m[k];});return out;};
 const detailLen=r=>r.exercises.reduce((n,b)=>n+(b.sp?b.sp.length:0),0);
-/* a and b: {runs, sums, z, xs, names, nt, nu, lib, gone, libGone, x}. z: when the history was cleared (a time); nothing from before it
-   comes back. xs: discarded runs, id -> [time, seconds], so two devices count their time once. x: fields this version does not know,
-   kept as they are. key(text) is a saved routine's key. Neither copy is changed. */
+/* a and b: {runs, sums, gen, xs, names, nt, nu, lib, gone, libGone, x}. gen: the generation (see genOf); a copy from an older one
+   brings no history with it, and a run from an older one goes (a run without g is in its copy's generation). xs: discarded runs,
+   id -> [time, seconds], so two devices count their time once. x: fields this version does not know, kept as they are. key(text) is
+   a saved routine's key. Neither copy is changed. Saved routines are not history: a clear leaves them. */
 // eslint-disable-next-line no-unused-vars -- sync (step 3 of SYNC-PLAN.md) calls it; the tests use it now
 function mergeRecs(a,b,key,maxLib){
-  const z=Math.max(+a.z||0,+b.z||0),sums=mergeSums(a.sums,b.sums,z),folded=coverage(sums),xs={};
-  [a.xs,b.xs].forEach(o=>Object.keys(o||{}).forEach(id=>{if(o[id][0]>z&&!folded({id:id,t:o[id][0]}))xs[id]=o[id];}));   /* folded: its time is in that device's totals */
-  const gone=mergeMarks(a.gone,b.gone);
-  const runs=newestById(a.runs,b.runs,gone,verOf,(x,y)=>detailLen(x)-detailLen(y))   /* the same version: the copy that kept its stroke detail */
-    .filter(r=>r.t>z&&!folded(r)).sort((x,y)=>x.t-y.t);
+  const ga=genOf(a),gb=genOf(b),gen=genWins(gb,ga)?gb:ga,ha=ga.n<gen.n?{}:a,hb=gb.n<gen.n?{}:b;   /* ha, hb: the history each copy brings */
+  const cur=o=>{const g=genOf(o).n;return (o.runs||[]).filter(r=>(r.g===undefined?g:r.g)>=gen.n);};
+  const sums=mergeSums(ha.sums,hb.sums),folded=coverage(sums),xs={};
+  [ha.xs,hb.xs].forEach(o=>Object.keys(o||{}).forEach(id=>{if(!folded({id:id,t:o[id][0]}))xs[id]=o[id];}));   /* folded: its time is in that device's totals */
+  const gone=mergeMarks(ha.gone,hb.gone);
+  const runs=newestById(cur(a),cur(b),gone,verOf,(x,y)=>detailLen(x)-detailLen(y))   /* the same version: the copy that kept its stroke detail */
+    .filter(r=>!folded(r)).sort((x,y)=>x.t-y.t);
   const libGone=mergeMarks(a.libGone,b.libGone);
   const lib=dropDuplicates(newestById(a.lib,b.lib,libGone,verOf),e=>key(e.x),verOf,libGone).sort((x,y)=>x.t-y.t).slice(-(maxLib||500));
-  const names={},nt={},an=a.names||{},bn=b.names||{};
-  new Set(Object.keys(a.nt||{}).concat(Object.keys(b.nt||{}),Object.keys(an),Object.keys(bn))).forEach(k=>{
-    const ta=(a.nt||{})[k]||ZERO,tb=(b.nt||{})[k]||ZERO,w=tb>ta?bn:ta>tb?an:tieWins(bn[k],an[k])?bn:an,t=tb>ta?tb:ta;
-    if(z&&stampTime(t)<=z)return;   /* named before the history was cleared */
+  const names={},nt={},an=ha.names||{},bn=hb.names||{};
+  new Set(Object.keys(ha.nt||{}).concat(Object.keys(hb.nt||{}),Object.keys(an),Object.keys(bn))).forEach(k=>{
+    const ta=(ha.nt||{})[k]||ZERO,tb=(hb.nt||{})[k]||ZERO,w=tb>ta?bn:ta>tb?an:tieWins(bn[k],an[k])?bn:an,t=tb>ta?tb:ta;
     nt[k]=t;
     if(typeof w[k]==='string')names[k]=w[k];   /* none: the name was taken off */
   });
-  return {runs:runs,sums:sums,z:z,xs:xs,names:names,nt:nt,nu:Math.max(a.nu||1,b.nu||1),lib:lib,gone:gone,libGone:libGone,x:Object.assign({},b.x,a.x)};
+  return {runs:runs,sums:sums,gen:gen,xs:xs,names:names,nt:nt,nu:Math.max(a.nu||1,b.nu||1),lib:lib,gone:gone,libGone:libGone,x:Object.assign({},b.x,a.x)};
 }
 /* Settings that travel: a and b are {set, setT, lists, listGone}. Each setting is the one changed last; libraries combine as routines do, one per address. */
 // eslint-disable-next-line no-unused-vars -- sync (step 3 of SYNC-PLAN.md) calls it; the tests use it now
@@ -3748,7 +3756,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.235';                           /* shown beside the title */
+const VERSION='1.5.236';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 /* This device: a random id, made once and kept only here (never exported or synced), its stamp counter, and v, the highest version time it has made or seen. */
 const DKEY=KEY+'.dev';
@@ -3876,10 +3884,10 @@ function textOwnTempos(x){
   return ownTempoMemo.get(x);
 }
 /* Fields this version does not know are kept as they are (at most 20, each small), so records from a newer Pocket keep them through a save here. */
-const RUN_KEYS=['id','t','mode','rk','lv','dy','ne','bpm','tol','gb','sec','exercises','u','sk','rp','ft'];
+const RUN_KEYS=['id','t','mode','rk','lv','dy','ne','bpm','tol','gb','sec','exercises','u','sk','rp','ft','g'];
 const EX_KEYS=['k','bpm','due','within','heard','avg','sd','miss','i','ls','ld','da','dg','ex','sp','q','an','ac','as','gn','gc','gs','bc','bn','bf','bs','bb'];
 const LIB_KEYS=['id','x','t','u'];
-const META_KEYS=['v','runs','items','sum','sums','z','xs','names','nt','nu','lib','libGone','gone','lists','listGone','settings','setT'];
+const META_KEYS=['v','runs','items','sum','sums','z','gen','xs','names','nt','nu','lib','libGone','gone','lists','listGone','settings','setT'];
 function keepExtra(x,known,into){
   Object.keys(x).forEach(k=>{   /* whole: a copy cut short would go back to newer devices with this one's next edit. An import is at most 100 MB. */
     if(k[0]==='_'||known.includes(k)||into[k]!==undefined)return;
@@ -3906,6 +3914,7 @@ function cleanRun(x){
   if(!exercises.length)return null;
   const o={id:x.id.slice(0,40),t:+x.t,mode:x.mode==='routine'?'routine':'single',rk:typeof x.rk==='string'?x.rk.slice(0,40):null,
     lv:x.lv,dy:/^[gbm2-7RL]?s?$/.test(x.dy)?x.dy:'',ne:Math.max(1,+x.ne||exercises.length),bpm:+x.bpm,tol:+x.tol||20,gb:gapNorm(x.gb)&&x.lv!=='none'&&x.lv!=='off'?gapNorm(x.gb):undefined,sec:Math.max(0,Math.min(14400,+x.sec||0)),exercises:exercises};
+  if(Number.isInteger(x.g)&&x.g>=0&&x.g<=1e9)o.g=x.g;   /* the generation it was played in; none: its copy's (unpackRecs) */
   if(isStamp(x.u))o.u=x.u;   /* changed after it was played (an exercise taken out, or put back by Undo), or restored after a delete */
   if(Array.isArray(x.sk)){const sk=[];x.sk.forEach(b=>{if(b&&typeof b.k==='string'&&b.k.length<=400&&+b.i>=1&&+b.i<=200)sk.push({i:Math.round(+b.i),k:b.k});});if(sk.length)o.sk=sk;}
   const q=x.rp;
@@ -3921,7 +3930,7 @@ function cleanRun(x){
   return keepExtra(x,RUN_KEYS,o);
 }
 const MAX_LIB=500;
-const recs={runs:[],sums:{},sum:newSum(),z:0,xs:{},x:{},names:{},nt:{},nu:1,lib:[],gone:{},libGone:{}};   /* sums: totals of folded runs, by device; sum: them added up (resum). z, xs: see mergeRecs. x: fields this version does not know. nt: the stamp of each name's change. gone, libGone: deleted runs and saved routines, id -> the stamp of the delete, so a sync does not bring them back. */   /* lib: saved routines {id,x,t}. x is the text without its title, stored once in the same pool as the runs' text. */   /* names: one title per routine, by its key. nu: the next "Untitled" number. */
+const recs={runs:[],sums:{},sum:newSum(),gen:{n:0,v:ZERO},xs:{},x:{},names:{},nt:{},nu:1,lib:[],gone:{},libGone:{}};   /* sums: totals of folded runs, by device; sum: them added up (resum). gen, xs: see mergeRecs. x: fields this version does not know. nt: the stamp of each name's change. gone, libGone: deleted runs and saved routines, id -> the stamp of the delete, so a sync does not bring them back. */   /* lib: saved routines {id,x,t}. x is the text without its title, stored once in the same pool as the runs' text. */   /* names: one title per routine, by its key. nu: the next "Untitled" number. */
 const num=v=>isFinite(+v)?+v:0;
 function cleanLib(list,items,v){
   const out=[],seen=new Set();
@@ -3960,26 +3969,28 @@ function unpackRecs(o){
     const c=cleanRun(Object.assign({},x,{exercises:x.exercises.map(b=>Object.assign({},b,{k:v>=2?items[b&&b.k]:b&&b.k})),sk:Array.isArray(x.sk)?x.sk.map(b=>({i:b&&b.i,k:v>=2?items[b&&b.k]:(b&&b.k)})):undefined,rp:x.rp?Object.assign({},x.rp,{x:v>=2?items[x.rp.x]:x.rp.x}):null}));
     if(c)runs.push(c);
   });
-  const sums={},xs={},q=o.sum;let z=Math.max(0,num(o.z));
+  /* The generation. Before 1.5.236 a clear kept its time (z) instead, and only runs played after it: records with one are in generation 1. */
+  const gen=o.gen?genOf(o):{n:num(o.z)>0||(o.sum&&num(o.sum.z)>0)?1:0,v:ZERO};
+  runs.forEach(r=>{if(r.g===undefined)r.g=gen.n;});   /* a run kept before 1.5.236, or saved before its copy's generation was: in its copy's */
+  const sums={},xs={},q=o.sum;
   const readXs=m=>Object.keys(m&&typeof m==='object'?m:{}).slice(0,MAX_MARKS).forEach(id=>{const x=m[id];if(Array.isArray(x)&&num(x[0])>0&&num(x[1])>0)xs[id.slice(0,40)]=[num(x[0]),Math.min(14400,num(x[1]))];});
   if(v>=3){
     if(o.sums&&typeof o.sums==='object')Object.keys(o.sums).slice(0,200).forEach(d=>{const e=o.sums[d];if(DEV_RE.test(d)&&e&&typeof e==='object')sums[d]=cleanSum(e,items);});
-    z=Math.min(z,Date.now());   /* a clear stamped by a clock that was ahead counts from now */
-    Object.keys(sums).forEach(d=>{if(sums[d].v===ZERO)sums[d].v=makeStamp(z?z+1:0,0,d);});   /* its version was not believed: any later fold by that device wins */
+    Object.keys(sums).forEach(d=>{if(sums[d].v===ZERO)sums[d].v=makeStamp(0,0,d);});   /* its version was not believed: any later fold by that device wins */
     readXs(o.xs);
   }else if(q&&typeof q==='object'){
     /* Totals from before 1.5.231 become this device's entry, at version zero (after the clear, if there was one), so any later fold wins.
        They kept no ids: the runs folded into them were always older than the ones kept. */
-    z=Math.min(Math.max(z,num(q.z)),Date.now());readXs(q.xs);
+    readXs(q.xs);
     const e=cleanSum(Object.assign({},q,{v:undefined,cov:undefined,ids:undefined}),items);
     e.upTo=q.upTo!==undefined?Math.max(0,num(q.upTo)):e.runs?runs.reduce((m,r)=>Math.min(m,r.t-1),Date.now()):0;
-    e.v=makeStamp(z?z+1:0,0,dev.id);
+    e.v=makeStamp(0,0,dev.id);
     if(e.runs>0||Object.keys(e.days).length)sums[dev.id]=e;
   }
   const names={};
   if(o.names&&typeof o.names==='object')Object.keys(o.names).forEach(k=>{if(typeof o.names[k]==='string'&&o.names[k].trim())names[k.slice(0,400)]=o.names[k].trim().slice(0,80);});
   const nt=cleanMarks(o.nt);Object.keys(names).forEach(k=>{if(!nt[k])nt[k]=ZERO;});   /* a name from before sync */
-  return {runs:runs,sums:sums,z:z,xs:xs,names:names,nt:nt,nu:Math.max(1,Math.round(num(o.nu))||1),lib:cleanLib(o.lib,items,v),gone:cleanMarks(o.gone),libGone:cleanMarks(o.libGone),x:keepExtra(o,META_KEYS,{})};
+  return {runs:runs,sums:sums,gen:gen,xs:xs,names:names,nt:nt,nu:Math.max(1,Math.round(num(o.nu))||1),lib:cleanLib(o.lib,items,v),gone:cleanMarks(o.gone),libGone:cleanMarks(o.libGone),x:keepExtra(o,META_KEYS,{})};
 }
 /* A run as exported: each sticking replaced by its hash, hk(text), which also files the text under that hash. */
 function packRun(r,hk){
@@ -3997,7 +4008,7 @@ function packRecs(sel){   /* sel says which parts to include; none given means t
   if(sel.hist){
     out.sums={};
     Object.keys(recs.sums).forEach(d=>{const e=recs.sums[d];out.sums[d]=Object.assign({},e,{pat:Object.keys(e.pat).map(k=>Object.assign({},e.pat[k],{k:hk(e.pat[k].k)}))});});
-    out.z=recs.z;out.xs=recs.xs;out.gone=recs.gone;
+    out.gen=recs.gen;out.xs=recs.xs;out.gone=recs.gone;
   }
   if(sel.lib){out.lib=recs.lib.map(e=>{const o={};Object.keys(e).forEach(k=>{if(k[0]!=='_')o[k]=e[k];});o.x=hk(e.x);return o;});out.libGone=recs.libGone;}   /* not _k, held only in memory */
   if(sel.lists){out.lists=S.lists.map(l=>({id:l.id,url:l.url,name:l.name||undefined,u:l.u||undefined}));out.listGone=S.listGone;}
@@ -4009,7 +4020,7 @@ function packRecs(sel){   /* sel says which parts to include; none given means t
 }
 /* The totals as shown (recs.sum) are worked out again from every device's entry whenever one changes. */
 const resum=()=>{recs.sum=sumView(recs);};
-const useRecs=u=>{recs.runs=u.runs;recs.sums=u.sums;recs.z=u.z;recs.xs=u.xs;recs.x=u.x;recs.names=u.names;recs.nt=u.nt;recs.nu=u.nu;recs.lib=u.lib;recs.gone=u.gone;recs.libGone=u.libGone;resum();};
+const useRecs=u=>{recs.runs=u.runs;recs.sums=u.sums;recs.gen=u.gen;recs.xs=u.xs;recs.x=u.x;recs.names=u.names;recs.nt=u.nt;recs.nu=u.nu;recs.lib=u.lib;recs.gone=u.gone;recs.libGone=u.libGone;resum();};
 /* Records as kept before 1.5.230, and still where the browser has no IndexedDB. */
 function loadLocal(){
   try{
@@ -6444,7 +6455,7 @@ function recordRun(r){
     if(routineParsed.title)setName(rk,routineParsed.title.slice(0,80));
     else if(!recs.names[rk])setName(rk,'Untitled '+(recs.nu++));
   }
-  const run={id:newStamp(),t:Date.now(),mode:S.mode,
+  const run={id:newStamp(),g:recs.gen.n,t:Date.now(),mode:S.mode,
     rk:all?routineKeyOf(all):null,ne:all?all.length:1,bpm:S.bpm,ft:ownTempos(allExercises())?1:undefined,tol:S.tol,lv:S.click,gb:r.gb||undefined,dy:r.dyc||'',rp:replaySnap(),sec:Math.max(0,Math.min(14400,Math.round((Date.now()-(r.w0||Date.now()))/1000))),
     exercises:rows.map(x=>({k:x.key,bpm:x.bpm,due:x.due,within:Math.round(x.pct*x.due),heard:x.heard,
       avg:isNaN(x.avg)?null:x.avg,sd:isNaN(x.spread)?null:x.spread,miss:x.miss,i:x.idx,
@@ -7648,16 +7659,20 @@ function importSelected(){
   const fresh=!recs.runs.length&&!recs.sum.runs;
   let add=0,addL=0,addS=0,setN=0,dup=0,savedCopy=false;
   if(sel.hist){
+    /* A file from an older generation brings in nothing from before the history was cleared here; one from a newer generation comes
+       into this one. An import never changes this device's generation. */
+    const old=u.gen.n<recs.gen.n;
     /* Totals by device, the newer copy of each. Totals from before 1.5.231 belong to no device, so they come in only on a fresh start. */
-    if(num(o.v)>=3||fresh)Object.keys(u.sums).forEach(d=>{const e=u.sums[d];if(recs.z&&stampTime(e.v)<=recs.z)return;if(!recs.sums[d]||e.v>recs.sums[d].v)recs.sums[d]=e;});
+    if(!old&&(num(o.v)>=3||fresh))Object.keys(u.sums).forEach(d=>{const e=u.sums[d];if(!recs.sums[d]||e.v>recs.sums[d].v)recs.sums[d]=e;});
     const folded=coverage(recs.sums),kept=recs.runs.filter(r=>!folded(r));
-    Object.keys(u.xs).forEach(id=>{if(u.xs[id][0]>recs.z)recs.xs[id]=u.xs[id];});
+    if(!old)Object.keys(u.xs).forEach(id=>{recs.xs[id]=u.xs[id];});
     Object.keys(recs.xs).forEach(id=>{if(folded({id:id,t:recs.xs[id][0]}))delete recs.xs[id];});   /* its time is in the totals now */
     if(kept.length<recs.runs.length)recs.runs.splice(0,recs.runs.length,...kept);   /* now counted in the totals that came in */
     resum();
     const have=new Set(recs.runs.map(x=>x.id));
     u.runs.forEach(c=>{
-      if(have.has(c.id)||folded(c)||c.t<=recs.z)return;   /* already in the totals, or from before the history was cleared */
+      if(have.has(c.id)||folded(c)||c.g<recs.gen.n)return;   /* already in the totals, or from before the history was cleared */
+      c.g=recs.gen.n;
       if(recs.gone[c.id]){c.u=newVersion(recs.gone[c.id],c.u);delete recs.gone[c.id];}   /* a deleted run, brought back on purpose */
       recs.runs.push(c);have.add(c.id);add++;
     });
@@ -7687,7 +7702,7 @@ const CLR_PARTS=[EXP_PARTS[0],EXP_PARTS[1],EXP_PARTS[2],EXP_PARTS[3],['dev','Dev
 function openClear(){exMode='clr';tickDialog('Clear','Clear',CLR_PARTS,()=>false);}
 function clearSelected(){
   const sel=readSel();
-  if(sel.hist){recs.z=Math.max(Date.now(),...recs.runs.map(r=>r.t));seeVersions(recs.z);recs.runs.length=0;recs.sums={};recs.xs={};resum();recs.names={};recs.nt={};recs.gone={};recs.nu=1;S.lastExport=0;S.expRuns=0;}   /* z: nothing played before now comes back in a sync; versions made from now on are after it */
+  if(sel.hist){recs.gen={n:recs.gen.n+1,v:newVersion(recs.gen.v)};recs.runs.length=0;recs.sums={};recs.xs={};resum();recs.names={};recs.nt={};recs.gone={};recs.nu=1;S.lastExport=0;S.expRuns=0;}   /* a new generation: in a sync, nothing from an older one comes back, on any device */
   if(sel.lib){recs.lib.forEach(e=>markGone(recs.libGone,e));recs.lib=[];S.libId='';S.routineText=STARTER;S.startExercise=1;S.seeded=false;}   /* back to a first start: the routines that ship with the app are added again */
   if(sel.lists){const t=newVersion(...S.lists.map(l=>l.u),...Object.values(S.listGone));S.lists.forEach(l=>{S.listGone[l.id]=t;});S.lists=hostedLists();S.lists.forEach(l=>{delete S.listGone[l.id];l.u=t;});S.listSel='';}
   if(sel.set)PORTABLE.forEach(k=>{delete S[k];});   /* the page reloads, and every one falls back to its starting value */
