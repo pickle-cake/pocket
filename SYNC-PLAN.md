@@ -21,9 +21,9 @@ Sizes in this plan are in characters, as JSON holds them, unless they say bytes.
  
 Agreed on 2026-11-21. Each release protects what is already there before the next builds on it.
  
-1. **Storage release (next).** Safe database upgrade, no automatic folding, and a failed save that can be recovered (step 1, "Storage release"). It protects the history that exists now, whatever sync becomes.
-2. **Data model revisions.** Keep every run with detail in its own store, logical versions, clear history by generation, deleted markers kept (step 2, revisions). The detail store needs the safe upgrade from release 1.
-3. **Sync pilot.** One revisioned snapshot, phone and tablet only (step 3), once the acceptance tests in step 3 pass.
+1. **Storage release (done in 1.5.233).** Safe database upgrade, no automatic folding, and a failed save that can be recovered (step 1, "Storage release"). It protects the history that exists now, whatever sync becomes.
+2. **Data model revisions (done in 1.5.234 to 1.5.237).** Keep every run with detail in its own store, logical versions, clear history by generation, deleted markers kept (step 2, revisions). The detail store needs the safe upgrade from release 1.
+3. **Sync pilot (next).** One revisioned snapshot, phone and tablet only (step 3), once the acceptance tests in step 3 pass.
 4. **Month files**, only when measurements on the phone show the snapshot is too big or too slow.
 ## Steps
  
@@ -44,7 +44,7 @@ Agreed on 2026-11-21. Each release protects what is already there before the nex
   - An old build that opens after the upgrade shows a reload prompt and writes nothing to a fallback history.
   - A preparatory release with these handlers helps, but a tab already running older code still has to close or reload.
   - As built: `openDb` asks for version 1 (`DB_VER`). On `VersionError` it opens the database as it is: exactly the stores `meta` and `runs` means a database that 1.5.230–1.5.232 opened one version up to make its stores, so it is still this version's; anything more is a newer version's. So a newer version that changes the database must add a store, not only change one. The reasons records are off (`recsOff`: newer, update, lost, error) show as a warning notice under the header with a Reload button, and while one is set nothing is saved or imported. Browser tests cover an upgrade from another tab, a newer database, an older tab blocking an upgrade, and a full disk.
-- **No automatic folding.** `foldRuns` no longer runs (it stays in the core script for the tests), neither past 2,000 runs nor when storage is full. A merge of two large copies could make a device fold all of its own runs, today's included, and step 2's revision removes folding anyway.
+- **No automatic folding.** `foldRuns` no longer runs (removed in 1.5.237), neither past 2,000 runs nor when storage is full. A merge of two large copies could make a device fold all of its own runs, today's included, and step 2's revision removes folding anyway.
 - **A failed save can be recovered.** When a write fails for lack of space, Pocket drops the oldest stroke detail and saves the run again (first the oldest half of the detail, then all but the newest run's: `dropDetail`). If that fails too, it tells the person the run was not saved, and keeps the run available for export while the app is open.
 #### Follow-ups from the review of 2026-11-21
  
@@ -61,7 +61,7 @@ Agreed on 2026-11-21. Each release protects what is already there before the nex
 - The home screen app on iOS starts with empty storage, separate from Safari's. Moving to it means an export and import (or, later, a sync).
 ### 2. A data model ready for sync (done in 1.5.231)
  
-Reworked after two reviews on 2026-11-21, before it was committed. Revisions below replace parts of it: keeping every run (not yet built) replaces totals by device and folding; logical versions (1.5.235) replace clock time in versions and the far-ahead rule; and clear history by generation (1.5.236) replaces `recs.z` as a time.
+Reworked after two reviews on 2026-11-21, before it was committed. Revisions below replace parts of it: keeping every run (1.5.237) replaces totals by device and folding; logical versions (1.5.235) replace clock time in versions and the far-ahead rule; and clear history by generation (1.5.236) replaces `recs.z` as a time.
  
 - **Stamps.** Every new id and version is a stamp, made by `newStamp()`: time, counter and device id, `ttttttttt-cccccc-dddddddd` in base 36 at fixed widths, so comparing two as text compares the time, then the counter, then the device.
   - The device id is 8 random characters, made once and kept with the counter in `localStorage` under its own key. It is never exported or part of the portable settings, though it shows inside the stamps it made.
@@ -88,7 +88,7 @@ Known limits (the revisions below change the ones marked):
 - Two edits of one item made at about the same time on two devices that had not seen each other's: the later stamp wins, which is the faster clock. (With logical versions: the winner is the same on every device, but may not be the later edit in real time.)
 - An edit after a delete on another copy brings the item back: the last change wins.
 - Keeping unknown fields also keeps ones a later version stops using.
-#### Revision: keep every run, no folding (not yet built)
+#### Revision: keep every run, no folding (done in 1.5.237)
  
 Measured on 2026-11-21 (see "What the data allows"): runs without detail grow by about 2.4M characters a year, which IndexedDB holds easily for decades. Folding saved space that is not short, and it is the part of the sync model that went wrong most often: a merge of two large copies made a device fold all of its own runs, today's included. So:
  
@@ -97,13 +97,14 @@ Measured on 2026-11-21 (see "What the data allows"): runs without detail grow by
 - **The base still covers what it folded.** A run folded on one device may still be held in full on another, so `cov`, `ids` and `upTo` stay, read only, and a merge keeps dropping runs they cover. Nothing new is ever covered.
 - **Merging is runs by id, plus deleted markers**, plus that fixed base. There is nothing else in the history to settle.
 - **Discarded runs** keep their time in `recs.xs`, as now; it is small. Without folding it is never trimmed.
-- **Detail is one thing.** `sp` and `q` are kept and dropped together.
+- **Detail is one thing.** `sp`, `q` and the buzz counts `bb` are kept and dropped together.
 - **Detail has its own store** (`detail`, keyed by run id). Start-up reads only the runs: about 12M characters after five years, instead of about 22M with the detail budget full. Dropping detail deletes an entry instead of rewriting the run, and loading detail only when a staff is shown follows from it.
 - **Exports keep detail on each run.** `sp` and `q` stay inline in an export, as now, so Pocket 1.5.231 still reads detail from a newer export. Check the round trip with 1.5.231 both ways.
-- **The detail budget is the only limit**, oldest dropped first, whoever made the run. It is 10M characters: about 3,100 runs with both `sp` and `q`, or 15 months at the current pace. Raising it to 20M characters keeps 2.5 years. Pick one, and count both parts.
+- **The detail budget is the only limit**, oldest dropped first, whoever made the run. It is 20M characters (40 MB), counting all three parts: about 2.5 years at the current pace. Settled on 2026-11-22. Where there is no IndexedDB it stays 40% of the `localStorage` space.
 - **Dropping detail is local.** A run's detail never changes once played, so two copies combine it by id, and a drop is not a change: it needs no marker and does not travel. A device that dropped a run's detail does not fetch it again by itself; it can fetch it when the run's staff is shown, if the server still has it (step 3).
 - **Rounding `avg` and `sd`** (stored at full float precision) would save about a quarter of a run. It is not needed for storage. If it is done, only for new runs: rewriting old ones would give each a new version, and the first sync would send everything again.
 - **Moving across.** On the first load after the change, detail moves to its own store, and runs are written without it. This is a storage change, not an edit, so versions stay as they are. It needs the safe upgrade from the storage release.
+- **As built (1.5.237).** `foldRun` and `foldRuns` are gone; `coverage` stays read only. The database is at version 2 with stores `meta`, `runs` and `detail` (`{id, d}`, one `[sp, q, bb]` for each exercise), so a build from before it reads the database as newer and leaves it alone. Each run's detail entry has its own signature (`storedD`), so a drop deletes the entry and does not rewrite the run. In memory and in exports the detail is still on each run, and start-up still reads it all; loading it only when a staff is shown is left for later. A run moved across from version 1 keeps its version. Since the score is worked out from the strokes, a run also keeps its score (`pts`), set when it is played, read or about to lose its detail; once the detail is gone, `runScore` uses it and the breakdown uses the counts kept on each exercise (on time, missed, the rest off time without early or late). Known limit: an exercise taken out of a run after its detail went leaves `pts` as it was. A run whose detail is over a quarter of the budget keeps none, instead of being cut short.
 #### Revision: logical versions, not clock time (done in 1.5.235)
  
 The result of a merge must not depend on any device's clock, or on when the merge runs. Distrusting far-ahead stamps (`okStamp`) made it depend on both: the same two copies could merge differently on Monday than on Wednesday, and capping a stamp when it arrives would let two devices store the same edit differently. So versions stop using the clock.
@@ -184,6 +185,5 @@ Analysis or coaching on a separate page, opened read-only, so the weight stays o
 - Is running a small hosted service for years acceptable, or should sync go through people's own cloud drives?
 - Is sync for one person's devices, or for anyone using Pocket? That decides how much goes into abuse limits and setup screens. For one person, used one device at a time, see the usage assumed in step 3; whether others can turn it on is still open.
 - Loading every run at start-up: with detail in its own store (step 2's revision), start-up reads about 2.4M characters a year of history. Check how long that takes on a phone at five years (12M) before deciding whether runs also need loading by month.
-- Detail budget: 10M characters (15 months) or 20M (2.5 years)?
 - Should detail sync at all, or stay on the device that played the run?
  

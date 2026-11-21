@@ -3,7 +3,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['mergeRecs', 'mergeSettings', 'mergeMarks', 'newSum', 'newEntry', 'practiceDays', 'cleanMarks', 'MAX_MARKS',
-  'makeStamp', 'isStamp', 'ZERO', 'stampTime', 'sumView', 'coverage', 'nextTime', 'latestVersion', 'tieWins', 'foldRuns', 'MAX_TIME', 'genOf', 'genWins']);
+  'makeStamp', 'isStamp', 'ZERO', 'stampTime', 'sumView', 'coverage', 'nextTime', 'latestVersion', 'tieWins', 'MAX_TIME', 'genOf', 'genWins']);
 
 const key = x => x.trim();
 const ex = () => [{ k: 'RLRL', due: 16, within: 16 }];
@@ -228,45 +228,16 @@ test('two devices with clocks five minutes apart edit, delete and restore, and e
   assert.ok(phone.recs.runs.some(r => r.id === p1.id), 'the restore is newer than the delete');
   assert.ok(!phone.recs.runs.some(r => r.id === p2.id));
 
-  /* The pad folds its oldest runs into its own totals (foldRuns): the two old ids and its own runs, all on one day. The phone's run stays
-     for the phone to fold. The phone keeps its copies of the pad's runs until it syncs. */
-  const total = d => d.recs.runs.length + c.sumView(d.recs).runs;
-  const before = total(phone);
-  const pe = c.foldRuns(pad.recs, 'pad00000', pad.recs.runs.length - 3);
-  pe.v = pad.version(pe.v);
-  assert.deepEqual(plain(ids(pad.recs.runs)), [p1.id], 'only the phone\'s run is left');
+  /* The pad runs short of space and drops the stroke detail of its oldest run. That is not an edit: no new version, and nothing is lost
+     from the run itself. Every run is kept on both devices, and of two copies at the same version, the one with its detail wins. */
+  const old = pad.recs.runs[0];
+  old.exercises[0].sp = 'AAAA'; phone.recs.runs.find(r => r.id === old.id).exercises[0].sp = 'AAAA';
+  const n = phone.recs.runs.length;
+  delete old.exercises[0].sp;
   sync();
-  assert.deepEqual(plain(phone.recs), plain(pad.recs), 'the same after the fold');
-  assert.equal(total(phone), before, 'no run is lost or counted twice by the fold');
-  assert.equal(c.sumView(phone.recs).runs, 8, 'the phone\'s totals from before sync and the pad\'s new ones, added up');
-
-  /* Then the phone folds its own run, and the two folds add up. */
-  const qe = c.foldRuns(phone.recs, 'phone000', 0);
-  qe.v = phone.version(qe.v);
-  sync();
-  assert.deepEqual(plain(phone.recs), plain(pad.recs));
-  assert.equal(phone.recs.runs.length, 0);
-  assert.equal(c.sumView(phone.recs).runs, before, 'every run counted once');
-});
-
-test('a device folds only its own runs and old ids; others lose only their stroke detail', () => {
-  const day = Date.UTC(2026, 0, 5, 12), me = 'aaaaaaaa', other = 'bbbbbbbb';
-  const sp = () => [{ k: 'RLRL', due: 16, within: 16, sp: [1, 2, 3] }];
-  const r = side({
-    runs: [run('lq3x8k2pab12', day - 3 * 864e5, { exercises: sp() }), run(st(day - 2 * 864e5, 1, other), day - 2 * 864e5, { exercises: sp() }),
-      run(st(day - 864e5, 2), day - 864e5, { exercises: sp() }), run(st(day, 5), day, { exercises: sp() })],
-    xs: { [st(day - 864e5, 3)]: [day - 864e5, 30], [st(day - 864e5, 8, other)]: [day - 864e5, 40] }
-  });
-  const e = c.foldRuns(r, me, 2);
-  assert.deepEqual(plain(ids(r.runs)), [st(day - 2 * 864e5, 1, other), st(day, 5)], 'the old id and this device\'s oldest are folded');
-  assert.equal(e.runs, 2);
-  assert.ok(!r.runs[0].exercises[0].sp, 'another device\'s old run loses its stroke detail');
-  assert.ok(r.runs[1].exercises[0].sp, 'a newer run keeps it');
-  assert.equal(e.cov[me], 3, 'this device\'s discarded run is folded too');
-  assert.ok(!e.cov[other] && !e.ids.includes(st(day - 864e5, 8, other)), 'nothing of the other device\'s is covered');
-  assert.deepEqual(Object.keys(r.xs), [st(day - 864e5, 8, other)], 'the other device\'s discarded time stays for it');
-  assert.equal(Object.values(e.days).reduce((x, y) => x + y, 0), 60 + 60 + 30);
-  assert.equal(c.foldRuns(side({ runs: [run(st(1, 1, other), 1)] }), me, 0), null, 'none of its own: nothing to fold');
+  assert.deepEqual(plain(phone.recs), plain(pad.recs), 'the same after the drop');
+  assert.equal(phone.recs.runs.length, n, 'no run is lost');
+  assert.equal(phone.recs.runs.find(r => r.id === old.id).exercises[0].sp, 'AAAA', 'the copy that kept its detail');
 });
 
 test('a version from a clock far ahead is a number like any other, and the next version counts up from it', () => {

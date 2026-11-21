@@ -9,7 +9,7 @@ const ENGINE = process.env.POCKET_ENGINE || 'chromium';
 const contextFor = viewport => Object.assign(ENGINE === 'webkit' && viewport.width < 720 ? { ...playwright.devices['iPhone 13'] } : {}, { viewport });
 const { ROOT, html } = require('./helpers');
 
-const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,save:saveRecs,recs:()=>recs,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo(),unlocked:renderUnlocked};window.__recs=()=>recsWritten().then(()=>new Promise((res,rej)=>{const tx=db.transaction(["runs","meta"]),m=tx.objectStore("meta").get("recs"),r=tx.objectStore("runs").getAll();tx.oncomplete=()=>res(m.result?Object.assign({},m.result,{runs:r.result.sort((x,y)=>x.t-y.t)}):null);tx.onerror=()=>rej(tx.error);}));let heardTimer=0;');
+const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,save:saveRecs,recs:()=>recs,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo(),unlocked:renderUnlocked};window.__recs=()=>recsWritten().then(()=>new Promise((res,rej)=>{const tx=db.transaction(["runs","meta","detail"]),m=tx.objectStore("meta").get("recs"),r=tx.objectStore("runs").getAll(),d=tx.objectStore("detail").getAll();tx.oncomplete=()=>{const dm=new Map(d.result.map(e=>[e.id,e.d])),inline=r.result.filter(x=>x.exercises.some(b=>b.sp||b.q||b.bb)).length;r.result.forEach(x=>{const e=dm.get(x.id);if(e)x.exercises.forEach((b,i)=>{["sp","q","bb"].forEach((k,j)=>{if(e[i]&&e[i][j])b[k]=e[i][j];});});});res(m.result?Object.assign({},m.result,{runs:r.result.sort((x,y)=>x.t-y.t),inline:inline,entries:d.result.length}):null);};tx.onerror=()=>rej(tx.error);}));let heardTimer=0;');
 assert.ok(page !== html, 'the test hook did not attach: has handleHit moved?');
 
 let server, base, browser, served = 0;
@@ -783,7 +783,7 @@ test('an upgrade from another tab stops this one saving, and a newer database is
   const p = await open({ seeded: true });
   assert.equal((await note(p)).shown, false);
   /* Another tab, on a newer version, upgrades the database and adds a store. */
-  await p.evaluate(() => new Promise((res, rej) => { const q = indexedDB.open('pocket', 2); q.onupgradeneeded = () => q.result.createObjectStore('more'); q.onsuccess = () => { q.result.close(); res(); }; q.onerror = () => rej(q.error); q.onblocked = () => rej(new Error('blocked: the page did not let go')); }));
+  await p.evaluate(() => new Promise((res, rej) => { const q = indexedDB.open('pocket', 3); q.onupgradeneeded = () => q.result.createObjectStore('more'); q.onsuccess = () => { q.result.close(); res(); }; q.onerror = () => rej(q.error); q.onblocked = () => rej(new Error('blocked: the page did not let go')); }));
   let n = await note(p);
   assert.ok(n.shown && n.reload, 'the reload prompt shows');
   assert.match(n.text, /^⚠ Pocket was updated in another tab/);
@@ -797,7 +797,7 @@ test('an upgrade from another tab stops this one saving, and a newer database is
   const f = await importFile(p, 'pocket-imp-newer.json', { v: 3, items: { h1: 'RLRL' }, runs: [] });
   assert.equal(await p.textContent('#recMsg'), 'Your records cannot be saved here until Pocket reloads.');
   const left = await p.evaluate(() => new Promise(res => { const q = indexedDB.open('pocket'); q.onsuccess = () => { const d = q.result, o = { v: d.version, stores: [...d.objectStoreNames].sort() }; d.close(); res(o); }; }));
-  assert.deepEqual(left, { v: 2, stores: ['meta', 'more', 'runs'] });
+  assert.deepEqual(left, { v: 3, stores: ['detail', 'meta', 'more', 'runs'] });
   assert.equal(await p.evaluate(() => localStorage.getItem('stick-timing-trainer.records.v2')), null, 'no fallback to localStorage');
   assert.deepEqual(p.errors, []);
   fs.unlinkSync(f);
@@ -840,6 +840,7 @@ test('every run is kept past 2,000, and a full disk drops the oldest stroke deta
   const saved = async () => withDetail((await p.evaluate(async () => (await window.__recs()).runs)));
   assert.equal(await p.evaluate(async () => (await window.__recs()).runs.length), N, 'nothing is folded');
   assert.deepEqual(await saved(), [499, 999, 1499, 1999, 2099]);
+  assert.deepEqual(await p.evaluate(async () => { const o = await window.__recs(); return [o.inline, o.entries]; }), [0, 5], 'the detail is kept apart from the runs');
   /* Writes fail for lack of space n times, then work again. */
   const fail = n => p.evaluate(n => {
     const t = IDBDatabase.prototype.transaction;
@@ -860,6 +861,56 @@ test('every run is kept past 2,000, and a full disk drops the oldest stroke deta
   assert.deepEqual(withDetail(await p.evaluate(() => window.__T.recs().runs)), [2099], 'in memory, only the newest run keeps its detail');
   assert.deepEqual(p.errors, []);
   fs.unlinkSync(f);
+});
+
+test('records saved before 1.5.237 move their stroke detail into its own store, and a drop deletes only that', async () => {
+  const ctx = await browser.newContext(contextFor({ width: 390, height: 900 }));
+  const setup = await ctx.newPage();
+  await setup.goto(base + 'landing/index.html');
+  const now = Date.now(), st = (t, n) => t.toString(36).padStart(9, '0') + '-' + n.toString(36).padStart(6, '0') + '-aaaaaaaa';
+  const run = (i, sp) => ({ id: st(now - (3 - i) * 36e5, i), t: now - (3 - i) * 36e5, u: st(now - 6e4, 10 + i), g: 0, sec: 60, bpm: 60, tol: 20, lv: 'beat', mode: 'single',
+    exercises: [Object.assign({ k: 'RLRL RLRL RLRL RLRL', i: 0, bpm: 60, due: 16, within: 15, heard: 16, miss: 1 }, sp ? { q: 'ooooooooooooooom', sp: 'AbC_'.repeat(16), bb: '0'.repeat(16) } : {})] });
+  /* A database as 1.5.233 to 1.5.236 left it: version 1, the detail on each run. */
+  await setup.evaluate(o => new Promise((res, rej) => {
+    const q = indexedDB.open('pocket', 1);
+    q.onupgradeneeded = () => { q.result.createObjectStore('meta'); q.result.createObjectStore('runs', { keyPath: 'id' }); };
+    q.onsuccess = () => { const d = q.result, tx = d.transaction(['meta', 'runs'], 'readwrite'); tx.objectStore('meta').put({ v: 3, items: {}, names: {}, nu: 1, lib: [] }, 'recs'); o.forEach(r => tx.objectStore('runs').put(r)); tx.oncomplete = () => { d.close(); res(); }; tx.onerror = () => rej(tx.error); };
+    q.onerror = () => rej(q.error);
+  }), [run(1, true), run(2, true), run(3, false)]);
+  await setup.evaluate(() => localStorage.setItem('stick-timing-trainer.v1', JSON.stringify({ settings: { seeded: true, noise: -50, latCal: true }, cal: null })));
+  await setup.close();
+  const p = await ctx.newPage();
+  p.errors = [];
+  p.on('pageerror', e => p.errors.push(e.message));
+  await p.goto(base);
+  await p.waitForTimeout(500);
+  let m = await p.evaluate(async () => { const o = await window.__recs(); return { inline: o.inline, entries: o.entries, u: o.runs.map(r => r.u), sp: o.runs.map(r => !!r.exercises[0].sp), pts: o.runs.map(r => r.pts > 0) }; });
+  assert.deepEqual(m.inline, 0, 'the runs are saved without their detail');
+  assert.equal(m.entries, 2);
+  assert.deepEqual(m.sp, [true, true, false], 'and the detail is in its own store');
+  assert.deepEqual(m.u, [1, 2, 3].map(i => st(now - 6e4, 10 + i)), 'a move is not an edit: the versions stay');
+  assert.deepEqual(m.pts, [true, true, false], 'the score is kept on each run that has its strokes');
+  const score = await p.evaluate(() => window.__T.recs().runs.map(r => r.pts));
+  /* After a reload the detail is read back, and nothing is written again. */
+  await p.reload();
+  await p.waitForTimeout(500);
+  assert.deepEqual(await p.evaluate(() => window.__T.recs().runs.map(r => !!r.exercises[0].sp && !!r.exercises[0].q && !!r.exercises[0].bb)), [true, true, false]);
+  /* The oldest run's detail is dropped: its detail entry goes, its run is not written, and its score stays. */
+  const written = await p.evaluate(() => {
+    const put = IDBObjectStore.prototype.put, del = IDBObjectStore.prototype.delete, log = window.__log = [];
+    IDBObjectStore.prototype.put = function (v, k) { log.push('put ' + this.name); return put.call(this, v, k); };
+    IDBObjectStore.prototype.delete = function (k) { log.push('delete ' + this.name); return del.call(this, k); };
+    const r = window.__T.recs().runs[0];
+    r.exercises.forEach(b => { delete b.sp; delete b.q; delete b.bb; });
+    window.__T.save();
+    return new Promise(res => setTimeout(() => res(log.slice()), 300));
+  });
+  assert.deepEqual(written, ['delete detail', 'put meta']);
+  m = await p.evaluate(async () => { const o = await window.__recs(); return { entries: o.entries, pts: o.runs.map(r => r.pts) }; });
+  assert.equal(m.entries, 1);
+  assert.deepEqual(m.pts, score, 'the scores stay');
+  assert.deepEqual(p.errors, []);
+  await ctx.close();
 });
 
 
@@ -1422,9 +1473,9 @@ test('A 25 MB import of 1,600 runs comes in whole, with stroke detail cut to its
   await p.click('#exGo');
   await p.waitForFunction(() => /^Imported/.test(document.getElementById('recMsg').textContent), null, { timeout: 60000 });
   assert.match(await p.textContent('#recMsg'), /^Imported 1,600 new runs/);
-  const r = await p.evaluate(async () => { const r = await window.__recs(); return { n: r.runs.length, sp: r.runs.reduce((a, x) => a + x.exercises.reduce((b, e) => b + (e.sp || '').length, 0), 0), newest: !!r.runs.reduce((a, x) => (x.t > a.t ? x : a)).exercises[0].sp }; });
+  const r = await p.evaluate(async () => { const r = await window.__recs(); return { n: r.runs.length, sp: r.runs.reduce((a, x) => a + x.exercises.reduce((b, e) => b + (e.sp || '').length + (e.q || '').length + (e.bb || '').length, 0), 0), newest: !!r.runs.reduce((a, x) => (x.t > a.t ? x : a)).exercises[0].sp }; });
   assert.equal(r.n, N, 'every run is kept');
-  assert.ok(r.sp <= 10e6, 'stroke detail (sp; q is not counted yet) is within its 10M-character budget');
+  assert.ok(r.sp <= 20e6 && r.sp > 19e6, 'stroke detail (timing, results and buzz counts) fills its 20M-character budget and no more');
   assert.ok(r.newest, 'the newest run keeps its stroke detail');
   fs.unlinkSync(file);
 });

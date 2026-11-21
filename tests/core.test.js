@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['minus', 'parseStrokes', 'nameMarkers', 'fmtPattern', 'parseExerciseLine', 'parseRoutine', 'resolveExercises', 'buildPlan', 'builderApply',
-  'graceSlot', 'leadSlot', 'envOnsets', 'matchStrokes', 'graceMain', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'foldRun', 'newSum', 'runScore', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict', 'gapNorm', 'gapSilent', 'gapTxt', 'GAP_MAX', 'gapFit', 'gapText', 'shareKey', 'gapMult', 'routineStats', 'nextText', 'ownTempos', 'tempoSpan']);
+  'graceSlot', 'leadSlot', 'envOnsets', 'matchStrokes', 'graceMain', 'buzzAt', 'bounceSlot', 'strokeOf', 'buzzSep', 'buzzStats', 'envDb', 'buzzCounts', 'buzzSingles', 'buzzNote', 'OnsetDetector', 'patKey', 'parseSig', 'textKey', 'nearestSlot', 'analyseCheck', 'strokeRate', 'masteryTier', 'MTIER', 'RATE_AT', 'badgeValues', 'newSum', 'runScore', 'keepScore', 'dropRunDetail', 'hasDetail', 'detailLen', 'runMax', 'winMult', 'highScores', 'unpackStrokes', 'BADGES', 'maxPoints', 'tempoMult', 'scoreParts', 'runShare', 'bestShares', 'scoreBreakdown', 'streakAfter', 'clockStep', 'clockVerdict', 'gapNorm', 'gapSilent', 'gapTxt', 'GAP_MAX', 'gapFit', 'gapText', 'shareKey', 'gapMult', 'routineStats', 'nextText', 'ownTempos', 'tempoSpan']);
 
 test('negative numbers are shown with a true minus sign', () => {
   assert.equal(c.minus(-30), '−30');
@@ -563,10 +563,25 @@ test('achievements: pace, practice time, routines, gold medals, tight window, ev
   assert.equal(v([run({}, [ex({ ls: 1.8 }), ex({ k: 'LRLR LRLR LRLR LRLR', ls: 2.6 }), ex({ k: 'RRLL RRLL RRLL RRLL', ls: 1.5, within: 20 })])]).evn, 1, 'even and cleared');
   assert.equal(v([run({}, [ex({ ls: null })])]).evn, 0, 'no levels, as on the keyboard, is not even');
   assert.equal(v([run({}, [ex(), ex({ k: 'LRLR LRLR LRLR LRLR', ex: 2 })])]).prf, 1, 'an extra hit spoils a perfect exercise');
-  /* the tight and even clears survive folding */
-  const sum = c.newSum(), r1 = run({ tol: 10 }, [ex({ ls: 1.5 })]);
-  c.foldRun(sum, r1);
-  { const o = v([], sum); assert.equal(o.tgt, 1, 'a tight clear survives folding'); assert.equal(o.evn, 1, 'an even clear survives folding'); }
+});
+
+test('stroke detail is timing, results and buzz counts, dropped together; the score and breakdown stay', () => {
+  const r = { id: 'a', lv: 'beat', bpm: 60, tol: 20, exercises: [{ k: 'RLRL', bpm: 60, due: 4, within: 3, miss: 1, q: 'ooob', sp: 'AAAABBBBCCCCDDDD', bb: '0120' },
+    { k: 'RLRL', bpm: 60, due: 4, within: 4, q: 'oooo' }] };
+  assert.equal(c.detailLen(r), 16 + 4 + 4 + 4);
+  const live = c.runScore(r), b0 = c.scoreBreakdown(r);
+  assert.ok(live > 0);
+  c.keepScore(r);
+  assert.equal(r.pts, live, 'the score is kept on the run');
+  c.dropRunDetail(r);
+  assert.ok(!c.hasDetail(r) && r.exercises.every(b => b.sp === undefined && b.q === undefined && b.bb === undefined), 'all three go');
+  assert.equal(c.runScore(r), live, 'the kept score once the strokes are gone');
+  const b1 = c.scoreBreakdown(r);
+  assert.equal(b1.due, b0.due);
+  assert.equal(b1.on, 7, 'on time from the counts kept on each exercise');
+  assert.equal(b1.on + b1.off + b1.miss, 8);
+  assert.equal(b1.split, b1.off, 'off time that cannot be told apart');
+  assert.equal(c.runScore({ lv: 'beat', exercises: [{ k: 'RLRL', due: 4, within: 4 }] }), 0, 'no strokes and no kept score: 0');
 });
 
 test('the on-time window scales points and the maximum alike, so a flawless run is 100% at any window', () => {

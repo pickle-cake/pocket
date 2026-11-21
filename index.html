@@ -1423,7 +1423,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
         <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. With the microphone, Pocket reads every strike in the loudness and works out which are grace notes and which is the main stroke, so a main stroke played just after its graces is still timed from the main stroke. A flam's grace comes up to 95 ms before it, and a drag's two graces up to 270 ms before it, or starting on the click when the main stroke is late. The main stroke should be the louder: a grace as loud as it can be read as the main stroke, so play graces softer. Grace notes are not counted as extras, and nor is a much quieter rebound just after a stroke. Keyboard play has no graces, so use one key per main stroke.</li>
         <li><b>Buzz strokes:</b> only the start of each buzz is scored, as early or late against the click. The bounces after it are not extras. A soft buzz that starts while the stroke before still rings is still heard as a stroke when it lands near its click. With the microphone, Pocket also counts the bounces it hears: the small number beside each buzz stroke on the staff, during the run and in History. After the run it says how many each buzz had on average, how far it rang towards the next stroke, and how many sounded like single strokes (a group of four buzzes in a row with 1 bounce or fewer each on average, or up to 1.5 and almost as loud as your plain strokes, since a buzz pressed into the pad is quieter). This is experimental: a pad and microphone hear bounces differently, so treat it as a guide. Keyboard play scores the start only.</li>
-        <li><b>Records and storage:</b> records are saved in this browser only. Export keeps a copy or moves it to another device, and Import brings it back. The app reminds you if you have never exported, or the last copy is two weeks old. On iPhone and iPad, Safari can clear a site's data after about a week without use, so add the page to your Home Screen. <b>Settings &rsaquo; Data &rsaquo; Storage</b> shows what takes space. Stroke detail (what rebuilds a run's staff) may use about 40% of what the browser allows. Past that, the oldest runs lose their detail first and keep their totals.</li>
+        <li><b>Records and storage:</b> records are saved in this browser only. Export keeps a copy or moves it to another device, and Import brings it back. The app reminds you if you have never exported, or the last copy is two weeks old. On iPhone and iPad, Safari can clear a site's data after about a week without use, so add the page to your Home Screen. <b>Settings &rsaquo; Data &rsaquo; Storage</b> shows what takes space. Stroke detail (what rebuilds a run's staff) may use up to 40 MB, or about 40% of what the browser allows where it has no database. Past that, the oldest runs lose their detail first and keep their scores and counts.</li>
       </ul>
     </section>
 
@@ -3223,7 +3223,13 @@ function dropDuplicates(list,key,ver,gone){
 const MAX_MARKS=5000;   /* old folded ids and discarded times read back; deleted markers have no limit */
 /* Markers and version maps read back from storage: key to a trusted stamp, all of them. */
 const cleanMarks=m=>{const out={};if(m&&typeof m==='object'&&!Array.isArray(m))Object.keys(m).forEach(k=>{if(isStamp(m[k]))out[k.slice(0,400)]=m[k];});return out;};
-const detailLen=r=>r.exercises.reduce((n,b)=>n+(b.sp?b.sp.length:0),0);
+/* A run's stroke detail: per exercise, the timing of each stroke (sp), its result (q) and the buzz counts (bb). They are kept and
+   dropped together. detailLen counts all three. */
+const DETAIL_KEYS=['sp','q','bb'];
+const exDetail=b=>(b.sp?b.sp.length:0)+(b.q?b.q.length:0)+(b.bb?b.bb.length:0);
+const detailLen=r=>r.exercises.reduce((n,b)=>n+exDetail(b),0);
+const hasDetail=r=>r.exercises.some(b=>exDetail(b)>0);
+const dropRunDetail=r=>r.exercises.forEach(b=>DETAIL_KEYS.forEach(k=>{delete b[k];}));
 /* a and b: {runs, sums, gen, xs, names, nt, nu, lib, gone, libGone, x}. gen: the generation (see genOf); a copy from an older one
    brings no history with it, and a run from an older one goes (a run without g is in its copy's generation). xs: discarded runs,
    id -> [time, seconds], so two devices count their time once. x: fields this version does not know, kept as they are. key(text) is
@@ -3302,7 +3308,12 @@ function unpackStrokes(sp){
   return out;
 }
 const exCodes=b=>typeof b.q==='string'?b.q:(typeof b.sp==='string'?unpackStrokes(b.sp).map(x=>x.r==='s'||x.r==='l'?'b':x.r).join(''):'');
-const runScore=run=>scoreParts(run.exercises.map(b=>[exCodes(b),strokeMult(b.k,b.bpm||run.bpm,run.tol,run.gb)]),run.lv);
+const liveScore=run=>scoreParts(run.exercises.map(b=>[exCodes(b),strokeMult(b.k,b.bpm||run.bpm,run.tol,run.gb)]),run.lv);
+const hasCodes=run=>run.exercises.some(b=>exCodes(b).length>0);
+/* A run's score comes from its strokes. Its stroke detail can be dropped, so the score is also kept on the run (pts), and used once
+   the strokes are gone. keepScore sets it while they are there. */
+const runScore=run=>hasCodes(run)?liveScore(run):(run.pts||0);
+const keepScore=run=>{if(hasCodes(run))run.pts=liveScore(run);return run;};
 /* The score of a flawless run at a level: every stroke on time. segs is [strokes, tempo multiplier] for each exercise in order. */
 const maxPoints=(segs,lv)=>{
   const p=LV_PTS[lv];if(!p)return 0;const c=STREAK_CAP;
@@ -3330,62 +3341,13 @@ function scoreBreakdown(run){
       if(c==='o'){on++;streak++;if(streak>best)best=streak;}
       else{streak=0;if(c==='m')miss++;else off++;}
     }
-    if(s[0]+s[1]+s[2]===off-off0){early+=s[0];late+=s[1];dyn+=s[2];}else split+=off-off0;   /* stroke data that was trimmed or never saved */
+    if(!exCodes(b)){const w=b.within||0,x=Math.min(b.miss||0,Math.max(0,(b.due||0)-w));on+=w;miss+=x;off+=Math.max(0,(b.due||0)-w-x);n+=b.due||0;mw+=(b.due||0)*m;}   /* its detail was dropped: the counts kept on the exercise (no streak, no hits on a rest) */
+    if(s[0]+s[1]+s[2]===off-off0){early+=s[0];late+=s[1];dyn+=s[2];}else split+=off-off0;   /* stroke data that was dropped or never saved */
   });
   const missed=Math.min(miss,unplayed);   /* a Miss is a stroke that was due and not played, or a hit on a rest */
   return {due:due,on:on,off:off,early:early,late:late,dyn:dyn,split:split,miss:missed,rest:miss-missed,best:best,tempo:n?mw/n:1};
 }
 function highScores(runs,sum){const o=Object.assign({},sum&&sum.hs);runs.forEach(r=>{const v=runScore(r);if(v>(o[r.lv]||0))o[r.lv]=v;});return o;}
-function foldRun(sum,run){
-  sum.runs++;sum.sec+=run.sec||0;
-  {const v=runScore(run);sum.hs=sum.hs||{};if(v>(sum.hs[run.lv]||0))sum.hs[run.lv]=v;}
-  {const v=Math.round(runShare(run)*1e4)/1e4,k=shareKey(run.lv,run.tol,run.gb);sum.hr=sum.hr||{};if(v>(sum.hr[k]||0))sum.hr[k]=v;}
-  if(sweepRun(run)){sum.cr=Math.max(sum.cr||0,run.sec||0);sum.cs=Math.max(sum.cs||0,runStrokes(run));}
-  sum.pf=(sum.pf||0)+perfectN(run);
-  const dk=dayKey(run.t);sum.days[dk]=(sum.days[dk]||0)+(run.sec||0);
-  if(run.lv==='off')return;
-  run.exercises.forEach(b=>{
-    if(!(b.due>0)||!(b.heard>0))return;
-    const key=statKey(b.k,run.lv,run.dy),bpm=b.bpm||run.bpm,pct=b.within/b.due;
-    let e=sum.pat[key];if(!e){e={k:b.k,lv:run.lv,dy:run.dy||'',runs:0,t:0,bpm:bpm,tr:[],cleared:0,clearedT:0,avg:null};sum.pat[key]=e;}
-    e.runs++;e.t=run.t;
-    if(bpm!==e.bpm){e.bpm=bpm;e.tr=[];}
-    e.tr.push(Math.round(pct*1000)/1000);if(e.tr.length>12)e.tr.shift();
-    e.avg=heardEnough(b)&&typeof b.avg==='number'?b.avg:null;
-    if(pct>=TARGET&&bpm>e.cleared){e.cleared=bpm;e.clearedT=run.t;}
-    if(tightClear(run,b))e.tc=1;
-    if(evenClear(b))e.ec=1;
-  });
-  if(run.rk){
-    const key=statKey(run.rk,run.lv,run.dy);
-    let e=sum.rt[key];if(!e){e={rk:run.rk,lv:run.lv,dy:run.dy||'',ne:run.ne,runs:0,t:0,cleared:0};sum.rt[key]=e;}
-    e.runs++;e.t=run.t;
-    if(run.exercises.length>=run.ne&&run.exercises.every(b=>b.due>0&&b.within/b.due>=TARGET)){if(run.ft)e.ftc=1;else e.cleared=Math.max(e.cleared,run.bpm);}
-  }
-}
-/* Folds the oldest runs into device me's entry in r.sums (r is {runs, sums, xs}) once there are more than keep, and returns the entry,
-   or null when there was nothing to fold. A device folds only its own runs, and runs with old ids (from before stamps, when runs moved
-   between devices only by import), so no run is folded on two devices, and each device has all of its own runs to fold. They go by
-   counter: every one up to the last made on or before the day of the newest that has to go, so the counter in cov covers exactly the
-   runs folded, even after the clock went back. The time of its discarded runs goes with them. Other devices' runs are left for their own
-   device to fold, and lose only their stroke detail here. */
-// eslint-disable-next-line no-unused-vars -- no longer called since 1.5.233 (every run is kept); the tests still use it, and step 2 of SYNC-PLAN.md decides its future
-function foldRuns(r,me,keep){
-  const need=r.runs.length-keep;if(need<=0)return null;
-  const own=r.runs.filter(x=>!isStamp(x.id)||stampDev(x.id)===me).sort((x,y)=>x.t-y.t);
-  const day=dayKey((own.length?own[Math.min(need,own.length)-1]:r.runs[need-1]).t),by=t=>dayKey(t)<=day;
-  let top=0;const up=(id,t)=>{if(isStamp(id)&&stampDev(id)===me&&by(t))top=Math.max(top,stampN(id));};
-  own.forEach(x=>up(x.id,x.t));Object.keys(r.xs||{}).forEach(id=>up(id,r.xs[id][0]));   /* its discarded runs too */
-  const takes=(id,t)=>isStamp(id)?stampDev(id)===me&&stampN(id)<=top:by(t);
-  r.runs.forEach(x=>{if(by(x.t)&&!takes(x.id,x.t))x.exercises.forEach(b=>{delete b.sp;});});
-  if(!own.length)return null;
-  const e=r.sums[me]||(r.sums[me]=newEntry());
-  const cover=id=>{if(isStamp(id))e.cov[me]=Math.max(e.cov[me]||0,stampN(id));else e.ids.push(id);};
-  const left=r.runs.filter(x=>{if(!takes(x.id,x.t))return true;foldRun(e,x);cover(x.id);return false;});
-  Object.keys(r.xs||{}).forEach(id=>{const x=r.xs[id];if(!takes(id,x[0]))return;const k=dayKey(x[0]);e.days[k]=(e.days[k]||0)+x[1];cover(id);delete r.xs[id];});
-  r.runs.splice(0,r.runs.length,...left);
-  return e;
-}
 /* Practice days. dayKey is the local date; minutes per day; the streak allows one rest day in any seven. */
 const dayKey=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
 function practiceDays(runs,sum){
@@ -3756,7 +3718,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.236';                           /* shown beside the title */
+const VERSION='1.5.237';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 /* This device: a random id, made once and kept only here (never exported or synced), its stamp counter, and v, the highest version time it has made or seen. */
 const DKEY=KEY+'.dev';
@@ -3884,7 +3846,7 @@ function textOwnTempos(x){
   return ownTempoMemo.get(x);
 }
 /* Fields this version does not know are kept as they are (at most 20, each small), so records from a newer Pocket keep them through a save here. */
-const RUN_KEYS=['id','t','mode','rk','lv','dy','ne','bpm','tol','gb','sec','exercises','u','sk','rp','ft','g'];
+const RUN_KEYS=['id','t','mode','rk','lv','dy','ne','bpm','tol','gb','sec','exercises','u','sk','rp','ft','g','pts'];
 const EX_KEYS=['k','bpm','due','within','heard','avg','sd','miss','i','ls','ld','da','dg','ex','sp','q','an','ac','as','gn','gc','gs','bc','bn','bf','bs','bb'];
 const LIB_KEYS=['id','x','t','u'];
 const META_KEYS=['v','runs','items','sum','sums','z','gen','xs','names','nt','nu','lib','libGone','gone','lists','listGone','settings','setT'];
@@ -3915,6 +3877,7 @@ function cleanRun(x){
   const o={id:x.id.slice(0,40),t:+x.t,mode:x.mode==='routine'?'routine':'single',rk:typeof x.rk==='string'?x.rk.slice(0,40):null,
     lv:x.lv,dy:/^[gbm2-7RL]?s?$/.test(x.dy)?x.dy:'',ne:Math.max(1,+x.ne||exercises.length),bpm:+x.bpm,tol:+x.tol||20,gb:gapNorm(x.gb)&&x.lv!=='none'&&x.lv!=='off'?gapNorm(x.gb):undefined,sec:Math.max(0,Math.min(14400,+x.sec||0)),exercises:exercises};
   if(Number.isInteger(x.g)&&x.g>=0&&x.g<=1e9)o.g=x.g;   /* the generation it was played in; none: its copy's (unpackRecs) */
+  if(Number.isInteger(x.pts)&&x.pts>=0)o.pts=x.pts;   /* the score, for when the stroke detail is gone; worked out again below while it is there */
   if(isStamp(x.u))o.u=x.u;   /* changed after it was played (an exercise taken out, or put back by Undo), or restored after a delete */
   if(Array.isArray(x.sk)){const sk=[];x.sk.forEach(b=>{if(b&&typeof b.k==='string'&&b.k.length<=400&&+b.i>=1&&+b.i<=200)sk.push({i:Math.round(+b.i),k:b.k});});if(sk.length)o.sk=sk;}
   const q=x.rp;
@@ -3927,6 +3890,7 @@ function cleanRun(x){
     if(un.length===o.exercises.length)return null;
     if(un.length&&un.every(b=>b.i>=1)){o.exercises=o.exercises.filter(b=>!un.includes(b));o.sk=(o.sk||[]).concat(un.map(b=>({i:b.i,k:b.k})));}
   }
+  keepScore(o);
   return keepExtra(x,RUN_KEYS,o);
 }
 const MAX_LIB=500;
@@ -4032,21 +3996,28 @@ function loadLocal(){
     }
   }catch(e){}
 }
-/* Records live in IndexedDB: one entry for each run, and one (meta, 'recs') for the totals, names and saved routines.
+/* Records live in IndexedDB: one entry for each run, one for each run's stroke detail (store 'detail', since 1.5.237), and one
+   (meta, 'recs') for the totals, names and saved routines.
    A save writes only the runs that changed, in the background, so a long history no longer slows each save.
    Only a browser with no IndexedDB at all keeps records in localStorage, with its smaller limits. An error opening the
    database never falls back to it: that would show an old or empty history, and save new runs where nothing reads them.
-   Every run is kept: nothing is folded into the totals any more. Only stroke detail has a limit.
+   Every run is kept: nothing is folded into the totals any more. Only stroke detail has a limit, and dropping it deletes the
+   run's detail entry without rewriting the run. In memory, and in an export, the detail is still on each run.
    Settings stay in localStorage either way: they are small, and the page reads them before it draws. */
-const DB_NAME='pocket',DB_VER=1,DB_STORES=['meta','runs'],DETAIL_DB=10000000;   /* 20 MB of stroke detail at two bytes a character */
+const DB_NAME='pocket',DB_VER=2,DB_STORES=['meta','runs','detail'],DETAIL_DB=20000000;   /* 40 MB of stroke detail at two bytes a character, about 2.5 years */
 /* A newer version that changes the database must add a store, not only change one: an older version takes a database
    with exactly its own stores as its own, whatever its version number (see openDb). */
 let db=null;   /* null: records are kept in localStorage, or, while recsOff is set, not at all */
 let recsOff='';   /* why records cannot be saved here until the page reloads: 'newer', 'update', 'lost' or 'error'. Nothing is written meanwhile. */
 const stored=new Map();   /* run id -> signature of the copy IndexedDB holds. '' means it has to be written, or deleted, again. */
+const storedD=new Map();   /* run id -> signature of its detail entry; none: no entry. '!' means it has to be written, or deleted, again. */
 let lastWrite=Promise.resolve(true);
-/* Changes whenever a run is changed in place: an exercise taken out, its routine key changed, its detail trimmed. */
-const runSig=r=>[r.t,r.u||'',r.rk,r.ne,r.exercises.map(b=>b.i+':'+(b.sp?b.sp.length:0)).join(','),r.sk?r.sk.map(b=>b.i).join(','):'',r.rp?r.rp.x.length+'.'+r.rp.st+'.'+(r.rp.o||[]).join(','):''].join('|');
+/* Changes whenever a run is changed in place: an exercise taken out, its routine key or score changed. Its detail has its own. */
+const runSig=r=>[r.t,r.u||'',r.rk,r.ne,r.pts===undefined?'':r.pts,r.exercises.map(b=>b.i).join(','),r.sk?r.sk.map(b=>b.i).join(','):'',r.rp?r.rp.x.length+'.'+r.rp.st+'.'+(r.rp.o||[]).join(','):''].join('|');
+const detailSig=r=>hasDetail(r)?r.exercises.map(b=>b.i+':'+DETAIL_KEYS.map(k=>b[k]?b[k].length:0).join('.')).join(','):'';
+/* A run as the runs store keeps it, without its detail, and its detail entry, one [sp, q, bb] for each exercise in order. */
+const bareRun=r=>{const o=JSON.parse(JSON.stringify(r));dropRunDetail(o);return o;};
+const detailEntry=r=>({id:r.id,d:r.exercises.map(b=>DETAIL_KEYS.map(k=>b[k]||''))});
 const idbReq=q=>new Promise((res,rej)=>{q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});
 const isFull=e=>!!e&&(e.name==='QuotaExceededError'||e.name==='NS_ERROR_DOM_QUOTA_REACHED'||e.code===22);
 const hasStores=d=>DB_STORES.every(n=>d.objectStoreNames.contains(n));
@@ -4078,7 +4049,7 @@ function openDb(ver){
     };
     setTimeout(()=>{if(!blocked)end('slow');},4000);   /* a browser that never answers */
     try{q=indexedDB.open(DB_NAME,ver||DB_VER);}catch(e){end('error');return;}
-    q.onupgradeneeded=()=>{const d=q.result;DB_STORES.forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n,n==='runs'?{keyPath:'id'}:undefined);});};
+    q.onupgradeneeded=()=>{const d=q.result;DB_STORES.forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n,n==='meta'?undefined:{keyPath:'id'});});};
     q.onsuccess=()=>{
       const d=q.result;
       if(done){d.close();return;}
@@ -4105,14 +4076,31 @@ async function loadRecs(){
   if(!d||typeof d!=='object'){stopRecs(d==='newer'?'newer':'error');return;}
   db=d;
   try{
-    const tx=db.transaction(['runs','meta']);
-    const [meta,raw]=await Promise.all([idbReq(tx.objectStore('meta').get('recs')),idbReq(tx.objectStore('runs').getAll())]);
+    const tx=db.transaction(['runs','meta','detail']);
+    const [meta,raw,det]=await Promise.all([idbReq(tx.objectStore('meta').get('recs')),idbReq(tx.objectStore('runs').getAll()),idbReq(tx.objectStore('detail').getAll())]);
     if(meta){
-      const items=Object.assign({},meta.items),hk=t=>{const h=hashOf(t);items[h]=t;return h;},runs=[];
-      raw.forEach(r=>{if(r&&typeof r.id==='string')stored.set(r.id,'');try{runs.push(packRun(r,hk));}catch(e){}});
+      const items=Object.assign({},meta.items),hk=t=>{const h=hashOf(t);items[h]=t;return h;},runs=[],dm=new Map(),moved=new Set();
+      det.forEach(e=>{if(e&&typeof e.id==='string'){storedD.set(e.id,'!');if(Array.isArray(e.d))dm.set(e.id,e.d);}});   /* '!': checked again below */
+      raw.forEach(r=>{
+        if(!r||typeof r.id!=='string'||!Array.isArray(r.exercises))return;
+        stored.set(r.id,'');
+        /* Detail kept on the run itself was saved before 1.5.237: it moves to its own entry, and the run is written without it. A
+           storage change, not an edit, so the version stays. */
+        if(r.exercises.some(b=>b&&DETAIL_KEYS.some(k=>b[k]!==undefined)))moved.add(r.id);
+        const d=dm.get(r.id);
+        if(d)r=Object.assign({},r,{exercises:r.exercises.map((b,i)=>{const x=Object.assign({},b);if(Array.isArray(d[i]))DETAIL_KEYS.forEach((k,j)=>{if(d[i][j]&&x[k]===undefined)x[k]=d[i][j];});return x;})});
+        try{runs.push(packRun(r,hk));}catch(e){}
+      });
       const u=unpackRecs(Object.assign({},meta,{v:Math.max(2,num(meta.v)),items:items,runs:runs}));   /* the runs were packed here, so their stickings are hashed */
       u.runs.sort((a,b)=>a.t-b.t);useRecs(u);
-      u.runs.forEach(r=>stored.set(r.id,runSig(r)));   /* a run that did not pass the checks keeps '', and goes at the next save */
+      /* A run that did not pass the checks keeps '', and goes at the next save; one with its detail on it is written again. A detail
+         entry that does not match what was read back is written again, or deleted. */
+      u.runs.forEach(r=>{
+        if(!moved.has(r.id))stored.set(r.id,runSig(r));
+        if(storedD.has(r.id)&&!moved.has(r.id)){const g=detailSig(r);storedD.set(r.id,g||'!');}
+        else if(moved.has(r.id)&&hasDetail(r))storedD.set(r.id,'!');
+      });
+      if(moved.size)writeRecs();
       try{localStorage.removeItem(RKEY);localStorage.removeItem(OLDKEY);}catch(e){}   /* left by an older version: already moved */
       return;
     }
@@ -4126,7 +4114,7 @@ async function loadRecs(){
 function dropDetail(step){
   let n=detailChars(),any=false;
   const goal=step?0:Math.floor(n/2);
-  for(let i=0;i<recs.runs.length-1&&n>goal;i++)recs.runs[i].exercises.forEach(b=>{if(b.sp){n-=b.sp.length;delete b.sp;any=true;}});
+  for(let i=0;i<recs.runs.length-1&&n>goal;i++){const r=recs.runs[i],m=detailLen(r);if(m){n-=m;dropRun(r);any=true;}}
   return any;
 }
 /* A save failed, even after dropping old detail. The records stay in memory while the page is open, so an export still keeps them. */
@@ -4141,26 +4129,34 @@ function saveFailed(full){
 function writeRecs(tries){
   tries=tries||0;
   if(!db)return Promise.resolve(false);
-  const live=new Set(),put=[],del=[];
-  recs.runs.forEach(r=>{live.add(r.id);const g=runSig(r);if(stored.get(r.id)!==g)put.push([r,g]);});
+  const live=new Set(),put=[],del=[],dput=[],ddel=[];
+  recs.runs.forEach(r=>{
+    live.add(r.id);const g=runSig(r);if(stored.get(r.id)!==g)put.push([r,g]);
+    const h=detailSig(r),w=storedD.get(r.id);if(h){if(w!==h)dput.push([r,h]);}else if(w!==undefined)ddel.push(r.id);
+  });
   stored.forEach((g,id)=>{if(!live.has(id))del.push(id);});
+  storedD.forEach((g,id)=>{if(!live.has(id))ddel.push(id);});
   let full=false;
   const p=new Promise(res=>{
     let tx=null;
     const failed=e=>{
       put.forEach(x=>stored.set(x[0].id,''));del.forEach(id=>stored.set(id,''));   /* written again at the next save */
+      dput.forEach(x=>storedD.set(x[0].id,'!'));ddel.forEach(id=>storedD.set(id,'!'));
       full=isFull(e);
       if(full&&tries<2&&db&&dropDetail(tries)){writeRecs(tries+1).then(ok=>{if(ok)full=false;res(ok);});return;}
       res(false);
     };
     try{
-      tx=db.transaction(['runs','meta'],'readwrite');
-      const rs=tx.objectStore('runs');
-      put.forEach(x=>rs.put(JSON.parse(JSON.stringify(x[0]))));   /* as JSON would keep it: nothing held only in memory */
+      tx=db.transaction(['runs','meta','detail'],'readwrite');
+      const rs=tx.objectStore('runs'),ds=tx.objectStore('detail');
+      put.forEach(x=>rs.put(bareRun(x[0])));   /* as JSON would keep it: nothing held only in memory */
       del.forEach(id=>rs.delete(id));
+      dput.forEach(x=>ds.put(detailEntry(x[0])));
+      ddel.forEach(id=>ds.delete(id));
       tx.objectStore('meta').put(packRecs({hist:true,lib:true,lists:false,set:false,runs:false}),'recs');
     }catch(e){try{if(tx)tx.abort();}catch(x){}failed(e);return;}
     put.forEach(x=>stored.set(x[0].id,x[1]));del.forEach(id=>stored.delete(id));
+    dput.forEach(x=>storedD.set(x[0].id,x[1]));ddel.forEach(id=>storedD.delete(id));
     tx.oncomplete=()=>res(true);
     tx.onabort=()=>failed(tx.error);
   });
@@ -4190,16 +4186,19 @@ const entryName=e=>{const k=libKey(e);return recs.names[k]||(isRoutineKey(k)?rou
 const libId=()=>newStamp();
 /* The text to load for an entry: a routine gets its name back as a title. */
 function entryText(e){const k=libKey(e);return recs.names[k]?setHeader(e.x,'title',recs.names[k]):e.x;}
-/* Stroke detail may use 40% of the space the browser gives this page (about 5 MB, two bytes a character). When it is over, the oldest runs lose theirs first; their totals stay.
-   One run keeps at most a quarter of that share. */
+/* Stroke detail may use 40% of the space the browser gives this page (about 5 MB, two bytes a character), or DETAIL_DB in IndexedDB.
+   When it is over, the oldest runs lose theirs first, whoever played them; the runs and their scores stay. A run with more than a
+   quarter of that share keeps none: detail is never cut short. */
 const QUOTA=Math.floor(5*1024*1024/2),DETAIL_SHARE=0.4;
 const detailBudget=()=>db?DETAIL_DB:Math.floor(QUOTA*DETAIL_SHARE);   /* in characters. IndexedDB has room for far more. */
-const detailChars=()=>recs.runs.reduce((n,r)=>n+r.exercises.reduce((m,b)=>m+(b.sp?b.sp.length:0),0),0);
+const detailChars=()=>recs.runs.reduce((n,r)=>n+detailLen(r),0);
+/* Drops a run's detail, keeping its score first. Dropping is local: no new version, nothing to sync. */
+const dropRun=r=>{keepScore(r);dropRunDetail(r);};
 function trimDetail(){
   const budget=detailBudget(),one=Math.floor(budget/4);
-  recs.runs.forEach(r=>{let left=one;r.exercises.forEach(b=>{if(!b.sp)return;if(b.sp.length<=left){left-=b.sp.length;return;}if(left>=4)b.sp=b.sp.slice(0,left-left%4);else delete b.sp;left=0;});});
-  let n=detailChars();
-  for(let i=0;i<recs.runs.length&&n>budget;i++)recs.runs[i].exercises.forEach(b=>{if(b.sp){n-=b.sp.length;delete b.sp;}});
+  let n=0;
+  recs.runs.forEach(r=>{const m=detailLen(r);if(m>one)dropRun(r);else n+=m;});
+  for(let i=0;i<recs.runs.length&&n>budget;i++){const m=detailLen(recs.runs[i]);if(m){n-=m;dropRun(recs.runs[i]);}}
 }
 function saveRecs(){
   if(recsOff)return false;   /* records cannot be saved until the page reloads: the notice says why */
@@ -6468,6 +6467,7 @@ function recordRun(r){
   const prevBest=new Map();
   rows.forEach(x=>{const b=bestBefore(recs.runs,x.key,x.bpm,S.click,r.dyc);if(b!==null)prevBest.set(x.key,b);});
   const newTempo=rows.filter(x=>x.pct>=TARGET&&x.bpm>(x.was=clearedBefore(recs.runs,x.key,S.click,recs.sum,r.dyc)));   /* was: the fastest clear before, for the medal it held */
+  keepScore(run);
   const bv0=badgeValues(recs.runs,recs.sum),score=runScore(run),hs0=highScores(recs.runs,recs.sum)[run.lv]||0,share0=bestShares(recs.runs,recs.sum)[shareKey(run.lv,run.tol,run.gb)]||0;
   recs.runs.push(run);
   let autoLib=null;   /* a kept routine goes to the library, where Delete removes it; discarding the run takes it back out */
@@ -7040,8 +7040,8 @@ function renderStorage(){
   const mk=document.createElement('i');mk.className='stomk';mk.style.left=(detailBudget()/scale*100)+'%';mk.title='Limit for stroke detail';bar.appendChild(mk);
   const leg=$('stoLeg');leg.textContent='';
   parts.forEach(x=>{const d=document.createElement('div');const dot=document.createElement('span');dot.style.background=x[2];d.append(dot,x[0]+' '+fmt(x[1]));leg.appendChild(d);});
-  const n=recs.runs.filter(r=>r.exercises.some(b=>b.sp)).length;
-  $('stoNote').textContent='Stroke detail is what lets a run show its staff and strokes again. It may use up to '+fmt(detailBudget())+'. Past that the oldest runs lose their detail first and keep their totals. '+n+(n===1?' run has':' runs have')+' its detail now.';
+  const n=recs.runs.filter(hasDetail).length;
+  $('stoNote').textContent='Stroke detail is what lets a run show its staff and strokes again. It may use up to '+fmt(detailBudget())+'. Past that the oldest runs lose their detail first and keep their scores and counts. '+n+(n===1?' run has':' runs have')+' its detail now.';
 }
 function showSetup(v){setSview(v);showTab('setup');}
 let histShown=20,histDays=7,hview='day';
@@ -7630,7 +7630,7 @@ async function exportRun(){
   await saveFile('pocket-run-'+stamp(true)+'.json','application/json',JSON.stringify(runTrace(r,lastRun.run)));
 }
 let impPending=null;
-/* Far above the largest export: about 1K characters a run, plus at most 10M characters of stroke detail. 5 MB was the limit while
+/* Far above the largest export: about 1K characters a run, plus at most 20M characters of stroke detail. 5 MB was the limit while
    records lived in localStorage; an export passes it at about 1,200 runs. */
 const MAX_IMPORT=100e6;
 /* The Data page's import message. After an import it is set once the page has redrawn, so the run count does not overwrite it. */
