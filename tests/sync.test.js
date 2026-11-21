@@ -3,7 +3,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { loadCore, plain } = require('./helpers');
 const c = loadCore(['mergeRecs', 'mergeSettings', 'mergeMarks', 'newSum', 'newEntry', 'practiceDays', 'cleanMarks', 'MAX_MARKS',
-  'makeStamp', 'isStamp', 'ZERO', 'stampTime', 'sumView', 'coverage', 'okStamp', 'latestStamp', 'tieWins', 'foldRuns', 'AHEAD']);
+  'makeStamp', 'isStamp', 'ZERO', 'stampTime', 'sumView', 'coverage', 'nextTime', 'latestVersion', 'tieWins', 'foldRuns', 'MAX_TIME']);
 
 const key = x => x.trim();
 const ex = () => [{ k: 'RLRL', due: 16, within: 16 }];
@@ -14,17 +14,15 @@ const ids = l => l.map(x => x.id);
 const st = (t, n, d) => c.makeStamp(t, n, d || 'aaaaaaaa');
 const entry = (v, o) => Object.assign(c.newEntry(v), o);
 
-/* A device as the app runs one: its own id, a clock that may be wrong, and a counter that only goes up (newStamp in index.html). A new
-   stamp is after the stamps given (the item's version), and see moves the clock up to the latest stamp taken in (seeStamps). */
+/* A device as the app runs one: its own id, a clock that may be wrong, and a counter that only goes up. An id carries the clock
+   (newStamp in index.html); a version counts up from the highest version seen and the ones given (newVersion), and see moves that
+   count up to the highest version taken in (seeVersions). */
 function device(id, skew) {
-  let n = 0, last = 0;
+  let n = 0, seen = 0;
   const d = { id, skew, recs: side({}), set: { set: {}, setT: {}, lists: [], listGone: {} } };
-  d.stamp = (now, ...after) => {
-    n++; last = Math.max(now + d.skew, last);
-    after.forEach(s => { if (c.isStamp(s) && c.makeStamp(last, n, id) <= s) last = c.stampTime(s) + 1; });
-    return c.makeStamp(last, n, id);
-  };
-  d.see = t => { last = Math.max(last, t); };
+  d.stamp = now => c.makeStamp(now + d.skew, ++n, id);
+  d.version = (...after) => { seen = c.nextTime(seen, ...after); return c.makeStamp(seen, ++n, id); };
+  d.see = v => { seen = Math.max(seen, v); };
   return d;
 }
 
@@ -33,11 +31,13 @@ test('stamps compare by time, then counter, then device, and keep rising when th
   assert.ok(st(10, 1, 'zzzzzzzz') < st(10, 2, 'aaaaaaaa'), 'then the counter');
   assert.ok(st(10, 1, 'aaaaaaaa') < st(10, 1, 'bbbbbbbb'), 'the device settles an exact tie');
   assert.ok(c.ZERO < st(0, 1), 'data from before sync loses to any real edit');
-  const d = device('dddddddd', 0), a = d.stamp(1000);
+  const d = device('dddddddd', 0), a = d.version(), b = d.version(), e = d.version(st(1000, 1, 'bbbbbbbb'));
+  assert.ok(a < b && b < e, 'each version is newer than the last');
+  assert.equal(c.stampTime(e), 1001, 'and newer than the version it changes');
+  const i = d.stamp(1000);
   d.skew = -500;
-  const b = d.stamp(1000), e = d.stamp(1000);
-  assert.ok(a < b && b < e, 'the same device never goes back');
-  assert.equal(c.stampTime(e), 1000);
+  const j = d.stamp(1000);
+  assert.ok(i !== j && c.stampTime(j) === 500, 'ids keep the clock, and the counter keeps them apart');
   assert.ok(c.isStamp(a) && !c.isStamp('lq3x8k2pab12') && !c.isStamp(12345));
 });
 
@@ -162,10 +162,10 @@ test('two devices with clocks five minutes apart edit, delete and restore, and e
   let now = Date.UTC(2026, 0, 5, 12);
   const tick = () => (now += 1000);
   const add = (d, extra) => { const r = run(d.stamp(tick()), now, extra); d.recs.runs.push(r); return r; };
-  const edit = (d, id, f) => { const r = d.recs.runs.find(x => x.id === id); Object.assign(r, f, { u: d.stamp(tick(), r.u) }); };
-  const del = (d, id) => { const r = d.recs.runs.find(x => x.id === id); d.recs.runs = d.recs.runs.filter(x => x.id !== id); d.recs.gone[id] = d.stamp(tick(), r.u); };
-  const sync = () => {   /* each device merges the other's copy and moves its clock up to what it took in, as step 3 will */
-    phone.see(c.latestStamp(pad.recs)); pad.see(c.latestStamp(phone.recs));
+  const edit = (d, id, f) => { const r = d.recs.runs.find(x => x.id === id); Object.assign(r, f, { u: d.version(r.u) }); };
+  const del = (d, id) => { const r = d.recs.runs.find(x => x.id === id); d.recs.runs = d.recs.runs.filter(x => x.id !== id); d.recs.gone[id] = d.version(r.u); };
+  const sync = () => {   /* each device merges the other's copy and counts up from what it took in, as step 3 will */
+    phone.see(c.latestVersion(pad.recs)); pad.see(c.latestVersion(phone.recs));
     const p = c.mergeRecs(phone.recs, pad.recs, key), q = c.mergeRecs(pad.recs, phone.recs, key);
     phone.recs = JSON.parse(JSON.stringify(p)); pad.recs = JSON.parse(JSON.stringify(q));
   };
@@ -180,14 +180,15 @@ test('two devices with clocks five minutes apart edit, delete and restore, and e
   assert.equal(phone.recs.runs.length, 5, 'both old runs and three new ones; the pad\'s run from before the phone\'s fold counts as folded');
   assert.equal(c.sumView(phone.recs).runs, 4);
 
-  /* Offline, the phone edits a run and a second later the pad edits it too. The pad's clock is five minutes slow, so its edit has the
-     older time: the faster clock wins a close call, as SYNC-PLAN.md says, but the same way on both devices. */
+  /* Offline, the phone edits a run and a second later the pad edits it too. Neither has seen the other's edit, so both count up from
+     the same versions; the counter settles it, which may not be the later edit in real time, as SYNC-PLAN.md says, but it is the same
+     on both devices. */
   edit(phone, t1.id, { n: 'phone' });
   edit(pad, t1.id, { n: 'pad' });
   del(pad, p1.id);
   add(pad);
   sync();
-  assert.equal(phone.recs.runs.find(r => r.id === t1.id).n, 'phone', 'the edit with the later stamp wins');
+  assert.equal(phone.recs.runs.find(r => r.id === t1.id).n, 'phone', 'the edit with the higher counter wins, on both');
   assert.deepEqual(plain(phone.recs), plain(pad.recs));
   assert.ok(!phone.recs.runs.some(r => r.id === p1.id), 'the delete reaches the phone');
 
@@ -197,7 +198,7 @@ test('two devices with clocks five minutes apart edit, delete and restore, and e
   assert.equal(phone.recs.runs.find(r => r.id === t1.id).n, 'pad again', 'an edit made after seeing another wins, however slow the clock');
 
   /* The phone restores the deleted run (Undo or import), with a new version, and the pad deletes another. */
-  const back = Object.assign(JSON.parse(JSON.stringify(p1)), { u: phone.stamp(tick()) });
+  const back = Object.assign(JSON.parse(JSON.stringify(p1)), { u: phone.version() });
   delete phone.recs.gone[p1.id]; phone.recs.runs.push(back);
   del(pad, p2.id);
   sync();
@@ -210,7 +211,7 @@ test('two devices with clocks five minutes apart edit, delete and restore, and e
   const total = d => d.recs.runs.length + c.sumView(d.recs).runs;
   const before = total(phone);
   const pe = c.foldRuns(pad.recs, 'pad00000', pad.recs.runs.length - 3);
-  pe.v = pad.stamp(tick(), pe.v);
+  pe.v = pad.version(pe.v);
   assert.deepEqual(plain(ids(pad.recs.runs)), [p1.id], 'only the phone\'s run is left');
   sync();
   assert.deepEqual(plain(phone.recs), plain(pad.recs), 'the same after the fold');
@@ -219,7 +220,7 @@ test('two devices with clocks five minutes apart edit, delete and restore, and e
 
   /* Then the phone folds its own run, and the two folds add up. */
   const qe = c.foldRuns(phone.recs, 'phone000', 0);
-  qe.v = phone.stamp(tick(), qe.v);
+  qe.v = phone.version(qe.v);
   sync();
   assert.deepEqual(plain(phone.recs), plain(pad.recs));
   assert.equal(phone.recs.runs.length, 0);
@@ -246,19 +247,25 @@ test('a device folds only its own runs and old ids; others lose only their strok
   assert.equal(c.foldRuns(side({ runs: [run(st(1, 1, other), 1)] }), me, 0), null, 'none of its own: nothing to fold');
 });
 
-test('a stamp more than a day ahead is not believed', () => {
-  const now = Date.now(), ahead = st(now + 2 * c.AHEAD, 1, 'bbbbbbbb'), soon = st(now + c.AHEAD / 2, 1, 'bbbbbbbb');
-  assert.ok(!c.okStamp(ahead) && c.okStamp(soon));
-  assert.deepEqual(plain(c.cleanMarks({ a: ahead, b: soon })), { b: soon }, 'a marker from a clock far ahead is dropped');
-  assert.equal(c.latestStamp({ runs: [{ id: ahead }, { id: soon }] }), c.stampTime(soon), 'and the clock does not move up to it');
+test('a version from a clock far ahead is a number like any other, and the next version counts up from it', () => {
+  const far = st(Date.now() + 365 * 864e5, 1, 'bbbbbbbb');
+  assert.deepEqual(plain(c.cleanMarks({ a: far })), { a: far }, 'it is read back');
+  const d = device('dddddddd', 0);
+  d.see(c.latestVersion({ gone: { a: far } }));
+  assert.ok(d.version() > far, 'an edit made after seeing it beats it');
+  const m = c.mergeRecs(side({ runs: [run('r', 1, { u: far, n: 'ahead' })] }), side({ runs: [run('r', 1, { u: st(5, 1), n: 'b' })] }), key);
+  assert.equal(m.runs[0].n, 'ahead', 'and it merges the same way whenever the merge runs');
+  assert.equal(c.nextTime(c.MAX_TIME), c.MAX_TIME, 'the count stops at the largest time a stamp holds');
+  assert.ok(c.isStamp(c.makeStamp(c.nextTime(c.MAX_TIME), 1, 'aaaaaaaa')));
 });
 
-test('the latest stamp is found in ids, versions, markers and totals', () => {
+test('the latest version is found in versions, markers, totals and the clear time, never in ids', () => {
   const s = t => st(t, 1, 'bbbbbbbb');
-  assert.equal(c.latestStamp({ runs: [{ id: s(5), u: s(7) }], lib: [{ id: 'x', u: s(3) }] }), 7);
-  assert.equal(c.latestStamp({ gone: { a: s(9) } }, { nt: { k: s(4) } }), 9);
-  assert.equal(c.latestStamp({ sums: { bbbbbbbb: { v: s(11) } }, setT: { bpm: s(10) } }), 11);
-  assert.equal(c.latestStamp({ runs: [{ id: 'lq3x8k2pab12' }] }), 0, 'old ids carry no stamp');
+  assert.equal(c.latestVersion({ runs: [{ id: s(5), u: s(7) }], lib: [{ id: 'x', u: s(3) }] }), 7);
+  assert.equal(c.latestVersion({ gone: { a: s(9) } }, { nt: { k: s(4) } }), 9);
+  assert.equal(c.latestVersion({ sums: { bbbbbbbb: { v: s(11) } }, setT: { bpm: s(10) } }), 11);
+  assert.equal(c.latestVersion({ runs: [{ id: 'lq3x8k2pab12' }, { id: s(99) }], lib: [{ id: s(98) }] }), 0, 'ids are not versions');
+  assert.equal(c.latestVersion({ z: 40, gone: { a: s(9) } }), 40, 'versions made after a clear are after it');
 });
 
 test('two devices with different data from before sync settle every tie the same way, whichever merges', () => {

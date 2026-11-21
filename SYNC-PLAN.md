@@ -104,7 +104,7 @@ Measured on 2026-11-21 (see "What the data allows"): runs without detail grow by
 - **Dropping detail is local.** A run's detail never changes once played, so two copies combine it by id, and a drop is not a change: it needs no marker and does not travel. A device that dropped a run's detail does not fetch it again by itself; it can fetch it when the run's staff is shown, if the server still has it (step 3).
 - **Rounding `avg` and `sd`** (stored at full float precision) would save about a quarter of a run. It is not needed for storage. If it is done, only for new runs: rewriting old ones would give each a new version, and the first sync would send everything again.
 - **Moving across.** On the first load after the change, detail moves to its own store, and runs are written without it. This is a storage change, not an edit, so versions stay as they are. It needs the safe upgrade from the storage release.
-#### Revision: logical versions, not clock time (not yet built)
+#### Revision: logical versions, not clock time (done in 1.5.235)
  
 The result of a merge must not depend on any device's clock, or on when the merge runs. Distrusting far-ahead stamps (`okStamp`) made it depend on both: the same two copies could merge differently on Monday than on Wednesday, and capping a stamp when it arrives would let two devices store the same edit differently. So versions stop using the clock.
  
@@ -115,6 +115,7 @@ The result of a merge must not depend on any device's clock, or on when the merg
 - **Ids keep the clock.** Run, routine and library ids are still made from time, counter and device id (`newStamp()`). They only need to be unique, and the counter and device id make sure of that. Versions are counted from versions only, never from ids.
 - **Practice time stays real.** A run's `t` is still the clock time, for history, practice days and streaks.
 - **The trade-off.** Two edits of one routine on two devices that had not seen each other's have a winner that is the same on every device, but it may not be the later edit in real time: the device that had seen more versions wins. For one person handing over between two devices this is accepted.
+- **As built.** `nextTime` (core) gives the time part of a new version; `newVersion()` uses it for every version, marker and setting or name time, with `dev.v` (the highest version time made or seen, carried over from the old stamp time `dev.t`). `newStamp()` makes ids only, from the clock and the counter. `latestVersion` reads versions, markers, totals and the clear time, never ids; `seeVersions` takes it in without any clock cap. `okStamp` and `AHEAD` are gone, and far-ahead stamps are read back like any other. Versions stop at the largest time nine base-36 digits hold (`MAX_TIME`), which only a made-up file reaches. Until clear by generation, a clear raises the count to the clear time, so that versions made after it are after it, and the clear time on reading is still capped at now; both go with that revision. The clock check below waits for sync (step 3).
 - **The clock is checked, not trusted.** With sync on, Pocket compares its clock with the server's time (the `Date` header) and warns when it is off by more than a few minutes. The check never blocks a save, an edit or a sync.
 #### Revision: clear history by generation (not yet built)
  

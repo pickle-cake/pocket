@@ -3129,17 +3129,21 @@ const stampTime=s=>isStamp(s)?parseInt(s.slice(0,9),36):0;
 const stampN=s=>parseInt(s.slice(10,16),36);
 const stampDev=s=>s.slice(17);
 const verOf=x=>isStamp(x.u)?x.u:ZERO;   /* an item's version: its stamp u, set when it was changed or restored */
-/* A stamp more than a day ahead of this device's clock is not believed. A clock set far ahead would otherwise win every edit until that
-   day came, and, through the next rule, pass its time on to every device. Such a stamp reads back as none: version zero, or no marker. */
-const AHEAD=864e5;
-const okStamp=s=>isStamp(s)&&stampTime(s)<=Date.now()+AHEAD;
-/* The latest time in the trusted stamps of records or settings: ids, versions and markers. After taking in another copy, a device moves
-   its clock up to it, so an edit it makes next is newer than every edit it has seen, however slow its clock. */
-function latestStamp(...os){
-  let m=0;const see=s=>{if(okStamp(s))m=Math.max(m,stampTime(s));},marks=o=>{if(o&&typeof o==='object')Object.keys(o).forEach(k=>see(o[k]));};
+/* Versions count; they do not keep time. The time part of a new version is one more than the highest version seen (nextTime), so an
+   edit beats every version it has seen, whatever any clock says, and a merge never depends on a clock or on when it runs. A version
+   stamped by a clock once set ahead is just a large number to count up from. Ids still carry the clock (newStamp): they only need to be
+   unique, which the counter and device make sure of. Versions are counted from versions only, never from ids. */
+const MAX_TIME=36**9-1;   /* nine base-36 digits: past it, a version could not be newer by its time part */
+const nextTime=(seen,...after)=>{let m=Math.max(0,+seen||0);after.forEach(s=>{if(isStamp(s))m=Math.max(m,stampTime(s));});return Math.min(MAX_TIME,m+1);};
+/* The highest version in records or settings: versions, markers, setting and name times, totals entries, and the clear time (until
+   the history is cleared by generation, the versions made after a clear have to be after it). After taking in another copy, a device
+   counts up from it (seeVersions), so an edit it makes next is newer than every version it has seen. */
+function latestVersion(...os){
+  let m=0;const see=s=>{if(isStamp(s))m=Math.max(m,stampTime(s));},marks=o=>{if(o&&typeof o==='object')Object.keys(o).forEach(k=>see(o[k]));};
   os.forEach(o=>{
     if(!o||typeof o!=='object')return;
-    [o.runs,o.lib,o.lists].forEach(l=>{if(Array.isArray(l))l.forEach(x=>{if(x){see(x.id);see(x.u);}});});
+    if(+o.z>0)m=Math.max(m,Math.min(MAX_TIME,Math.floor(+o.z)));
+    [o.runs,o.lib,o.lists].forEach(l=>{if(Array.isArray(l))l.forEach(x=>{if(x)see(x.u);});});
     [o.gone,o.libGone,o.listGone,o.nt,o.setT].forEach(marks);
     if(o.sums&&typeof o.sums==='object')Object.keys(o.sums).forEach(d=>see(o.sums[d]&&o.sums[d].v));
   });
@@ -3212,7 +3216,7 @@ function dropDuplicates(list,key,ver,gone){
 }
 const MAX_MARKS=5000;   /* old folded ids and discarded times read back; deleted markers have no limit */
 /* Markers and version maps read back from storage: key to a trusted stamp, all of them. */
-const cleanMarks=m=>{const out={};if(m&&typeof m==='object'&&!Array.isArray(m))Object.keys(m).forEach(k=>{if(okStamp(m[k]))out[k.slice(0,400)]=m[k];});return out;};
+const cleanMarks=m=>{const out={};if(m&&typeof m==='object'&&!Array.isArray(m))Object.keys(m).forEach(k=>{if(isStamp(m[k]))out[k.slice(0,400)]=m[k];});return out;};
 const detailLen=r=>r.exercises.reduce((n,b)=>n+(b.sp?b.sp.length:0),0);
 /* a and b: {runs, sums, z, xs, names, nt, nu, lib, gone, libGone, x}. z: when the history was cleared (a time); nothing from before it
    comes back. xs: discarded runs, id -> [time, seconds], so two devices count their time once. x: fields this version does not know,
@@ -3744,26 +3748,21 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.234';                           /* shown beside the title */
+const VERSION='1.5.235';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
-/* This device: a random id, made once and kept only here (never exported or synced), its stamp counter, and the latest time it stamped. */
+/* This device: a random id, made once and kept only here (never exported or synced), its stamp counter, and v, the highest version time it has made or seen. */
 const DKEY=KEY+'.dev';
 const dev=(()=>{let d=null;try{d=JSON.parse(localStorage.getItem(DKEY)||'null');}catch(e){}
-  if(!d||typeof d.id!=='string'||!/^[0-9a-z]{8}$/.test(d.id)){const a=new Uint8Array(8);crypto.getRandomValues(a);d={id:[...a].map(x=>(x%36).toString(36)).join(''),n:0,t:0};}
-  d.n=Math.max(0,Math.floor(+d.n)||0);d.t=Math.max(0,+d.t||0);return d;})();
-/* A new id or version from this device (makeStamp). The time never goes back and the counter only goes up, so each one is newer than the last. */
+  if(!d||typeof d.id!=='string'||!/^[0-9a-z]{8}$/.test(d.id)){const a=new Uint8Array(8);crypto.getRandomValues(a);d={id:[...a].map(x=>(x%36).toString(36)).join(''),n:0,v:0};}
+  d.n=Math.max(0,Math.floor(+d.n)||0);d.v=Math.min(MAX_TIME,Math.max(0,Math.floor(+d.v)||0,Math.floor(+d.t)||0));delete d.t;return d;})();   /* t: the stamp time before 1.5.235, which every version made or seen was at or below */
 const saveDev=()=>{try{localStorage.setItem(DKEY,JSON.stringify(dev));}catch(e){}};
-/* A new id or version from this device (makeStamp). The time never goes back and the counter only goes up, so each one is newer than the
-   last, and newer than the stamps given: the item's version, or its deleted marker. A time more than a day ahead of the clock (it was
-   set ahead, and is right again) is given up. */
-function newStamp(...after){
-  if(dev.t>Date.now()+AHEAD)dev.t=Date.now();
-  dev.n++;dev.t=Math.max(Date.now(),dev.t);
-  after.forEach(s=>{if(okStamp(s)&&makeStamp(dev.t,dev.n,dev.id)<=s)dev.t=stampTime(s)+1;});
-  saveDev();return makeStamp(dev.t,dev.n,dev.id);
-}
-/* Records or settings from elsewhere were taken in: the clock moves up to the latest stamp in them (latestStamp). */
-const seeStamps=t=>{if(t>dev.t&&t<=Date.now()+AHEAD){dev.t=t;saveDev();}};
+/* A new id from this device: the clock, the counter, which only goes up, and the device, so no two are the same. */
+function newStamp(){dev.n++;saveDev();return makeStamp(Date.now(),dev.n,dev.id);}
+/* A new version: newer than every version this device has made or seen, and than the stamps given (the item's version, or its deleted
+   marker), whatever the clock says (nextTime). */
+function newVersion(...after){dev.v=nextTime(dev.v,...after);dev.n++;saveDev();return makeStamp(dev.v,dev.n,dev.id);}
+/* Records or settings from elsewhere were taken in: the count moves up to the highest version in them (latestVersion). */
+const seeVersions=t=>{if(t>dev.v){dev.v=Math.min(MAX_TIME,Math.floor(t));saveDev();}};
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const LOOKAHEAD=0.35;                            /* how far ahead clicks are scheduled, in seconds */
@@ -3802,7 +3801,7 @@ S.others=S.accent&&S.others==='g'?'g':'n';               /* the other strokes: n
 S.noise=typeof S.noise==='number'&&isFinite(S.noise)?clamp(Math.round(S.noise),-90,-10):null;   /* room noise in dB from the last Mic check, on this device */
 S.settle=clamp(Math.round(+S.settle)||40,20,120);
 /* Saved libraries: address, name, and the last loaded routines (kept for the three newest loads only). */
-S.lists=Array.isArray(S.lists)?S.lists.filter((l,i,a)=>l&&typeof l.url==='string'&&l.url.length<=500&&a.findIndex(q=>q&&q.url===l.url)===i).slice(0,20).map(l=>({id:typeof l.id==='string'&&l.id&&l.id.length<=40?l.id:listId(l.url),url:l.url,name:typeof l.name==='string'?l.name.slice(0,60):'',t:+l.t||0,u:okStamp(l.u)?l.u:undefined,items:Array.isArray(l.items)?l.items.filter(i=>i&&typeof i.title==='string'&&typeof i.text==='string').slice(0,100).map(i=>({title:i.title.slice(0,80),text:i.text.slice(0,20000)})):undefined})):hostedLists();   /* a fresh install starts with the hosted libraries among its links */
+S.lists=Array.isArray(S.lists)?S.lists.filter((l,i,a)=>l&&typeof l.url==='string'&&l.url.length<=500&&a.findIndex(q=>q&&q.url===l.url)===i).slice(0,20).map(l=>({id:typeof l.id==='string'&&l.id&&l.id.length<=40?l.id:listId(l.url),url:l.url,name:typeof l.name==='string'?l.name.slice(0,60):'',t:+l.t||0,u:isStamp(l.u)?l.u:undefined,items:Array.isArray(l.items)?l.items.filter(i=>i&&typeof i.title==='string'&&typeof i.text==='string').slice(0,100).map(i=>({title:i.title.slice(0,80),text:i.text.slice(0,20000)})):undefined})):hostedLists();   /* a fresh install starts with the hosted libraries among its links */
 S.listGone=cleanMarks(S.listGone);   /* library links deleted here: id and the stamp of the delete, so a sync does not bring them back */
 S.listSel=typeof S.listSel==='string'&&S.lists.some(l=>l.url===S.listSel)?S.listSel:'';
 S.lists.filter(l=>l.items).sort((x,y)=>y.t-x.t).slice(3).forEach(l=>{delete l.items;});
@@ -3830,7 +3829,7 @@ if(typeof S.libId!=='string')S.libId='';
 S.libOpened=Array.isArray(S.libOpened)?S.libOpened.filter(o=>o&&typeof o.id==='string'&&isFinite(+o.t)).slice(0,20).map(o=>({id:o.id,t:+o.t})):[];
 S.startExercise=1;
 const PORTABLE=['bpm','tol','accent','others','vol','click','eachUnit','eachVal','gap','pulse','view','game','palette','theme'];   /* settings that travel in an export. Microphone, latency and sensitivity belong to the device and stay out. */
-S.setT=S.setT&&typeof S.setT==='object'&&!Array.isArray(S.setT)?Object.fromEntries(Object.entries(S.setT).filter(([k,v])=>PORTABLE.includes(k)&&okStamp(v))):{};   /* the stamp of each portable setting's last change, so a merge keeps the newer one */
+S.setT=S.setT&&typeof S.setT==='object'&&!Array.isArray(S.setT)?Object.fromEntries(Object.entries(S.setT).filter(([k,v])=>PORTABLE.includes(k)&&isStamp(v))):{};   /* the stamp of each portable setting's last change, so a merge keeps the newer one */
 let setWas=JSON.stringify(PORTABLE.map(k=>S[k]));
 S.expSel=(S.expSel&&typeof S.expSel==='object')?{hist:S.expSel.hist!==false,lib:S.expSel.lib!==false,lists:S.expSel.lists!==false,set:S.expSel.set!==false}:{hist:true,lib:true,lists:true,set:true};   /* what the Export dialog ticks, remembered */
 if(!isFinite(+S.lastExport))S.lastExport=0;
@@ -3838,7 +3837,7 @@ if(!isFinite(+S.expRuns))S.expRuns=0;
 /* Saves the settings. A portable setting that changed since the last save gets a new stamp, for a merge between devices. */
 const save=()=>{
   const now=JSON.stringify(PORTABLE.map(k=>S[k]));
-  if(now!==setWas){const was=JSON.parse(setWas),t=newStamp(...Object.values(S.setT));PORTABLE.forEach((k,i)=>{if(JSON.stringify(S[k])!==JSON.stringify(was[i]))S.setT[k]=t;});setWas=now;}
+  if(now!==setWas){const was=JSON.parse(setWas),t=newVersion(...Object.values(S.setT));PORTABLE.forEach((k,i)=>{if(JSON.stringify(S[k])!==JSON.stringify(was[i]))S.setT[k]=t;});setWas=now;}
   try{localStorage.setItem(KEY,JSON.stringify({settings:S}));}catch(e){}
 };
 function setLatency(v){S.latency=v;$('latency').value=v;save();latUse();}
@@ -3907,7 +3906,7 @@ function cleanRun(x){
   if(!exercises.length)return null;
   const o={id:x.id.slice(0,40),t:+x.t,mode:x.mode==='routine'?'routine':'single',rk:typeof x.rk==='string'?x.rk.slice(0,40):null,
     lv:x.lv,dy:/^[gbm2-7RL]?s?$/.test(x.dy)?x.dy:'',ne:Math.max(1,+x.ne||exercises.length),bpm:+x.bpm,tol:+x.tol||20,gb:gapNorm(x.gb)&&x.lv!=='none'&&x.lv!=='off'?gapNorm(x.gb):undefined,sec:Math.max(0,Math.min(14400,+x.sec||0)),exercises:exercises};
-  if(okStamp(x.u))o.u=x.u;   /* changed after it was played (an exercise taken out, or put back by Undo), or restored after a delete */
+  if(isStamp(x.u))o.u=x.u;   /* changed after it was played (an exercise taken out, or put back by Undo), or restored after a delete */
   if(Array.isArray(x.sk)){const sk=[];x.sk.forEach(b=>{if(b&&typeof b.k==='string'&&b.k.length<=400&&+b.i>=1&&+b.i<=200)sk.push({i:Math.round(+b.i),k:b.k});});if(sk.length)o.sk=sk;}
   const q=x.rp;
   if(q&&typeof q.x==='string'&&q.x.length<=MAX_SNAP)o.rp={x:q.x,st:Math.max(1,Math.round(+q.st)||1),ev:isFinite(+q.ev)&&+q.ev>0?+q.ev:1,eu:q.eu==='pass'?'pass':'min',gp:+q.gp===4?4:0,
@@ -3930,14 +3929,14 @@ function cleanLib(list,items,v){
     if(!e||typeof e.id!=='string'||seen.has(e.id))return;
     const x=v>=2?items[e.x]:e.x;
     if(typeof x!=='string'||!x.trim()||x.length>MAX_SNAP)return;
-    seen.add(e.id);const c={id:e.id.slice(0,40),x:x,t:num(e.t)};if(okStamp(e.u))c.u=e.u;out.push(keepExtra(e,LIB_KEYS,c));
+    seen.add(e.id);const c={id:e.id.slice(0,40),x:x,t:num(e.t)};if(isStamp(e.u))c.u=e.u;out.push(keepExtra(e,LIB_KEYS,c));
   });
   return out;
 }
 const DEV_RE=/^[0-9a-z]{8}$/;
 /* One device's totals read back: newSum() plus its version and what it covers (see newEntry). pat lists its stickings by hash. */
 function cleanSum(q,items){
-  const sum=newEntry(okStamp(q.v)?q.v:ZERO),dyOf=d=>/^[gbm2-7RL]?s?$/.test(d)?d:'';
+  const sum=newEntry(isStamp(q.v)?q.v:ZERO),dyOf=d=>/^[gbm2-7RL]?s?$/.test(d)?d:'';
   sum.runs=Math.max(0,num(q.runs));sum.sec=Math.max(0,num(q.sec));sum.cr=Math.max(0,num(q.cr));sum.cs=Math.max(0,num(q.cs))||Math.round(sum.cr*4);   /* records from before strokes were kept have only seconds: 4 strokes a second, sixteenths at 60 BPM */sum.pf=Math.max(0,num(q.pf));
   LEVELS.forEach(l=>{const v=Math.max(0,Math.round(num(q.hs&&q.hs[l.v])));if(v)sum.hs[l.v]=v;});
   Object.keys(q.hr||{}).forEach(k=>{const m=/^([a-z]+)(?:\|(\d+))?(?:\|([0-9-]+))?$/.exec(k),h=Math.min(1,Math.max(0,num(q.hr[k])));if(m&&LEVELS.some(l=>l.v===m[1])&&h)sum.hr[shareKey(m[1],+m[2]||20,m[3])]=h;});   /* a best kept before windows were told apart was at ±20 ms */
@@ -4167,11 +4166,11 @@ function pruneNames(){
   Object.keys(recs.names).concat(Object.keys(recs.nt)).forEach(k=>{if(!live.has(k)){delete recs.names[k];delete recs.nt[k];}});
 }
 /* Sets a routine's name, and when, so the newer name wins in a sync. */
-const setName=(k,v)=>{if(recs.names[k]!==v){recs.names[k]=v;recs.nt[k]=newStamp(recs.nt[k]);}};
+const setName=(k,v)=>{if(recs.names[k]!==v){recs.names[k]=v;recs.nt[k]=newVersion(recs.nt[k]);}};
 /* Deleted runs and saved routines leave a marker, id -> the stamp of the delete, so a sync does not bring them back. */
-const markGone=(m,x)=>{m[x.id]=newStamp(verOf(x),m[x.id]);};   /* newer than the item it deletes */
+const markGone=(m,x)=>{m[x.id]=newVersion(verOf(x),m[x.id]);};   /* newer than the item it deletes */
 /* A saved routine put back by Undo: newer than its marker. */
-const restoreLib=e=>{const u=newStamp(recs.libGone[e.id],e.u);recs.lib.push(e);delete recs.libGone[e.id];e.u=u;};
+const restoreLib=e=>{const u=newVersion(recs.libGone[e.id],e.u);recs.lib.push(e);delete recs.libGone[e.id];e.u=u;};
 const routineName=rk=>recs.names[rk]||'Untitled routine';
 /* Saved routines. An entry is found by the key its text is recorded under, so History and the library agree on which routine is which. */
 const libKey=e=>e._k!==undefined?e._k:(e._k=textKey(e.x,S.subdiv));
@@ -6599,7 +6598,7 @@ function discardRun(){
     if(run&&!run.ended)return;
     if(gone&&!recs.runs.some(x=>x.id===gone.id)){
       recs.runs.splice(Math.min(i,recs.runs.length),0,gone);
-      gone.u=newStamp(recs.gone[gone.id],gone.u);delete recs.gone[gone.id];delete recs.xs[gone.id];   /* the run counts its own time again, and is newer than the marker another device may have */
+      gone.u=newVersion(recs.gone[gone.id],gone.u);delete recs.gone[gone.id];delete recs.xs[gone.id];   /* the run counts its own time again, and is newer than the marker another device may have */
     }
     /* As the Library's own Undo: not if the routine was saved again meanwhile, and the selection only if none was made since. */
     if(dropLib&&!recs.lib.includes(al)&&!libFor(libKey(al))&&recs.lib.length<MAX_LIB){restoreLib(al);if(wasCur&&!S.libId){S.libId=al.id;save();}}
@@ -7457,7 +7456,7 @@ function dropExercise(r,b){
   r.exercises=left;
   const keys=left.map(x=>({i:x.i,k:x.k})).concat((r.sk||[]).map(x=>({i:x.i,k:x.k}))).sort((a,c)=>a.i-c.i).map(x=>x.k);
   const was=r.rk;
-  r.ne=keys.length;r.rk=routineKeyOf(keys);r.u=newStamp(r.u);
+  r.ne=keys.length;r.rk=routineKeyOf(keys);r.u=newVersion(r.u);
   if(was&&was!==r.rk&&recs.names[was]&&!recs.names[r.rk])setName(r.rk,recs.names[was]);
   if(r.rp){   /* the replay text loses the same line, so Play does not bring the exercise back */
     const t=String(r.rp.x||'').replace(/^\uFEFF/,'').trim(),ex=/^[\[{]/.test(t)?null:parseRoutine(t).exercises.find(e=>e.idx===gone);
@@ -7645,7 +7644,7 @@ function importSelected(){
   const sel=readSel();
   $('expModal').hidden=true;
   const {o,u,file}=impPending;impPending=null;
-  seeStamps(latestStamp(u,o));   /* what is changed here next is newer than anything in the file */
+  seeVersions(latestVersion(u,o));   /* what is changed here next is newer than anything in the file */
   const fresh=!recs.runs.length&&!recs.sum.runs;
   let add=0,addL=0,addS=0,setN=0,dup=0,savedCopy=false;
   if(sel.hist){
@@ -7659,7 +7658,7 @@ function importSelected(){
     const have=new Set(recs.runs.map(x=>x.id));
     u.runs.forEach(c=>{
       if(have.has(c.id)||folded(c)||c.t<=recs.z)return;   /* already in the totals, or from before the history was cleared */
-      if(recs.gone[c.id]){c.u=newStamp(recs.gone[c.id],c.u);delete recs.gone[c.id];}   /* a deleted run, brought back on purpose */
+      if(recs.gone[c.id]){c.u=newVersion(recs.gone[c.id],c.u);delete recs.gone[c.id];}   /* a deleted run, brought back on purpose */
       recs.runs.push(c);have.add(c.id);add++;
     });
     Object.keys(u.names).forEach(k=>{if(!recs.names[k])setName(k,u.names[k]);});recs.nu=Math.max(recs.nu,u.nu);
@@ -7673,7 +7672,7 @@ function importSelected(){
     dup+=u.lib.length-addL;
   }
   if(sel.hist||sel.lib)Object.keys(u.x).forEach(k=>{if(!(k in recs.x))recs.x[k]=u.x[k];});   /* fields from a newer version, kept for it */
-  if(sel.lists)(Array.isArray(o.lists)?o.lists:[]).forEach(l=>{if(l&&typeof l.url==='string'&&l.url.length<=500&&httpUrl(l.url)&&S.lists.length<20&&!S.lists.some(q=>q.url===l.url||listName(q).toLowerCase()===listName({url:l.url,name:typeof l.name==='string'?l.name:''}).toLowerCase())){const id=typeof l.id==='string'&&l.id&&l.id.length<=40&&!S.lists.some(q=>q.id===l.id)?l.id:listId(l.url);delete S.listGone[id];S.lists.push({id,url:l.url,name:typeof l.name==='string'?l.name.slice(0,60):'',t:0,u:newStamp()});addS++;}});
+  if(sel.lists)(Array.isArray(o.lists)?o.lists:[]).forEach(l=>{if(l&&typeof l.url==='string'&&l.url.length<=500&&httpUrl(l.url)&&S.lists.length<20&&!S.lists.some(q=>q.url===l.url||listName(q).toLowerCase()===listName({url:l.url,name:typeof l.name==='string'?l.name:''}).toLowerCase())){const id=typeof l.id==='string'&&l.id&&l.id.length<=40&&!S.lists.some(q=>q.id===l.id)?l.id:listId(l.url);delete S.listGone[id];S.lists.push({id,url:l.url,name:typeof l.name==='string'?l.name.slice(0,60):'',t:0,u:newVersion()});addS++;}});
   /* Settings from the file: only the ones that travel, and only of the right kind. The page reloads so everything is read back through the usual checks. */
   if(sel.set&&o.settings&&typeof o.settings==='object')PORTABLE.forEach(k=>{const v=o.settings[k];if(v!==undefined&&typeof v===typeof S[k]){S[k]=v;setN++;}});
   if(addS||savedCopy||setN)save();
@@ -7688,9 +7687,9 @@ const CLR_PARTS=[EXP_PARTS[0],EXP_PARTS[1],EXP_PARTS[2],EXP_PARTS[3],['dev','Dev
 function openClear(){exMode='clr';tickDialog('Clear','Clear',CLR_PARTS,()=>false);}
 function clearSelected(){
   const sel=readSel();
-  if(sel.hist){recs.runs.length=0;recs.sums={};recs.z=Math.max(Date.now(),dev.t);recs.xs={};resum();recs.names={};recs.nt={};recs.gone={};recs.nu=1;S.lastExport=0;S.expRuns=0;}   /* z: nothing played before now comes back in a sync */
+  if(sel.hist){recs.z=Math.max(Date.now(),...recs.runs.map(r=>r.t));seeVersions(recs.z);recs.runs.length=0;recs.sums={};recs.xs={};resum();recs.names={};recs.nt={};recs.gone={};recs.nu=1;S.lastExport=0;S.expRuns=0;}   /* z: nothing played before now comes back in a sync; versions made from now on are after it */
   if(sel.lib){recs.lib.forEach(e=>markGone(recs.libGone,e));recs.lib=[];S.libId='';S.routineText=STARTER;S.startExercise=1;S.seeded=false;}   /* back to a first start: the routines that ship with the app are added again */
-  if(sel.lists){const t=newStamp(...S.lists.map(l=>l.u),...Object.values(S.listGone));S.lists.forEach(l=>{S.listGone[l.id]=t;});S.lists=hostedLists();S.lists.forEach(l=>{delete S.listGone[l.id];l.u=t;});S.listSel='';}
+  if(sel.lists){const t=newVersion(...S.lists.map(l=>l.u),...Object.values(S.listGone));S.lists.forEach(l=>{S.listGone[l.id]=t;});S.lists=hostedLists();S.lists.forEach(l=>{delete S.listGone[l.id];l.u=t;});S.listSel='';}
   if(sel.set)PORTABLE.forEach(k=>{delete S[k];});   /* the page reloads, and every one falls back to its starting value */
   if(sel.dev){micOff(true);S.clockLog=[];S.noise=null;S.latCal=false;S.latency=null;delete S.sens;delete S.settle;delete S.input;}   /* shows the Set up card again */
   save();saveRecs();recsWritten().then(()=>location.reload());
@@ -8369,9 +8368,9 @@ function renderLinks(){
       if((l===NEW||u.href!==l.url)&&S.lists.some(q=>q.url===u.href)){er.textContent='That address is already in the list.';return;}
       if(l===NEW){
         if(S.lists.length>=20){er.textContent='You can keep 20 libraries.';return;}
-        S.lists.push({id:newListId(u.href),url:u.href,name:nm.value.trim().slice(0,60),t:0,u:newStamp()});
+        S.lists.push({id:newListId(u.href),url:u.href,name:nm.value.trim().slice(0,60),t:0,u:newVersion()});
       }else{
-        l.name=nm.value.trim().slice(0,60);l.u=newStamp(l.u);
+        l.name=nm.value.trim().slice(0,60);l.u=newVersion(l.u);
         if(S.listSel===l.url)S.listSel=u.href;
         if(u.href!==l.url){l.url=u.href;delete l.items;l.t=0;lib={items:[],loaded:false,busy:false,cur:''};}
       }
@@ -8386,7 +8385,7 @@ function renderLinks(){
     const nm=document.createElement('b'),ur=document.createElement('span'),ac=document.createElement('span');
     nm.className='rt';nm.textContent=listName(l);ur.className='rm lnkurl';ur.textContent=l.url;ac.className='ra';
     ac.appendChild(iconBtn('edit','Edit',()=>{lnkEdit=l;renderLinks();}));
-    ac.appendChild(kebab('More actions',[{t:'Delete',fn:()=>{S.lists=S.lists.filter(q=>q!==l);S.listGone[l.id]=newStamp(l.u,S.listGone[l.id]);if(S.listSel===l.url){S.listSel='';lib={items:[],loaded:false,busy:false,cur:''};}libMode='';save();renderLibrary();},arm:true,danger:true}]));
+    ac.appendChild(kebab('More actions',[{t:'Delete',fn:()=>{S.lists=S.lists.filter(q=>q!==l);S.listGone[l.id]=newVersion(l.u,S.listGone[l.id]);if(S.listSel===l.url){S.listSel='';lib={items:[],loaded:false,busy:false,cur:''};}libMode='';save();renderLibrary();},arm:true,danger:true}]));
     const inner=document.createElement('div');inner.className='row';inner.append(nm,ur,ac);
     box.appendChild(inner);
   });
@@ -8447,7 +8446,7 @@ async function loadLibrary(){
       reviewImport(raw);return;
     }
     let l=S.lists.find(q=>q.url===href);
-    if(!l){l={id:newListId(href),url:href,name:$('libName').value.trim().slice(0,60),t:0,u:newStamp()};S.lists.push(l);}
+    if(!l){l={id:newListId(href),url:href,name:$('libName').value.trim().slice(0,60),t:0,u:newVersion()};S.lists.push(l);}
     l.t=Date.now();l.items=res.items.map(i=>({title:i.title,text:i.text}));
     S.listSel=href;libMode='';$('libraryUrl').value='';$('libName').value='';suggestName();
     S.lists.filter(q=>q.items).sort((x,y)=>y.t-x.t).slice(3).forEach(q=>{delete q.items;});save();
