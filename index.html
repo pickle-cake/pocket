@@ -219,11 +219,6 @@ body[data-run="1"] .notice{display:none}
 .rows.rv.more-up{-webkit-mask-image:linear-gradient(to top,var(--ink) calc(100% - var(--s-6)),transparent);mask-image:linear-gradient(to top,var(--ink) calc(100% - var(--s-6)),transparent)}
 .rows.rv.more-up.more-dn{-webkit-mask-image:linear-gradient(to bottom,transparent,var(--ink) var(--s-6),var(--ink) calc(100% - var(--s-6)),transparent);mask-image:linear-gradient(to bottom,transparent,var(--ink) var(--s-6),var(--ink) calc(100% - var(--s-6)),transparent)}
 #rowsMore{margin-top:8px}
-.stobar{position:relative;display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--line)}
-.stobar i{display:block;height:100%}
-.stobar i.stomk{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);opacity:.6}
-.stoleg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
-.stoleg span{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
 .glib>summary{font-size:15px;padding:12px 14px}
 .glib>.gb{display:grid;gap:8px;padding:0 8px 8px}
 .rvhost{overflow-y:auto;overflow-x:hidden;border-radius:var(--r-lg);overscroll-behavior:auto}
@@ -969,9 +964,6 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     </section>
     <section class="panel" aria-label="Storage">
       <h3>Storage</h3>
-      <p class="hint" id="stoTotal"></p>
-      <div class="stobar" id="stoBar" role="img"></div>
-      <div class="stoleg" id="stoLeg"></div>
       <p class="hint" id="stoNote"></p>
     </section>
     <section class="panel" aria-label="Library links">
@@ -1423,7 +1415,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
         <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. With the microphone, Pocket reads every strike in the loudness and works out which are grace notes and which is the main stroke, so a main stroke played just after its graces is still timed from the main stroke. A flam's grace comes up to 95 ms before it, and a drag's two graces up to 270 ms before it, or starting on the click when the main stroke is late. The main stroke should be the louder: a grace as loud as it can be read as the main stroke, so play graces softer. Grace notes are not counted as extras, and nor is a much quieter rebound just after a stroke. Keyboard play has no graces, so use one key per main stroke.</li>
         <li><b>Buzz strokes:</b> only the start of each buzz is scored, as early or late against the click. The bounces after it are not extras. A soft buzz that starts while the stroke before still rings is still heard as a stroke when it lands near its click. With the microphone, Pocket also counts the bounces it hears: the small number beside each buzz stroke on the staff, during the run and in History. After the run it says how many each buzz had on average, how far it rang towards the next stroke, and how many sounded like single strokes (a group of four buzzes in a row with 1 bounce or fewer each on average, or up to 1.5 and almost as loud as your plain strokes, since a buzz pressed into the pad is quieter). This is experimental: a pad and microphone hear bounces differently, so treat it as a guide. Keyboard play scores the start only.</li>
-        <li><b>Records and storage:</b> records are saved in this browser only. Export keeps a copy or moves it to another device, and Import brings it back. The app reminds you if you have never exported, or the last copy is two weeks old. On iPhone and iPad, Safari can clear a site's data after about a week without use, so add the page to your Home Screen. <b>Settings &rsaquo; Data &rsaquo; Storage</b> shows what takes space. Stroke detail (what rebuilds a run's staff) may use up to 40 MB, or about 40% of what the browser allows where it has no database. Past that, the oldest runs lose their detail first and keep their scores and counts.</li>
+        <li><b>Records and storage:</b> records are saved in this browser only. Export keeps a copy or moves it to another device, and Import brings it back. The app reminds you if you have never exported, or the last copy is two weeks old. On iPhone and iPad, Safari can clear a site's data after about a week without use, so add the page to your Home Screen. <b>Settings &rsaquo; Data &rsaquo; Storage</b> shows the space used. Stroke detail (what rebuilds a run's staff) may use up to 40 MB, or about 40% of what the browser allows where it has no database. Past that, the oldest runs lose their detail first and keep their scores and counts.</li>
       </ul>
     </section>
 
@@ -3718,7 +3710,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.237';                           /* shown beside the title */
+const VERSION='1.5.238';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 /* This device: a random id, made once and kept only here (never exported or synced), its stamp counter, and v, the highest version time it has made or seen. */
 const DKEY=KEY+'.dev';
@@ -7023,25 +7015,15 @@ function setSview(v){
   if(v==='data')renderStorage();
   showTabs(v,[['pref','svPref','svBtnPref'],['dev','svDev','svBtnDev'],['data','svData','svBtnData']]);
 }
-/* What the saved data takes. Sizes are characters, two bytes each. In localStorage the limit is the browser's, about 5 MB, and is only an estimate.
-   In IndexedDB the browser allows far more, so the bar is drawn against Pocket's own limit for stroke detail. */
+/* What the saved data takes, in characters, two bytes each. In localStorage the browser's limit is about 5 MB, and is only an estimate. */
 function renderStorage(){
-  let rk=0,kk=0;
-  const detail=detailChars(),p=packRecs();
-  try{rk=db?JSON.stringify(p).length:(localStorage.getItem(RKEY)||'').length;kk=(localStorage.getItem(KEY)||'').length;}catch(e){}
-  const scale=db?Math.floor(detailBudget()/DETAIL_SHARE):QUOTA;
-  const runs=Math.max(0,JSON.stringify(p.runs||[]).length-detail)+JSON.stringify(p.sum||{}).length;
-  const libs=JSON.stringify(S.lists||[]).length,sets=Math.max(0,kk-libs),routines=Math.max(0,rk-detail-runs);
-  const parts=[['Stroke detail',detail,'var(--accent)'],['Runs',runs,'var(--ok)'],['Routines',routines,'var(--late)'],['Libraries',libs,'var(--early)'],['Settings',sets,'var(--muted)']];
-  const used=parts.reduce((n,x)=>n+x[1],0),fmt=c=>{const b=c*2;return b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(0.1,b/1024).toFixed(b<10240?1:0)+' KB';};
-  $('stoTotal').textContent=db?fmt(used)+' used on this device. Pocket keeps every run.':fmt(used)+' of about '+fmt(QUOTA)+' used on this device.';
-  const bar=$('stoBar');bar.textContent='';bar.setAttribute('aria-label',$('stoTotal').textContent);
-  parts.forEach(x=>{if(!x[1])return;const e=document.createElement('i');e.style.width=(x[1]/scale*100)+'%';e.style.background=x[2];e.title=x[0];bar.appendChild(e);});
-  const mk=document.createElement('i');mk.className='stomk';mk.style.left=(detailBudget()/scale*100)+'%';mk.title='Limit for stroke detail';bar.appendChild(mk);
-  const leg=$('stoLeg');leg.textContent='';
-  parts.forEach(x=>{const d=document.createElement('div');const dot=document.createElement('span');dot.style.background=x[2];d.append(dot,x[0]+' '+fmt(x[1]));leg.appendChild(d);});
+  let used=0;
+  try{used=(db?JSON.stringify(packRecs()).length:(localStorage.getItem(RKEY)||'').length)+(localStorage.getItem(KEY)||'').length;}catch(e){}
+  const fmt=c=>{const b=c*2;return b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(0.1,b/1024).toFixed(b<10240?1:0)+' KB';};
   const n=recs.runs.filter(hasDetail).length;
-  $('stoNote').textContent='Stroke detail is what lets a run show its staff and strokes again. It may use up to '+fmt(detailBudget())+'. Past that the oldest runs lose their detail first and keep their scores and counts. '+n+(n===1?' run has':' runs have')+' its detail now.';
+  $('stoNote').textContent=(db?fmt(used)+' used on this device. Pocket keeps every run.':fmt(used)+' of about '+fmt(QUOTA)+' used on this device.')
+    +' Stroke detail, which lets a run show its staff and strokes again, may use up to '+fmt(detailBudget())+'; past that, the oldest runs lose it first and keep their scores and counts. '
+    +n+(n===1?' run has its':' runs have their')+' detail now.';
 }
 function showSetup(v){setSview(v);showTab('setup');}
 let histShown=20,histDays=7,hview='day';
