@@ -86,15 +86,22 @@ const runs = (o.runs || []).map(r => {
   if (r.rp) out.rp = Object.assign({}, r.rp, { x: put(remap(text(r.rp.x))) });
   return out;
 });
-const sum = Object.assign({}, o.sum);
-sum.pat = (o.sum.pat || []).map(e => { const k = newKey(text(e.k)); return k && Object.assign({}, e, { k: put(k) }); }).filter(Boolean);
-sum.rt = {};
-for (const [key, e] of Object.entries(o.sum.rt || {})) { const rk = rkMap.get(e.rk) || e.rk; sum.rt[key.replace(e.rk, rk)] = Object.assign({}, e, { rk }); }
+/* Totals: one set before 1.5.231 (format 2), one for each device after (format 3). */
+const cleanTotals = q => {
+  const s = Object.assign({}, q);
+  s.pat = (q.pat || []).map(e => { const k = newKey(text(e.k)); return k && Object.assign({}, e, { k: put(k) }); }).filter(Boolean);
+  s.rt = {};
+  for (const [key, e] of Object.entries(q.rt || {})) { const rk = rkMap.get(e.rk) || e.rk; s.rt[key.replace(e.rk, rk)] = Object.assign({}, e, { rk }); }
+  return s;
+};
+const totals = {};
+if (o.sums) { totals.sums = {}; for (const [d, q] of Object.entries(o.sums)) totals.sums[d] = cleanTotals(q); for (const k of ['z', 'xs']) if (o[k] !== undefined) totals[k] = o[k]; }
+else if (o.sum) totals.sum = cleanTotals(o.sum);
 const lib = (o.lib || []).filter(e => text(e.x)).map(e => ({ id: e.id, x: put(remap(text(e.x))), t: e.t }));
 const names = {};
 for (const [k, v] of Object.entries(o.names || {})) if (known.titles.has(v)) names[k] = v;
 
-const seed = { v: 2, sum, lib, names, nu: o.nu, runs, items: outItems };
+const seed = Object.assign({ v: o.sums ? 3 : 2 }, totals, { lib, names, nu: o.nu, runs, items: outItems });
 
 /* Nothing outside routines/*.txt may survive: a routine is one of the repository's or has only generated lines,
    and a single exercise is a repository line, a generated one, or a key made from one. */

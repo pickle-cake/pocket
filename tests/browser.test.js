@@ -9,7 +9,7 @@ const ENGINE = process.env.POCKET_ENGINE || 'chromium';
 const contextFor = viewport => Object.assign(ENGINE === 'webkit' && viewport.width < 720 ? { ...playwright.devices['iPhone 13'] } : {}, { viewport });
 const { ROOT, html } = require('./helpers');
 
-const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo(),unlocked:renderUnlocked};window.__recs=()=>recsWritten().then(()=>new Promise((res,rej)=>{const tx=db.transaction(["runs","meta"]),m=tx.objectStore("meta").get("recs"),r=tx.objectStore("runs").getAll();tx.oncomplete=()=>res(m.result?Object.assign({},m.result,{runs:r.result.sort((x,y)=>x.t-y.t)}):null);tx.onerror=()=>rej(tx.error);}));let heardTimer=0;');
+const page = html.replace('let heardTimer=0;', 'window.__T={hit:handleHit,save:saveRecs,recs:()=>recs,run:()=>run,S:()=>S,ctx:()=>ctx,sync:()=>syncInfo(),unlocked:renderUnlocked};window.__recs=()=>recsWritten().then(()=>new Promise((res,rej)=>{const tx=db.transaction(["runs","meta","detail"]),m=tx.objectStore("meta").get("recs"),r=tx.objectStore("runs").getAll(),d=tx.objectStore("detail").getAll();tx.oncomplete=()=>{const dm=new Map(d.result.map(e=>[e.id,e.d])),inline=r.result.filter(x=>x.exercises.some(b=>b.sp||b.q||b.bb)).length;r.result.forEach(x=>{const e=dm.get(x.id);if(e)x.exercises.forEach((b,i)=>{["sp","q","bb"].forEach((k,j)=>{if(e[i]&&e[i][j])b[k]=e[i][j];});});});res(m.result?Object.assign({},m.result,{runs:r.result.sort((x,y)=>x.t-y.t),inline:inline,entries:d.result.length}):null);};tx.onerror=()=>rej(tx.error);}));let heardTimer=0;');
 assert.ok(page !== html, 'the test hook did not attach: has handleHit moved?');
 
 let server, base, browser, served = 0;
@@ -774,6 +774,190 @@ test('a stray exercise is deleted from a run, and an unheard one is not scored',
   await ctx.close();
 });
 
+/* The storage release (1.5.233): records are never opened in a way that could lose or split them. */
+const note = p => p.evaluate(() => ({ shown: !document.getElementById('dbNote').hidden, text: document.getElementById('dbText').textContent, reload: !document.getElementById('dbGo').hidden }));
+const importFile = async (p, name, o) => { const f = path.join(os.tmpdir(), name); fs.writeFileSync(f, JSON.stringify(o)); await p.click('#tabProgress'); await p.setInputFiles('#recFile', f); return f; };
+const withDetail = runs => runs.reduce((a, r, i) => (r.exercises[0].sp ? a.concat(i) : a), []);
+
+test('an upgrade from another tab stops this one saving, and a newer database is left alone', async () => {
+  const p = await open({ seeded: true });
+  assert.equal((await note(p)).shown, false);
+  /* Another tab, on a newer version, upgrades the database and adds a store. */
+  await p.evaluate(() => new Promise((res, rej) => { const q = indexedDB.open('pocket', 3); q.onupgradeneeded = () => q.result.createObjectStore('more'); q.onsuccess = () => { q.result.close(); res(); }; q.onerror = () => rej(q.error); q.onblocked = () => rej(new Error('blocked: the page did not let go')); }));
+  let n = await note(p);
+  assert.ok(n.shown && n.reload, 'the reload prompt shows');
+  assert.match(n.text, /^⚠ Pocket was updated in another tab/);
+  assert.equal(await p.evaluate(() => window.__T.save()), false, 'nothing is saved');
+  /* After a reload, this older build meets the newer database: it says so, and writes nothing, not even to localStorage. */
+  await p.reload();
+  await p.waitForTimeout(300);
+  n = await note(p);
+  assert.ok(n.shown && n.reload);
+  assert.match(n.text, /newer version of Pocket/);
+  const f = await importFile(p, 'pocket-imp-newer.json', { v: 3, items: { h1: 'RLRL' }, runs: [] });
+  assert.equal(await p.textContent('#recMsg'), 'Your records cannot be saved here until Pocket reloads.');
+  const left = await p.evaluate(() => new Promise(res => { const q = indexedDB.open('pocket'); q.onsuccess = () => { const d = q.result, o = { v: d.version, stores: [...d.objectStoreNames].sort() }; d.close(); res(o); }; }));
+  assert.deepEqual(left, { v: 3, stores: ['detail', 'meta', 'more', 'runs'] });
+  assert.equal(await p.evaluate(() => localStorage.getItem('stick-timing-trainer.records.v2')), null, 'no fallback to localStorage');
+  assert.deepEqual(p.errors, []);
+  fs.unlinkSync(f);
+});
+
+test('an older tab holding the database up is named, and the page carries on once it goes', async () => {
+  const ctx = await browser.newContext(contextFor({ width: 390, height: 900 }));
+  /* A tab that opened the database before its stores were made, and does not let go when asked. */
+  const old = await ctx.newPage();
+  await old.goto(base + 'landing/index.html');
+  await old.evaluate(() => new Promise(res => { const q = indexedDB.open('pocket'); q.onsuccess = () => { window.__db = q.result; res(); }; }));
+  const p = await ctx.newPage();
+  p.errors = [];
+  p.on('pageerror', e => p.errors.push(e.message));
+  await p.goto(base);
+  await p.waitForFunction(() => !document.getElementById('dbNote').hidden);
+  const n = await note(p);
+  assert.equal(n.text, '⚠ Pocket is open in another tab on an older version. Close or reload that tab to continue.');
+  assert.equal(n.reload, false, 'reloading this tab would not help');
+  await old.evaluate(() => window.__db.close());
+  await p.waitForFunction(() => document.getElementById('dbNote').hidden);
+  assert.equal(await p.evaluate(() => window.__T.save()), true, 'the database is open');
+  /* It is now at version 2 with only this version's stores: still this version's database after a reload. */
+  await p.reload();
+  await p.waitForTimeout(300);
+  assert.equal((await note(p)).shown, false);
+  assert.equal(await p.evaluate(() => window.__T.save()), true);
+  assert.ok(await p.evaluate(async () => !!(await window.__recs())), 'and saves to it');
+  assert.deepEqual(p.errors, []);
+});
+
+test('every run is kept past 2,000, and a full disk drops the oldest stroke detail before giving up', async () => {
+  const p = await open({ seeded: true });
+  const now = Date.now(), N = 2100, stamp = (t, n, d) => t.toString(36).padStart(9, '0') + '-' + n.toString(36).padStart(6, '0') + '-' + d;
+  const runs = Array.from({ length: N }, (_, i) => { const t = now - (N - i) * 36e5, e = { k: 'h1', due: 16, within: 16, heard: 16 }; if (i % 500 === 499 || i === N - 1) e.sp = 'AbC_'.repeat(50); return { id: stamp(t, i + 1, 'otherdev'), t, sec: 60, bpm: 60, lv: 'beat', exercises: [e] }; });
+  const f = await importFile(p, 'pocket-imp-2100.json', { v: 3, items: { h1: 'RLRL' }, runs });
+  await p.waitForSelector('#exGo', { state: 'visible', timeout: 30000 });
+  await p.click('#exGo');
+  await p.waitForFunction(() => /^Imported/.test(document.getElementById('recMsg').textContent), null, { timeout: 60000 });
+  const saved = async () => withDetail((await p.evaluate(async () => (await window.__recs()).runs)));
+  assert.equal(await p.evaluate(async () => (await window.__recs()).runs.length), N, 'nothing is folded');
+  assert.deepEqual(await saved(), [499, 999, 1499, 1999, 2099]);
+  assert.deepEqual(await p.evaluate(async () => { const o = await window.__recs(); return [o.inline, o.entries]; }), [0, 5], 'the detail is kept apart from the runs');
+  /* Writes fail for lack of space n times, then work again. */
+  const fail = n => p.evaluate(n => {
+    const t = IDBDatabase.prototype.transaction;
+    let left = n;
+    IDBDatabase.prototype.transaction = function (s, m) { if (m === 'readwrite' && left-- > 0) throw new DOMException('full', 'QuotaExceededError'); return t.call(this, s, m); };
+    window.__T.recs().runs[0].exercises[0].sp = 'AbC_';   /* a change, so there is something to write */
+    window.__T.save();
+  }, n);
+  /* Once: the oldest half of the stroke detail goes, and the second write gets through. */
+  await fail(1);
+  await p.waitForTimeout(500);
+  assert.deepEqual(await saved(), [1999, 2099]);
+  assert.doesNotMatch(await p.textContent('#status'), /could not save/);
+  /* Every time: all but the newest run's detail goes, and then the person is told, with a way to export. */
+  await fail(99);
+  await p.waitForFunction(() => /could not save/.test(document.getElementById('status').textContent));
+  assert.equal(await p.textContent('#status'), 'Browser storage is full, so Pocket could not save your records. They are kept while Pocket stays open: export them to keep a copy. Export');
+  assert.deepEqual(withDetail(await p.evaluate(() => window.__T.recs().runs)), [2099], 'in memory, only the newest run keeps its detail');
+  assert.deepEqual(p.errors, []);
+  fs.unlinkSync(f);
+});
+
+test('records saved before 1.5.237 move their stroke detail into its own store, and a drop deletes only that', async () => {
+  const ctx = await browser.newContext(contextFor({ width: 390, height: 900 }));
+  const setup = await ctx.newPage();
+  await setup.goto(base + 'landing/index.html');
+  const now = Date.now(), st = (t, n) => t.toString(36).padStart(9, '0') + '-' + n.toString(36).padStart(6, '0') + '-aaaaaaaa';
+  const run = (i, sp) => ({ id: st(now - (3 - i) * 36e5, i), t: now - (3 - i) * 36e5, u: st(now - 6e4, 10 + i), g: 0, sec: 60, bpm: 60, tol: 20, lv: 'beat', mode: 'single',
+    exercises: [Object.assign({ k: 'RLRL RLRL RLRL RLRL', i: 0, bpm: 60, due: 16, within: 15, heard: 16, miss: 1 }, sp ? { q: 'ooooooooooooooom', sp: 'AbC_'.repeat(16), bb: '0'.repeat(16) } : {})] });
+  /* A database as 1.5.233 to 1.5.236 left it: version 1, the detail on each run. */
+  await setup.evaluate(o => new Promise((res, rej) => {
+    const q = indexedDB.open('pocket', 1);
+    q.onupgradeneeded = () => { q.result.createObjectStore('meta'); q.result.createObjectStore('runs', { keyPath: 'id' }); };
+    q.onsuccess = () => { const d = q.result, tx = d.transaction(['meta', 'runs'], 'readwrite'); tx.objectStore('meta').put({ v: 3, items: {}, names: {}, nu: 1, lib: [] }, 'recs'); o.forEach(r => tx.objectStore('runs').put(r)); tx.oncomplete = () => { d.close(); res(); }; tx.onerror = () => rej(tx.error); };
+    q.onerror = () => rej(q.error);
+  }), [run(1, true), run(2, true), run(3, false)]);
+  await setup.evaluate(() => localStorage.setItem('stick-timing-trainer.v1', JSON.stringify({ settings: { seeded: true, noise: -50, latCal: true }, cal: null })));
+  await setup.close();
+  const p = await ctx.newPage();
+  p.errors = [];
+  p.on('pageerror', e => p.errors.push(e.message));
+  await p.goto(base);
+  await p.waitForTimeout(500);
+  let m = await p.evaluate(async () => { const o = await window.__recs(); return { inline: o.inline, entries: o.entries, u: o.runs.map(r => r.u), sp: o.runs.map(r => !!r.exercises[0].sp), pts: o.runs.map(r => r.pts > 0) }; });
+  assert.deepEqual(m.inline, 0, 'the runs are saved without their detail');
+  assert.equal(m.entries, 2);
+  assert.deepEqual(m.sp, [true, true, false], 'and the detail is in its own store');
+  assert.deepEqual(m.u, [1, 2, 3].map(i => st(now - 6e4, 10 + i)), 'a move is not an edit: the versions stay');
+  assert.deepEqual(m.pts, [true, true, false], 'the score is kept on each run that has its strokes');
+  const score = await p.evaluate(() => window.__T.recs().runs.map(r => r.pts));
+  /* After a reload the detail is read back, and nothing is written again. */
+  await p.reload();
+  await p.waitForTimeout(500);
+  assert.deepEqual(await p.evaluate(() => window.__T.recs().runs.map(r => !!r.exercises[0].sp && !!r.exercises[0].q && !!r.exercises[0].bb)), [true, true, false]);
+  /* The oldest run's detail is dropped: its detail entry goes, its run is not written, and its score stays. */
+  const written = await p.evaluate(() => {
+    const put = IDBObjectStore.prototype.put, del = IDBObjectStore.prototype.delete, log = window.__log = [];
+    IDBObjectStore.prototype.put = function (v, k) { log.push('put ' + this.name); return put.call(this, v, k); };
+    IDBObjectStore.prototype.delete = function (k) { log.push('delete ' + this.name); return del.call(this, k); };
+    const r = window.__T.recs().runs[0];
+    r.exercises.forEach(b => { delete b.sp; delete b.q; delete b.bb; });
+    window.__T.save();
+    return new Promise(res => setTimeout(() => res(log.slice()), 300));
+  });
+  assert.deepEqual(written, ['delete detail', 'put meta']);
+  m = await p.evaluate(async () => { const o = await window.__recs(); return { entries: o.entries, pts: o.runs.map(r => r.pts) }; });
+  assert.equal(m.entries, 1);
+  assert.deepEqual(m.pts, score, 'the scores stay');
+  assert.deepEqual(p.errors, []);
+  await ctx.close();
+});
+
+
+test('a clear starts a new generation: records cleared before 1.5.236 are in generation 1, and an older file brings nothing back', async () => {
+  const ctx = await browser.newContext(contextFor({ width: 390, height: 900 }));
+  const p = await ctx.newPage();
+  p.errors = [];
+  p.on('pageerror', e => p.errors.push(e.message));
+  const t0 = Date.now() - 864e5, ex = () => [{ k: 'RLRL', bpm: 60, due: 16, within: 16, heard: 16 }];
+  const run = (id, t, g) => Object.assign({ id, t, mode: 'single', lv: 'beat', bpm: 60, tol: 20, sec: 60, exercises: ex() }, g === undefined ? {} : { g });
+  await p.addInitScript(r => {
+    if (localStorage.getItem('seeded-by-test')) return;
+    localStorage.setItem('seeded-by-test', '1');
+    /* Cleared by a version before 1.5.236, with a clock that was ahead: a clear time far after the run kept since. */
+    localStorage.setItem('stick-timing-trainer.records.v2', JSON.stringify({ v: 1, z: 9e12, names: {}, nu: 1, lib: [], runs: [r] }));
+    localStorage.setItem('stick-timing-trainer.v1', JSON.stringify({ settings: { seeded: true, noise: -50, latCal: true }, cal: null }));
+  }, run('kept', t0));
+  await p.goto(base);
+  await p.waitForTimeout(300);
+  let m = await p.evaluate(async () => { const o = await window.__recs(); return { gen: o.gen, runs: o.runs.map(r => r.id + ':' + r.g), z: o.z }; });
+  assert.deepEqual(m, { gen: { n: 1, v: '000000000-000000-00000000' }, runs: ['kept:1'], z: undefined }, 'the run kept after the old clear is in generation 1');
+  /* Clear the history: generation 2, at a version after everything seen. */
+  await p.click('#tabSettings').catch(() => {});
+  await p.evaluate(() => document.getElementById('recClear').click());
+  await p.evaluate(() => document.querySelector('#exOpts input[data-k=hist]').click());
+  await Promise.all([p.waitForEvent('load'), p.evaluate(() => { const b = document.getElementById('exGo'); b.click(); b.click(); })]);
+  await p.waitForTimeout(300);
+  m = await p.evaluate(async () => { const o = await window.__recs(); return { n: o.gen.n, v: o.gen.v, runs: o.runs.length }; });
+  assert.equal(m.n, 2);
+  assert.equal(m.runs, 0);
+  assert.notEqual(m.v, '000000000-000000-00000000');
+  /* A file from before the clear (generation 0, played by its clock after it) brings in no runs; one from a later generation comes into this one. */
+  let f = await importFile(p, 'pocket-imp-gen0.json', { v: 1, runs: [run('old', Date.now())] });
+  await p.click('#exGo');
+  await p.waitForFunction(() => /\S/.test(document.getElementById('recMsg').textContent));
+  assert.equal(await p.textContent('#recMsg'), 'Nothing new in what you ticked.');
+  fs.unlinkSync(f);
+  f = await importFile(p, 'pocket-imp-gen5.json', { v: 1, gen: { n: 5, v: '00000000z-000001-bbbbbbbb' }, runs: [run('new', Date.now(), 5)] });
+  await p.click('#exGo');
+  await p.waitForFunction(() => /^Imported/.test(document.getElementById('recMsg').textContent));
+  m = await p.evaluate(async () => { const o = await window.__recs(); return { n: o.gen.n, runs: o.runs.map(r => r.id + ':' + r.g) }; });
+  assert.deepEqual(m, { n: 2, runs: ['new:2'] }, 'an import never changes the generation');
+  fs.unlinkSync(f);
+  assert.deepEqual(p.errors, []);
+});
+
+
 audioTest('coaching says when the exercises were too short for notes on single strokes', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: ['16 RLRL RLRL RLRL RLRL', '16 LRLR LRLR LRLR LRLR'].join(String.fromCharCode(10)), eachUnit: 'pass', eachVal: 2, seeded: true });
   await press(p, /^Start/);
@@ -1247,6 +1431,55 @@ test('Import asks what to bring in, offers only what the file holds, and imports
   assert.equal(after.lib, 1);
 });
 
+test('Importing records from a newer format keeps the totals by device and the fields this version does not know', async () => {
+  const p = await open();
+  const file = path.join(os.tmpdir(), 'pocket-imp-v3.json'), now = Date.now(), stamp = (t, n, d) => t.toString(36).padStart(9, '0') + '-' + n.toString(36).padStart(6, '0') + '-' + d;
+  fs.writeFileSync(file, JSON.stringify({
+    v: 9, future: { a: 1 }, items: { h1: 'RLRL' },
+    runs: [{ id: stamp(now - 6e4, 3, 'otherdev'), t: now - 6e4, sec: 60, bpm: 60, lv: 'beat', mood: 'good', exercises: [{ k: 'h1', due: 16, within: 16, heard: 16, tilt: 2 }] }],
+    sums: { otherdev: { v: stamp(now - 1e5, 2, 'otherdev'), runs: 4, sec: 240, days: {}, pat: [], rt: {}, cov: { otherdev: 2 } } },
+    lib: [{ id: 'zz9', x: 'h1', t: 1, u: stamp(5, 1, 'otherdev'), tag: 'mine' }]
+  }));
+  await p.click('#tabProgress');
+  await p.setInputFiles('#recFile', file);
+  await p.waitForTimeout(300);
+  await p.click('#exGo');
+  await p.waitForTimeout(400);
+  const r = await p.evaluate(async () => window.__recs());
+  assert.equal(r.v, 3, 'written in the format this version knows');
+  assert.deepEqual(r.future, { a: 1 }, 'a field it does not know is kept');
+  assert.equal(r.runs.length, 1);
+  assert.equal(r.runs[0].mood, 'good');
+  assert.equal(r.runs[0].exercises[0].tilt, 2);
+  assert.equal(r.sums.otherdev.runs, 4, "the other device's totals");
+  assert.ok(r.lib.some(e => e.id === 'zz9' && e.tag === 'mine'), 'and on a saved routine');
+  assert.equal(await p.textContent('#recMsg'), 'Imported 1 new run and 1 routine.');
+  await p.reload();
+  await p.click('#tabProgress');
+  await p.waitForTimeout(300);
+  assert.match(await p.textContent('#recMsg'), /^1 run in history, 5 in all\./, "the other device's 4 runs count, read back from storage");
+});
+
+test('A 25 MB import of 1,600 runs comes in whole, with stroke detail cut to its budget', async () => {
+  const p = await open();
+  const file = path.join(os.tmpdir(), 'pocket-imp-big.json'), now = Date.now(), N = 1600, stamp = (t, n, d) => t.toString(36).padStart(9, '0') + '-' + n.toString(36).padStart(6, '0') + '-' + d;
+  const sp = 'AbC_'.repeat(3900), q = 'obmr'.repeat(100);
+  const runs = Array.from({ length: N }, (_, i) => { const t = now - (N - i) * 36e5; return { id: stamp(t, i + 1, 'otherdev'), t, sec: 60, bpm: 60, lv: 'beat', exercises: [{ k: 'h1', due: 16, within: 16, heard: 16, sp, q }] }; });
+  fs.writeFileSync(file, JSON.stringify({ v: 3, items: { h1: 'RLRL' }, runs }));
+  assert.ok(fs.statSync(file).size > 25e6, 'the file is over 25 MB');
+  await p.click('#tabProgress');
+  await p.setInputFiles('#recFile', file);
+  await p.waitForSelector('#exGo', { state: 'visible', timeout: 30000 });
+  await p.click('#exGo');
+  await p.waitForFunction(() => /^Imported/.test(document.getElementById('recMsg').textContent), null, { timeout: 60000 });
+  assert.match(await p.textContent('#recMsg'), /^Imported 1,600 new runs/);
+  const r = await p.evaluate(async () => { const r = await window.__recs(); return { n: r.runs.length, sp: r.runs.reduce((a, x) => a + x.exercises.reduce((b, e) => b + (e.sp || '').length + (e.q || '').length + (e.bb || '').length, 0), 0), newest: !!r.runs.reduce((a, x) => (x.t > a.t ? x : a)).exercises[0].sp }; });
+  assert.equal(r.n, N, 'every run is kept');
+  assert.ok(r.sp <= 20e6 && r.sp > 19e6, 'stroke detail (timing, results and buzz counts) fills its 20M-character budget and no more');
+  assert.ok(r.newest, 'the newest run keeps its stroke detail');
+  fs.unlinkSync(file);
+});
+
 audioTest('a scored run shows its score against the maximum, and flags a new high score', async () => {
   const p = await open({ input: 'kb', bpm: 120, routineText: '8 RLRL', eachUnit: 'pass', eachVal: 1, click: 'half', seeded: true, game: true });
   await press(p, /^Start/);
@@ -1512,7 +1745,9 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   await p.waitForTimeout(300);
   assert.equal(await libN(), n0 + 1, 'the routine joins the library');
   const runsN = () => p.evaluate(async () => ((await window.__recs()) || { runs: [] }).runs.length);
-  const daySec = () => p.evaluate(async () => { const r = (await window.__recs()); return Object.values(r.sum.days).reduce((t, v) => t + v, 0) + r.runs.reduce((t, x) => t + (x.sec || 0), 0); });
+  const daySec = () => p.evaluate(async () => { const r = (await window.__recs()); return Object.values(r.sums || {}).reduce((t, e) => t + Object.values(e.days).reduce((s, v) => s + v, 0), 0) + Object.values(r.xs || {}).reduce((t, x) => t + x[1], 0) + r.runs.reduce((t, x) => t + (x.sec || 0), 0); });
+  const runId = await p.evaluate(async () => (await window.__recs()).runs[0].id);
+  const marks = () => p.evaluate(async id => { const r = await window.__recs(); return { gone: !!(r.gone || {})[id], xs: !!(r.xs || {})[id] }; }, runId);
   const sec0 = await daySec(), runSec = await p.evaluate(async () => (await window.__recs()).runs[0].sec);
   assert.ok(runSec > 0, 'the run has a time: ' + runSec);
   await p.click('#advDiscard');
@@ -1523,6 +1758,7 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   assert.equal(await libN(), n0, 'discarding takes it back out');
   assert.equal(await runsN(), 0);
   assert.equal(await daySec(), sec0, 'its time still counts towards the day');
+  assert.deepEqual(await marks(), { gone: true, xs: true }, 'a deleted marker stays, so a sync does not bring the run back, and its time is kept by id');
   assert.equal(await p.evaluate(() => document.body.dataset.state), 'idle', 'back to the start screen');
   assert.match(await p.textContent('#status'), /^Run discarded\./);
   assert.equal(await p.evaluate(() => document.activeElement.textContent), 'Undo', 'focus moves to Undo, not lost with the Discard button');
@@ -1530,6 +1766,7 @@ audioTest('A kept routine is saved to the library on its own, and discarding the
   await p.waitForTimeout(300);
   assert.equal(await runsN(), 1, 'Undo puts the run back');
   assert.equal(await daySec(), sec0, 'and its time is not counted twice');
+  assert.deepEqual(await marks(), { gone: false, xs: false }, 'Undo takes the marker and the kept time off');
   assert.equal(await libN(), n0 + 1, 'and the routine saved with it');
   assert.equal(await p.evaluate(() => document.body.dataset.state), 'done', 'and shows the result again');
   assert.equal(await p.isVisible('#advDiscard'), true);

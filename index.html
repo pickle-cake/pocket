@@ -154,6 +154,7 @@ input[type=range]:disabled,input[type=text]:disabled,input[type=number]:disabled
 .panel>p:empty,.panel>ul:empty{display:none}   /* empty message slots would add a grid gap each */
 .hint{font-size:13px;color:var(--muted);margin:0}
 .notice{margin:var(--s-2) 0 0;padding:var(--s-3);border-left:3px solid var(--accent);font:var(--t-small) var(--font-body)}   /* flat, with an accent rail */
+.notice.warn{border-left-color:var(--warn)}
 .notice ul{margin:var(--s-2) 0;padding-left:var(--s-5)}.notice li{margin:var(--s-1) 0}.notice p{margin:0}
 .btn.link{background:none;border-color:transparent;color:var(--accent);padding-inline:var(--s-1);min-width:var(--hit)}   /* tertiary: brass text, no box */
 .btn.link.inl{margin-block:calc(-1*var(--s-3));padding-block:0;vertical-align:baseline}   /* in a line of text: still a 44px target, without opening up the line */
@@ -218,11 +219,6 @@ body[data-run="1"] .notice{display:none}
 .rows.rv.more-up{-webkit-mask-image:linear-gradient(to top,var(--ink) calc(100% - var(--s-6)),transparent);mask-image:linear-gradient(to top,var(--ink) calc(100% - var(--s-6)),transparent)}
 .rows.rv.more-up.more-dn{-webkit-mask-image:linear-gradient(to bottom,transparent,var(--ink) var(--s-6),var(--ink) calc(100% - var(--s-6)),transparent);mask-image:linear-gradient(to bottom,transparent,var(--ink) var(--s-6),var(--ink) calc(100% - var(--s-6)),transparent)}
 #rowsMore{margin-top:8px}
-.stobar{position:relative;display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--line)}
-.stobar i{display:block;height:100%}
-.stobar i.stomk{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);opacity:.6}
-.stoleg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
-.stoleg span{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
 .glib>summary{font-size:15px;padding:12px 14px}
 .glib>.gb{display:grid;gap:8px;padding:0 8px 8px}
 .rvhost{overflow-y:auto;overflow-x:hidden;border-radius:var(--r-lg);overscroll-behavior:auto}
@@ -843,6 +839,7 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     </nav>
   </header>
   <p class="notice" id="updNote" hidden><span id="updText"></span> <button class="btn link" id="updGo" type="button">Update</button> <button class="btn link" id="updLater" type="button">Later</button></p>
+  <p class="notice warn" id="dbNote" role="alert" hidden><span id="dbText"></span> <button class="btn link" id="dbGo" type="button">Reload</button></p>
 
   <div id="stTop"><p class="status" id="status" role="status" aria-live="polite"></p></div>
 
@@ -967,9 +964,6 @@ button[data-armed],.btn[data-armed],.menu button[data-armed]{background:var(--da
     </section>
     <section class="panel" aria-label="Storage">
       <h3>Storage</h3>
-      <p class="hint" id="stoTotal"></p>
-      <div class="stobar" id="stoBar" role="img"></div>
-      <div class="stoleg" id="stoLeg"></div>
       <p class="hint" id="stoNote"></p>
     </section>
     <section class="panel" aria-label="Library links">
@@ -1406,7 +1400,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>Progress page:</b> every exercise, sorted by accuracy, with accuracy at your last tempo, trend and early/late bias, grouped by click level. Play loads that exercise. A routine is cleared at a tempo when one run covered every exercise and all reached 90%.</li>
         <li><b>Tempo guidance:</b> each exercise in the start list shows the tempo it has cleared, or "new". The summary shows where the whole routine has been cleared.</li>
         <li><b>Staff of a run:</b> each run keeps the result of every stroke. A run's page has a <b>Staff</b> group showing the notation with each stroke coloured and read out, and the Play page rebuilds its review from the same record.</li>
-        <li><b>History:</b> on the Progress page, switch to History for your last 300 runs, by exercise or routine, newest first. Tap a group for its runs and a run for its exercises. <b>Play</b> loads the same routine, tempo, click level and settings, ready to start. <b>Delete</b> deletes the run. The ⋮ beside an exercise deletes just that exercise from the run, for one that was in the editor by mistake. An exercise nothing was heard in is listed as not played and is never scored. An untitled routine is called "Untitled 1", "Untitled 2" and so on. The pencil renames it everywhere, and a title typed in the editor replaces it. Runs beyond 300 are folded into your totals, streaks, achievements and cleared tempos, which are kept for good, but they can no longer be replayed.</li>
+        <li><b>History:</b> on the Progress page, switch to History for every run, by exercise or routine, newest first. Tap a group for its runs and a run for its exercises. <b>Play</b> loads the same routine, tempo, click level and settings, ready to start. <b>Delete</b> deletes the run. The ⋮ beside an exercise deletes just that exercise from the run, for one that was in the editor by mistake. An exercise nothing was heard in is listed as not played and is never scored. An untitled routine is called "Untitled 1", "Untitled 2" and so on. The pencil renames it everywhere, and a title typed in the editor replaces it. Every run is kept, so any of them can be replayed. When storage runs short, the oldest runs lose their stroke detail first; their scores stay.</li>
       </ul>
     </section>
 
@@ -1421,7 +1415,7 @@ RLRR LRLL RLRR LRLL</pre>
         <li><b>How accents are scored:</b> with the microphone, each accent is compared with the strokes around it and each ghost note with its neighbours. An accent must be about 4 dB louder and a ghost note about 6 dB quieter. Strokes less than 60 ms apart are not judged. Ghost notes are heard down to 14 dB below the trigger line (the dashed line on the Settings meter), kept at least 6 dB above the room noise from your last Mic check. A quiet hit counts only on a ghost note, so room noise elsewhere is ignored. The rule is saved with each run, and an exercise played with a different rule has its own scores and History group. Keyboard input does not judge loudness.</li>
         <li><b>Flams and drags:</b> only the main stroke is scored, as early or late against the click. With the microphone, Pocket reads every strike in the loudness and works out which are grace notes and which is the main stroke, so a main stroke played just after its graces is still timed from the main stroke. A flam's grace comes up to 95 ms before it, and a drag's two graces up to 270 ms before it, or starting on the click when the main stroke is late. The main stroke should be the louder: a grace as loud as it can be read as the main stroke, so play graces softer. Grace notes are not counted as extras, and nor is a much quieter rebound just after a stroke. Keyboard play has no graces, so use one key per main stroke.</li>
         <li><b>Buzz strokes:</b> only the start of each buzz is scored, as early or late against the click. The bounces after it are not extras. A soft buzz that starts while the stroke before still rings is still heard as a stroke when it lands near its click. With the microphone, Pocket also counts the bounces it hears: the small number beside each buzz stroke on the staff, during the run and in History. After the run it says how many each buzz had on average, how far it rang towards the next stroke, and how many sounded like single strokes (a group of four buzzes in a row with 1 bounce or fewer each on average, or up to 1.5 and almost as loud as your plain strokes, since a buzz pressed into the pad is quieter). This is experimental: a pad and microphone hear bounces differently, so treat it as a guide. Keyboard play scores the start only.</li>
-        <li><b>Records and storage:</b> records are saved in this browser only. Export keeps a copy or moves it to another device, and Import brings it back. The app reminds you if you have never exported, or the last copy is two weeks old. On iPhone and iPad, Safari can clear a site's data after about a week without use, so add the page to your Home Screen. <b>Settings &rsaquo; Data &rsaquo; Storage</b> shows what takes space. Stroke detail (what rebuilds a run's staff) may use about 40% of what the browser allows. Past that, the oldest runs lose their detail first and keep their totals.</li>
+        <li><b>Records and storage:</b> records are saved in this browser only. Export keeps a copy or moves it to another device, and Import brings it back. The app reminds you if you have never exported, or the last copy is two weeks old. On iPhone and iPad, Safari can clear a site's data after about a week without use, so add the page to your Home Screen. <b>Settings &rsaquo; Data &rsaquo; Storage</b> shows the space used. Stroke detail (what rebuilds a run's staff) may use up to 40 MB, or about 40% of what the browser allows where it has no database. Past that, the oldest runs lose their detail first and keep their scores and counts.</li>
       </ul>
     </section>
 
@@ -3114,6 +3108,156 @@ function clearedBefore(runs,k,lv,sum,dy){
 }
 /* Runs that age out of the detail list are folded into a small permanent summary, so totals, streaks, badges and cleared tempos never shrink. */
 const newSum=()=>({runs:0,sec:0,days:{},pat:{},rt:{},cr:0,cs:0,pf:0,hs:{},hr:{}});
+/* ---------- stamps: ids and versions (SYNC-PLAN.md, step 2) ----------
+   A stamp is time, counter and device: 'ttttttttt-cccccc-dddddddd', base 36 at fixed widths, so comparing two as text compares the time,
+   then the counter, then the device. On one device the time never goes back and the counter only goes up, so its stamps always rise, even
+   when its clock does not; the device settles an exact tie, so no edit is lost to one. ZERO is the version of anything from before sync,
+   which any real edit beats. Ids from before stamps (time and random letters) stay as they are. */
+const STAMP_RE=/^[0-9a-z]{9}-[0-9a-z]{6}-[0-9a-z]{8}$/;
+const isStamp=s=>typeof s==='string'&&STAMP_RE.test(s);
+const makeStamp=(t,n,dev)=>Math.max(0,Math.floor(t)).toString(36).padStart(9,'0')+'-'+Math.max(0,Math.floor(n)).toString(36).padStart(6,'0')+'-'+dev;
+const ZERO=makeStamp(0,0,'00000000');
+const stampTime=s=>isStamp(s)?parseInt(s.slice(0,9),36):0;
+const stampN=s=>parseInt(s.slice(10,16),36);
+const stampDev=s=>s.slice(17);
+const verOf=x=>isStamp(x.u)?x.u:ZERO;   /* an item's version: its stamp u, set when it was changed or restored */
+/* Versions count; they do not keep time. The time part of a new version is one more than the highest version seen (nextTime), so an
+   edit beats every version it has seen, whatever any clock says, and a merge never depends on a clock or on when it runs. A version
+   stamped by a clock once set ahead is just a large number to count up from. Ids still carry the clock (newStamp): they only need to be
+   unique, which the counter and device make sure of. Versions are counted from versions only, never from ids. */
+const MAX_TIME=36**9-1;   /* nine base-36 digits: past it, a version could not be newer by its time part */
+const nextTime=(seen,...after)=>{let m=Math.max(0,+seen||0);after.forEach(s=>{if(isStamp(s))m=Math.max(m,stampTime(s));});return Math.min(MAX_TIME,m+1);};
+/* The highest version in records or settings: versions, markers, setting and name times, totals entries and the generation. After
+   taking in another copy, a device counts up from it (seeVersions), so an edit it makes next is newer than every version it has seen. */
+function latestVersion(...os){
+  let m=0;const see=s=>{if(isStamp(s))m=Math.max(m,stampTime(s));},marks=o=>{if(o&&typeof o==='object')Object.keys(o).forEach(k=>see(o[k]));};
+  os.forEach(o=>{
+    if(!o||typeof o!=='object')return;
+    if(o.gen)see(o.gen.v);
+    [o.runs,o.lib,o.lists].forEach(l=>{if(Array.isArray(l))l.forEach(x=>{if(x)see(x.u);});});
+    [o.gone,o.libGone,o.listGone,o.nt,o.setT].forEach(marks);
+    if(o.sums&&typeof o.sums==='object')Object.keys(o.sums).forEach(d=>see(o.sums[d]&&o.sums[d].v));
+  });
+  return m;
+}
+/* ---------- generations ----------
+   Clearing the history starts a new generation: gen is {n, v}, its number and the version of the clear. Every run records the
+   generation it was played in (g). A merge keeps the higher generation, and of two clears that did not see each other (the same
+   number), the newer version. Everything in the history from an older generation goes: a clear is a fresh start everywhere, no clock
+   involved. Two copies in the same generation both started afresh, and combine as usual. */
+const genOf=o=>{const g=o&&o.gen,n=g?Math.floor(+g.n):0;return {n:n>0&&n<=1e9?n:0,v:g&&isStamp(g.v)?g.v:ZERO};};
+const genWins=(x,y)=>x.n!==y.n?x.n>y.n:x.v>y.v;
+/* Of two different copies at the same version (data from before sync is all at version zero), the one to keep, the same on every
+   device: a value over none, then the larger as JSON. */
+const tieWins=(x,y)=>x!==undefined&&(y===undefined||JSON.stringify(x)>JSON.stringify(y));
+/* ---------- totals by device ----------
+   sums maps a device id to the totals of the runs that device folded away: newSum() plus v, its version, and what it covers.
+   cov: device id -> the highest counter of that device's runs folded in. ids: runs with old ids folded in. upTo: before 1.5.231 a fold
+   kept no ids, so runs with old ids up to that time count as folded. The totals shown add every device's entry up. */
+const newEntry=v=>Object.assign(newSum(),{v:v||ZERO,cov:{},ids:[],upTo:0});
+function addSums(list){
+  const s=newSum(),later=(p,q)=>(p.t||0)>(q.t||0);
+  list.forEach(e=>{
+    s.runs+=e.runs||0;s.sec+=e.sec||0;s.pf+=e.pf||0;s.cr=Math.max(s.cr,e.cr||0);s.cs=Math.max(s.cs,e.cs||0);
+    Object.keys(e.days||{}).forEach(k=>{s.days[k]=(s.days[k]||0)+e.days[k];});
+    ['hs','hr'].forEach(f=>Object.keys(e[f]||{}).forEach(k=>{if(e[f][k]>(s[f][k]||0))s[f][k]=e[f][k];}));
+    Object.keys(e.pat||{}).forEach(k=>{
+      const p=e.pat[k],q=s.pat[k];
+      if(!q){s.pat[k]=Object.assign({},p,{tr:(p.tr||[]).slice()});return;}
+      const n=Object.assign({},later(p,q)?p:q);n.tr=(n.tr||[]).slice();n.runs=(p.runs||0)+(q.runs||0);   /* the trend, tempo and average from the later of the two */
+      const c=(p.cleared||0)>(q.cleared||0)?p:q;n.cleared=c.cleared;n.clearedT=c.clearedT;
+      n.tc=p.tc||q.tc?1:undefined;n.ec=p.ec||q.ec?1:undefined;s.pat[k]=n;
+    });
+    Object.keys(e.rt||{}).forEach(k=>{
+      const p=e.rt[k],q=s.rt[k];
+      if(!q){s.rt[k]=Object.assign({},p);return;}
+      s.rt[k]=Object.assign({},q,{runs:(p.runs||0)+(q.runs||0),t:Math.max(p.t||0,q.t||0),cleared:Math.max(p.cleared||0,q.cleared||0),ftc:p.ftc||q.ftc?1:undefined});
+    });
+  });
+  return s;
+}
+/* The totals as shown, from records {sums, xs}: every device's entry added up, and the time of discarded runs. */
+const sumView=r=>Object.assign(addSums(Object.keys(r.sums||{}).map(d=>r.sums[d])),{xs:r.xs||{}});
+/* Whether a run is already in any device's totals. */
+function coverage(sums){
+  const cov={},ids=new Set();let upTo=0;
+  Object.keys(sums||{}).forEach(d=>{const e=sums[d];Object.keys(e.cov||{}).forEach(k=>{if(!(cov[k]>=e.cov[k]))cov[k]=e.cov[k];});(e.ids||[]).forEach(i=>ids.add(i));upTo=Math.max(upTo,e.upTo||0);});
+  return r=>isStamp(r.id)?cov[stampDev(r.id)]>=stampN(r.id):r.t<=upTo||ids.has(r.id);
+}
+/* Each device's entry is the newer of two copies. */
+function mergeSums(a,b){
+  const out={};
+  [a||{},b||{}].forEach(o=>Object.keys(o).forEach(d=>{const e=o[d];if(!out[d]||e.v>out[d].v||(e.v===out[d].v&&tieWins(e,out[d])))out[d]=e;}));
+  return out;
+}
+/* ---------- merging two copies of the records ----------
+   Runs combine by id, everything else by newest version. A deleted marker (id -> the stamp of the delete) wins over any version that is
+   not newer, so a run deleted on one copy stays deleted unless it was restored (Undo, import) after. An edit made after a delete on
+   another copy brings the item back: the last change wins. Two saved routines with the same exercises keep the newer one. */
+/* Every marker is kept, never trimmed: a trimmed marker would let an old copy bring its item back. One is about 45 characters. */
+function mergeMarks(a,b){
+  const o=Object.assign({},a);
+  Object.keys(b||{}).forEach(k=>{if(!(o[k]>=b[k]))o[k]=b[k];});
+  return o;
+}
+function newestById(as,bs,gone,ver,tie){
+  const m=new Map();
+  const better=(x,y)=>{const p=ver(x),q=ver(y);if(p!==q)return p>q;const d=tie?tie(x,y):0;return d?d>0:tieWins(x,y);};   /* the same version: tie, then tieWins */
+  [as||[],bs||[]].forEach(l=>l.forEach(x=>{const y=m.get(x.id);if(!y||better(x,y))m.set(x.id,x);}));
+  return [...m.values()].filter(x=>!(gone[x.id]>=ver(x)));
+}
+/* One copy of a duplicate (same key) stays, the newest; the others get a deleted marker so they do not come back. */
+function dropDuplicates(list,key,ver,gone){
+  const best=new Map();
+  list.forEach(x=>{const k=key(x);if(!k)return;const y=best.get(k);if(!y||ver(x)>ver(y)||(ver(x)===ver(y)&&x.id>y.id))best.set(k,x);});
+  return list.filter(x=>{const k=key(x),y=k&&best.get(k);if(!y||y===x)return true;if(!(gone[x.id]>=ver(y)))gone[x.id]=ver(y);return false;});
+}
+const MAX_MARKS=5000;   /* old folded ids and discarded times read back; deleted markers have no limit */
+/* Markers and version maps read back from storage: key to a trusted stamp, all of them. */
+const cleanMarks=m=>{const out={};if(m&&typeof m==='object'&&!Array.isArray(m))Object.keys(m).forEach(k=>{if(isStamp(m[k]))out[k.slice(0,400)]=m[k];});return out;};
+/* A run's stroke detail: per exercise, the timing of each stroke (sp), its result (q) and the buzz counts (bb). They are kept and
+   dropped together. detailLen counts all three. */
+const DETAIL_KEYS=['sp','q','bb'];
+const exDetail=b=>(b.sp?b.sp.length:0)+(b.q?b.q.length:0)+(b.bb?b.bb.length:0);
+const detailLen=r=>r.exercises.reduce((n,b)=>n+exDetail(b),0);
+const hasDetail=r=>r.exercises.some(b=>exDetail(b)>0);
+const dropRunDetail=r=>r.exercises.forEach(b=>DETAIL_KEYS.forEach(k=>{delete b[k];}));
+/* a and b: {runs, sums, gen, xs, names, nt, nu, lib, gone, libGone, x}. gen: the generation (see genOf); a copy from an older one
+   brings no history with it, and a run from an older one goes (a run without g is in its copy's generation). xs: discarded runs,
+   id -> [time, seconds], so two devices count their time once. x: fields this version does not know, kept as they are. key(text) is
+   a saved routine's key. Neither copy is changed. Saved routines are not history: a clear leaves them. */
+// eslint-disable-next-line no-unused-vars -- sync (step 3 of SYNC-PLAN.md) calls it; the tests use it now
+function mergeRecs(a,b,key,maxLib){
+  const ga=genOf(a),gb=genOf(b),gen=genWins(gb,ga)?gb:ga,ha=ga.n<gen.n?{}:a,hb=gb.n<gen.n?{}:b;   /* ha, hb: the history each copy brings */
+  const cur=o=>{const g=genOf(o).n;return (o.runs||[]).filter(r=>(r.g===undefined?g:r.g)>=gen.n);};
+  const sums=mergeSums(ha.sums,hb.sums),folded=coverage(sums),xs={};
+  [ha.xs,hb.xs].forEach(o=>Object.keys(o||{}).forEach(id=>{if(!folded({id:id,t:o[id][0]}))xs[id]=o[id];}));   /* folded: its time is in that device's totals */
+  const gone=mergeMarks(ha.gone,hb.gone);
+  const runs=newestById(cur(a),cur(b),gone,verOf,(x,y)=>detailLen(x)-detailLen(y))   /* the same version: the copy that kept its stroke detail */
+    .filter(r=>!folded(r)).sort((x,y)=>x.t-y.t);
+  const libGone=mergeMarks(a.libGone,b.libGone);
+  const lib=dropDuplicates(newestById(a.lib,b.lib,libGone,verOf),e=>key(e.x),verOf,libGone).sort((x,y)=>x.t-y.t).slice(-(maxLib||500));
+  const names={},nt={},an=ha.names||{},bn=hb.names||{};
+  new Set(Object.keys(ha.nt||{}).concat(Object.keys(hb.nt||{}),Object.keys(an),Object.keys(bn))).forEach(k=>{
+    const ta=(ha.nt||{})[k]||ZERO,tb=(hb.nt||{})[k]||ZERO,w=tb>ta?bn:ta>tb?an:tieWins(bn[k],an[k])?bn:an,t=tb>ta?tb:ta;
+    nt[k]=t;
+    if(typeof w[k]==='string')names[k]=w[k];   /* none: the name was taken off */
+  });
+  return {runs:runs,sums:sums,gen:gen,xs:xs,names:names,nt:nt,nu:Math.max(a.nu||1,b.nu||1),lib:lib,gone:gone,libGone:libGone,x:Object.assign({},b.x,a.x)};
+}
+/* Settings that travel: a and b are {set, setT, lists, listGone}. Each setting is the one changed last; libraries combine as routines do, one per address. */
+// eslint-disable-next-line no-unused-vars -- sync (step 3 of SYNC-PLAN.md) calls it; the tests use it now
+function mergeSettings(a,b,keys){
+  const set={},setT={};
+  keys.forEach(k=>{
+    const ta=(a.setT||{})[k]||ZERO,tb=(b.setT||{})[k]||ZERO,w=tb>ta?b:ta>tb?a:tieWins((b.set||{})[k],(a.set||{})[k])?b:a,t=tb>ta?tb:ta;
+    if(w.set&&w.set[k]!==undefined)set[k]=w.set[k];
+    if(t!==ZERO)setT[k]=t;
+  });
+  const listGone=mergeMarks(a.listGone,b.listGone);
+  const lists=dropDuplicates(newestById(a.lists,b.lists,listGone,verOf),l=>l.url,verOf,listGone).slice(0,20);
+  return {set:set,setT:setT,lists:lists,listGone:listGone};
+}
 /* A clean routine run: two or more exercises played right through, every one at the target. A perfect exercise: at least 16 strokes, every one on time, and no extra hits. */
 const sweepRun=run=>run.lv!=='off'&&run.ne>=2&&run.exercises.length>=run.ne&&run.exercises.every(b=>b.due>0&&b.within/b.due>=TARGET);
 const runStrokes=run=>run.exercises.reduce((n,b)=>n+(b.due||0),0);   /* the strokes a run asked for */
@@ -3156,7 +3300,12 @@ function unpackStrokes(sp){
   return out;
 }
 const exCodes=b=>typeof b.q==='string'?b.q:(typeof b.sp==='string'?unpackStrokes(b.sp).map(x=>x.r==='s'||x.r==='l'?'b':x.r).join(''):'');
-const runScore=run=>scoreParts(run.exercises.map(b=>[exCodes(b),strokeMult(b.k,b.bpm||run.bpm,run.tol,run.gb)]),run.lv);
+const liveScore=run=>scoreParts(run.exercises.map(b=>[exCodes(b),strokeMult(b.k,b.bpm||run.bpm,run.tol,run.gb)]),run.lv);
+const hasCodes=run=>run.exercises.some(b=>exCodes(b).length>0);
+/* A run's score comes from its strokes. Its stroke detail can be dropped, so the score is also kept on the run (pts), and used once
+   the strokes are gone. keepScore sets it while they are there. */
+const runScore=run=>hasCodes(run)?liveScore(run):(run.pts||0);
+const keepScore=run=>{if(hasCodes(run))run.pts=liveScore(run);return run;};
 /* The score of a flawless run at a level: every stroke on time. segs is [strokes, tempo multiplier] for each exercise in order. */
 const maxPoints=(segs,lv)=>{
   const p=LV_PTS[lv];if(!p)return 0;const c=STREAK_CAP;
@@ -3184,44 +3333,20 @@ function scoreBreakdown(run){
       if(c==='o'){on++;streak++;if(streak>best)best=streak;}
       else{streak=0;if(c==='m')miss++;else off++;}
     }
-    if(s[0]+s[1]+s[2]===off-off0){early+=s[0];late+=s[1];dyn+=s[2];}else split+=off-off0;   /* stroke data that was trimmed or never saved */
+    if(!exCodes(b)){const w=b.within||0,x=Math.min(b.miss||0,Math.max(0,(b.due||0)-w));on+=w;miss+=x;off+=Math.max(0,(b.due||0)-w-x);n+=b.due||0;mw+=(b.due||0)*m;}   /* its detail was dropped: the counts kept on the exercise (no streak, no hits on a rest) */
+    if(s[0]+s[1]+s[2]===off-off0){early+=s[0];late+=s[1];dyn+=s[2];}else split+=off-off0;   /* stroke data that was dropped or never saved */
   });
   const missed=Math.min(miss,unplayed);   /* a Miss is a stroke that was due and not played, or a hit on a rest */
   return {due:due,on:on,off:off,early:early,late:late,dyn:dyn,split:split,miss:missed,rest:miss-missed,best:best,tempo:n?mw/n:1};
 }
 function highScores(runs,sum){const o=Object.assign({},sum&&sum.hs);runs.forEach(r=>{const v=runScore(r);if(v>(o[r.lv]||0))o[r.lv]=v;});return o;}
-function foldRun(sum,run){
-  sum.runs++;sum.sec+=run.sec||0;
-  {const v=runScore(run);sum.hs=sum.hs||{};if(v>(sum.hs[run.lv]||0))sum.hs[run.lv]=v;}
-  {const v=Math.round(runShare(run)*1e4)/1e4,k=shareKey(run.lv,run.tol,run.gb);sum.hr=sum.hr||{};if(v>(sum.hr[k]||0))sum.hr[k]=v;}
-  if(sweepRun(run)){sum.cr=Math.max(sum.cr||0,run.sec||0);sum.cs=Math.max(sum.cs||0,runStrokes(run));}
-  sum.pf=(sum.pf||0)+perfectN(run);
-  const dk=dayKey(run.t);sum.days[dk]=(sum.days[dk]||0)+(run.sec||0);
-  if(run.lv==='off')return;
-  run.exercises.forEach(b=>{
-    if(!(b.due>0)||!(b.heard>0))return;
-    const key=statKey(b.k,run.lv,run.dy),bpm=b.bpm||run.bpm,pct=b.within/b.due;
-    let e=sum.pat[key];if(!e){e={k:b.k,lv:run.lv,dy:run.dy||'',runs:0,t:0,bpm:bpm,tr:[],cleared:0,clearedT:0,avg:null};sum.pat[key]=e;}
-    e.runs++;e.t=run.t;
-    if(bpm!==e.bpm){e.bpm=bpm;e.tr=[];}
-    e.tr.push(Math.round(pct*1000)/1000);if(e.tr.length>12)e.tr.shift();
-    e.avg=heardEnough(b)&&typeof b.avg==='number'?b.avg:null;
-    if(pct>=TARGET&&bpm>e.cleared){e.cleared=bpm;e.clearedT=run.t;}
-    if(tightClear(run,b))e.tc=1;
-    if(evenClear(b))e.ec=1;
-  });
-  if(run.rk){
-    const key=statKey(run.rk,run.lv,run.dy);
-    let e=sum.rt[key];if(!e){e={rk:run.rk,lv:run.lv,dy:run.dy||'',ne:run.ne,runs:0,t:0,cleared:0};sum.rt[key]=e;}
-    e.runs++;e.t=run.t;
-    if(run.exercises.length>=run.ne&&run.exercises.every(b=>b.due>0&&b.within/b.due>=TARGET)){if(run.ft)e.ftc=1;else e.cleared=Math.max(e.cleared,run.bpm);}
-  }
-}
 /* Practice days. dayKey is the local date; minutes per day; the streak allows one rest day in any seven. */
 const dayKey=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
 function practiceDays(runs,sum){
   const m=new Map();
   if(sum)Object.keys(sum.days).forEach(k=>m.set(k,sum.days[k]));
+  const have=new Set(runs.map(r=>r.id));
+  if(sum&&sum.xs)Object.keys(sum.xs).forEach(id=>{if(have.has(id))return;const x=sum.xs[id],k=dayKey(x[0]);m.set(k,(m.get(k)||0)+x[1]);});   /* discarded runs: played, so their time counts */
   runs.forEach(r=>{const k=dayKey(r.t);m.set(k,(m.get(k)||0)+(r.sec||0));});
   return m;
 }
@@ -3585,8 +3710,21 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.230';                           /* shown beside the title */
+const VERSION='1.5.238';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
+/* This device: a random id, made once and kept only here (never exported or synced), its stamp counter, and v, the highest version time it has made or seen. */
+const DKEY=KEY+'.dev';
+const dev=(()=>{let d=null;try{d=JSON.parse(localStorage.getItem(DKEY)||'null');}catch(e){}
+  if(!d||typeof d.id!=='string'||!/^[0-9a-z]{8}$/.test(d.id)){const a=new Uint8Array(8);crypto.getRandomValues(a);d={id:[...a].map(x=>(x%36).toString(36)).join(''),n:0,v:0};}
+  d.n=Math.max(0,Math.floor(+d.n)||0);d.v=Math.min(MAX_TIME,Math.max(0,Math.floor(+d.v)||0,Math.floor(+d.t)||0));delete d.t;return d;})();   /* t: the stamp time before 1.5.235, which every version made or seen was at or below */
+const saveDev=()=>{try{localStorage.setItem(DKEY,JSON.stringify(dev));}catch(e){}};
+/* A new id from this device: the clock, the counter, which only goes up, and the device, so no two are the same. */
+function newStamp(){dev.n++;saveDev();return makeStamp(Date.now(),dev.n,dev.id);}
+/* A new version: newer than every version this device has made or seen, and than the stamps given (the item's version, or its deleted
+   marker), whatever the clock says (nextTime). */
+function newVersion(...after){dev.v=nextTime(dev.v,...after);dev.n++;saveDev();return makeStamp(dev.v,dev.n,dev.id);}
+/* Records or settings from elsewhere were taken in: the count moves up to the highest version in them (latestVersion). */
+const seeVersions=t=>{if(t>dev.v){dev.v=Math.min(MAX_TIME,Math.floor(t));saveDev();}};
 const MAX_TEXT=200000;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const LOOKAHEAD=0.35;                            /* how far ahead clicks are scheduled, in seconds */
@@ -3595,7 +3733,11 @@ const STARTER='RLRL RLRL RLRL RLRL';
 const HOSTED={wStarter:['routines/starter.txt','Starter routines'],wRudiments:['routines/rudiments.txt','Standard rudiments']};   /* libraries kept next to the app */
 /* The starter list sits beside the page. A page opened from a preview or from disk has no web address to resolve it against. */
 const hostedHref=path=>{try{return new URL(path,location.href).href;}catch(e){return '';}};
-const hostedLists=()=>Object.keys(HOSTED).map(id=>({url:hostedHref(HOSTED[id][0]),name:HOSTED[id][1],t:0})).filter(l=>l.url);
+const hostedLists=()=>Object.keys(HOSTED).map(id=>({id,url:hostedHref(HOSTED[id][0]),name:HOSTED[id][1],t:0})).filter(l=>l.url);   /* a hosted library has the same id on every device */
+/* A library link's id: made from its first address, and kept when the address is edited, so two devices agree on which link is which. */
+const listId=url=>{const h=Object.keys(HOSTED).find(id=>hostedHref(HOSTED[id][0])===url);return h||'k'+hashOf(url);};
+/* A new link takes the id of its address, unless another link already has it (one whose address was edited away). Adding it again lifts its deleted marker. */
+const newListId=url=>{let id=listId(url);while(S.lists.some(q=>q.id===id))id='k'+hashOf(id+Math.random());delete S.listGone[id];return id;};
 const S={mode:'single',routineText:STARTER,eachUnit:'pass',eachVal:8,gap:0,   /* a fresh app: 8 passes at 40 BPM on the Easy click, so the first exercise is simple */
   pulse:true,startExercise:1,
   bpm:40,subdiv:4,click:'strokes',lastExport:0,expRuns:0,tol:20,sens:-30,settle:40,accent:'',others:'n',noise:null,vol:60,latency:null,latCal:false,input:'mic',editTab:'build',theme:'',palette:'std',libId:'',libSort:'name'};
@@ -3621,7 +3763,8 @@ S.others=S.accent&&S.others==='g'?'g':'n';               /* the other strokes: n
 S.noise=typeof S.noise==='number'&&isFinite(S.noise)?clamp(Math.round(S.noise),-90,-10):null;   /* room noise in dB from the last Mic check, on this device */
 S.settle=clamp(Math.round(+S.settle)||40,20,120);
 /* Saved libraries: address, name, and the last loaded routines (kept for the three newest loads only). */
-S.lists=Array.isArray(S.lists)?S.lists.filter((l,i,a)=>l&&typeof l.url==='string'&&l.url.length<=500&&a.findIndex(q=>q&&q.url===l.url)===i).slice(0,20).map(l=>({url:l.url,name:typeof l.name==='string'?l.name.slice(0,60):'',t:+l.t||0,items:Array.isArray(l.items)?l.items.filter(i=>i&&typeof i.title==='string'&&typeof i.text==='string').slice(0,100).map(i=>({title:i.title.slice(0,80),text:i.text.slice(0,20000)})):undefined})):hostedLists();   /* a fresh install starts with the hosted libraries among its links */
+S.lists=Array.isArray(S.lists)?S.lists.filter((l,i,a)=>l&&typeof l.url==='string'&&l.url.length<=500&&a.findIndex(q=>q&&q.url===l.url)===i).slice(0,20).map(l=>({id:typeof l.id==='string'&&l.id&&l.id.length<=40?l.id:listId(l.url),url:l.url,name:typeof l.name==='string'?l.name.slice(0,60):'',t:+l.t||0,u:isStamp(l.u)?l.u:undefined,items:Array.isArray(l.items)?l.items.filter(i=>i&&typeof i.title==='string'&&typeof i.text==='string').slice(0,100).map(i=>({title:i.title.slice(0,80),text:i.text.slice(0,20000)})):undefined})):hostedLists();   /* a fresh install starts with the hosted libraries among its links */
+S.listGone=cleanMarks(S.listGone);   /* library links deleted here: id and the stamp of the delete, so a sync does not bring them back */
 S.listSel=typeof S.listSel==='string'&&S.lists.some(l=>l.url===S.listSel)?S.listSel:'';
 S.lists.filter(l=>l.items).sort((x,y)=>y.t-x.t).slice(3).forEach(l=>{delete l.items;});
 S.vol=clamp(Math.round(+S.vol),0,100);if(isNaN(S.vol))S.vol=60;
@@ -3648,10 +3791,17 @@ if(typeof S.libId!=='string')S.libId='';
 S.libOpened=Array.isArray(S.libOpened)?S.libOpened.filter(o=>o&&typeof o.id==='string'&&isFinite(+o.t)).slice(0,20).map(o=>({id:o.id,t:+o.t})):[];
 S.startExercise=1;
 const PORTABLE=['bpm','tol','accent','others','vol','click','eachUnit','eachVal','gap','pulse','view','game','palette','theme'];   /* settings that travel in an export. Microphone, latency and sensitivity belong to the device and stay out. */
+S.setT=S.setT&&typeof S.setT==='object'&&!Array.isArray(S.setT)?Object.fromEntries(Object.entries(S.setT).filter(([k,v])=>PORTABLE.includes(k)&&isStamp(v))):{};   /* the stamp of each portable setting's last change, so a merge keeps the newer one */
+let setWas=JSON.stringify(PORTABLE.map(k=>S[k]));
 S.expSel=(S.expSel&&typeof S.expSel==='object')?{hist:S.expSel.hist!==false,lib:S.expSel.lib!==false,lists:S.expSel.lists!==false,set:S.expSel.set!==false}:{hist:true,lib:true,lists:true,set:true};   /* what the Export dialog ticks, remembered */
 if(!isFinite(+S.lastExport))S.lastExport=0;
 if(!isFinite(+S.expRuns))S.expRuns=0;
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({settings:S}));}catch(e){}};
+/* Saves the settings. A portable setting that changed since the last save gets a new stamp, for a merge between devices. */
+const save=()=>{
+  const now=JSON.stringify(PORTABLE.map(k=>S[k]));
+  if(now!==setWas){const was=JSON.parse(setWas),t=newVersion(...Object.values(S.setT));PORTABLE.forEach((k,i)=>{if(JSON.stringify(S[k])!==JSON.stringify(was[i]))S.setT[k]=t;});setWas=now;}
+  try{localStorage.setItem(KEY,JSON.stringify({settings:S}));}catch(e){}
+};
 function setLatency(v){S.latency=v;$('latency').value=v;save();latUse();}
 /* The latency in use, in words, under the box: the 40 ms default, the device's own estimate, or a calibrated or typed number. */
 function latUse(){
@@ -3661,7 +3811,7 @@ function latUse(){
 /* A calibration has been done, so the reminder at the top goes away. */
 function markCal(){S.latCal=true;save();syncInfo();}
 /* Scores live under their own key so clearing them never touches your settings or calibration. */
-const RKEY='stick-timing-trainer.records.v2',OLDKEY='stick-timing-trainer.records.v1',MAX_RUNS=300,MAX_SNAP=20000;
+const RKEY='stick-timing-trainer.records.v2',OLDKEY='stick-timing-trainer.records.v1',MAX_SNAP=20000;
 /* A short hash of a text. Each distinct pattern or routine is stored once and runs point to it. */
 function hashOf(t){
   let h1=0xdeadbeef,h2=0x41c6ce57;
@@ -3687,6 +3837,19 @@ function textOwnTempos(x){
   if(!ownTempoMemo.has(x)){let v=false;try{const p=parseRoutine(x);v=p.exercises.length>0&&p.exercises.every(b=>b.bpm);}catch(e){v=false;}ownTempoMemo.set(x,v);}
   return ownTempoMemo.get(x);
 }
+/* Fields this version does not know are kept as they are (at most 20, each small), so records from a newer Pocket keep them through a save here. */
+const RUN_KEYS=['id','t','mode','rk','lv','dy','ne','bpm','tol','gb','sec','exercises','u','sk','rp','ft','g','pts'];
+const EX_KEYS=['k','bpm','due','within','heard','avg','sd','miss','i','ls','ld','da','dg','ex','sp','q','an','ac','as','gn','gc','gs','bc','bn','bf','bs','bb'];
+const LIB_KEYS=['id','x','t','u'];
+const META_KEYS=['v','runs','items','sum','sums','z','gen','xs','names','nt','nu','lib','libGone','gone','lists','listGone','settings','setT'];
+function keepExtra(x,known,into){
+  Object.keys(x).forEach(k=>{   /* whole: a copy cut short would go back to newer devices with this one's next edit. An import is at most 100 MB. */
+    if(k[0]==='_'||known.includes(k)||into[k]!==undefined)return;
+    let s;try{s=JSON.stringify(x[k]);}catch(e){return;}
+    if(s!==undefined)into[k]=JSON.parse(s);
+  });
+  return into;
+}
 function cleanRun(x){
   if(!x||typeof x!=='object'||typeof x.id!=='string'||!Array.isArray(x.exercises)||!isFinite(+x.t)||!isFinite(+x.bpm)||!['strokes','guide','beat','half','bar','none','off'].includes(x.lv))return null;
   const exercises=[];
@@ -3700,10 +3863,14 @@ function cleanRun(x){
       gn:+b.gn>0?Math.floor(+b.gn):undefined,gc:+b.gc>0?Math.floor(+b.gc):undefined,gs:typeof b.gs==='number'&&isFinite(b.gs)?b.gs:undefined,
       bc:+b.bc>0?Math.floor(+b.bc):undefined,bn:typeof b.bn==='number'&&b.bn>=0&&b.bn<100?b.bn:undefined,bf:typeof b.bf==='number'&&b.bf>=0&&b.bf<=100?b.bf:undefined,
       bs:+b.bs>0?Math.floor(+b.bs):undefined,bb:typeof b.bb==='string'&&b.bb.length<=SPMAX&&/^[0-9-]+$/.test(b.bb)?b.bb:undefined});
+    keepExtra(b,EX_KEYS,exercises[exercises.length-1]);
   });
   if(!exercises.length)return null;
   const o={id:x.id.slice(0,40),t:+x.t,mode:x.mode==='routine'?'routine':'single',rk:typeof x.rk==='string'?x.rk.slice(0,40):null,
     lv:x.lv,dy:/^[gbm2-7RL]?s?$/.test(x.dy)?x.dy:'',ne:Math.max(1,+x.ne||exercises.length),bpm:+x.bpm,tol:+x.tol||20,gb:gapNorm(x.gb)&&x.lv!=='none'&&x.lv!=='off'?gapNorm(x.gb):undefined,sec:Math.max(0,Math.min(14400,+x.sec||0)),exercises:exercises};
+  if(Number.isInteger(x.g)&&x.g>=0&&x.g<=1e9)o.g=x.g;   /* the generation it was played in; none: its copy's (unpackRecs) */
+  if(Number.isInteger(x.pts)&&x.pts>=0)o.pts=x.pts;   /* the score, for when the stroke detail is gone; worked out again below while it is there */
+  if(isStamp(x.u))o.u=x.u;   /* changed after it was played (an exercise taken out, or put back by Undo), or restored after a delete */
   if(Array.isArray(x.sk)){const sk=[];x.sk.forEach(b=>{if(b&&typeof b.k==='string'&&b.k.length<=400&&+b.i>=1&&+b.i<=200)sk.push({i:Math.round(+b.i),k:b.k});});if(sk.length)o.sk=sk;}
   const q=x.rp;
   if(q&&typeof q.x==='string'&&q.x.length<=MAX_SNAP)o.rp={x:q.x,st:Math.max(1,Math.round(+q.st)||1),ev:isFinite(+q.ev)&&+q.ev>0?+q.ev:1,eu:q.eu==='pass'?'pass':'min',gp:+q.gp===4?4:0,
@@ -3715,10 +3882,11 @@ function cleanRun(x){
     if(un.length===o.exercises.length)return null;
     if(un.length&&un.every(b=>b.i>=1)){o.exercises=o.exercises.filter(b=>!un.includes(b));o.sk=(o.sk||[]).concat(un.map(b=>({i:b.i,k:b.k})));}
   }
-  return o;
+  keepScore(o);
+  return keepExtra(x,RUN_KEYS,o);
 }
 const MAX_LIB=500;
-const recs={runs:[],sum:newSum(),names:{},nu:1,lib:[]};   /* lib: saved routines {id,x,t}. x is the text without its title, stored once in the same pool as the runs' text. */   /* names: one title per routine, by its key. nu: the next "Untitled" number. */
+const recs={runs:[],sums:{},sum:newSum(),gen:{n:0,v:ZERO},xs:{},x:{},names:{},nt:{},nu:1,lib:[],gone:{},libGone:{}};   /* sums: totals of folded runs, by device; sum: them added up (resum). gen, xs: see mergeRecs. x: fields this version does not know. nt: the stamp of each name's change. gone, libGone: deleted runs and saved routines, id -> the stamp of the delete, so a sync does not bring them back. */   /* lib: saved routines {id,x,t}. x is the text without its title, stored once in the same pool as the runs' text. */   /* names: one title per routine, by its key. nu: the next "Untitled" number. */
 const num=v=>isFinite(+v)?+v:0;
 function cleanLib(list,items,v){
   const out=[],seen=new Set();
@@ -3726,33 +3894,59 @@ function cleanLib(list,items,v){
     if(!e||typeof e.id!=='string'||seen.has(e.id))return;
     const x=v>=2?items[e.x]:e.x;
     if(typeof x!=='string'||!x.trim()||x.length>MAX_SNAP)return;
-    seen.add(e.id);out.push({id:e.id.slice(0,40),x:x,t:num(e.t)});
+    seen.add(e.id);const c={id:e.id.slice(0,40),x:x,t:num(e.t)};if(isStamp(e.u))c.u=e.u;out.push(keepExtra(e,LIB_KEYS,c));
   });
   return out;
 }
+const DEV_RE=/^[0-9a-z]{8}$/;
+/* One device's totals read back: newSum() plus its version and what it covers (see newEntry). pat lists its stickings by hash. */
+function cleanSum(q,items){
+  const sum=newEntry(isStamp(q.v)?q.v:ZERO),dyOf=d=>/^[gbm2-7RL]?s?$/.test(d)?d:'';
+  sum.runs=Math.max(0,num(q.runs));sum.sec=Math.max(0,num(q.sec));sum.cr=Math.max(0,num(q.cr));sum.cs=Math.max(0,num(q.cs))||Math.round(sum.cr*4);   /* records from before strokes were kept have only seconds: 4 strokes a second, sixteenths at 60 BPM */sum.pf=Math.max(0,num(q.pf));
+  LEVELS.forEach(l=>{const v=Math.max(0,Math.round(num(q.hs&&q.hs[l.v])));if(v)sum.hs[l.v]=v;});
+  Object.keys(q.hr||{}).forEach(k=>{const m=/^([a-z]+)(?:\|(\d+))?(?:\|([0-9-]+))?$/.exec(k),h=Math.min(1,Math.max(0,num(q.hr[k])));if(m&&LEVELS.some(l=>l.v===m[1])&&h)sum.hr[shareKey(m[1],+m[2]||20,m[3])]=h;});   /* a best kept before windows were told apart was at ±20 ms */
+  Object.keys(q.days||{}).forEach(k=>{if(/^\d{4}-\d\d-\d\d$/.test(k))sum.days[k]=Math.max(0,num(q.days[k]));});
+  (Array.isArray(q.pat)?q.pat:[]).forEach(e=>{
+    const k=items[e&&e.k];if(typeof k!=='string'||!Array.isArray(e.tr)||!e.tr.length||!LEVELS.some(l=>l.v===e.lv))return;
+    const dy=dyOf(e.dy);
+    sum.pat[statKey(k,e.lv,dy)]={k:k,lv:e.lv,dy:dy,runs:num(e.runs),t:num(e.t),bpm:num(e.bpm),tr:e.tr.slice(-12).map(num),cleared:num(e.cleared),clearedT:num(e.clearedT),avg:e.avg==null?null:num(e.avg),tc:e.tc?1:undefined,ec:e.ec?1:undefined};
+  });
+  Object.keys(q.rt||{}).forEach(key=>{const e=q.rt[key];if(e&&typeof e.rk==='string'&&LEVELS.some(l=>l.v===e.lv))sum.rt[statKey(e.rk,e.lv,dyOf(e.dy))]={rk:e.rk.slice(0,40),lv:e.lv,dy:dyOf(e.dy),ne:Math.max(1,num(e.ne)),runs:num(e.runs),t:num(e.t),cleared:num(e.cleared),ftc:e.ftc?1:undefined};});
+  Object.keys(q.cov||{}).forEach(d=>{if(DEV_RE.test(d)&&num(q.cov[d])>0)sum.cov[d]=Math.floor(num(q.cov[d]));});
+  sum.ids=Array.isArray(q.ids)?q.ids.filter(i=>typeof i==='string').slice(-MAX_MARKS).map(i=>i.slice(0,40)):[];
+  sum.upTo=Math.max(0,num(q.upTo));
+  return sum;
+}
+/* Records as packed by packRecs, of any format: 3 has totals by device, 2 one set of totals, and before 2 the stickings in full. */
 function unpackRecs(o){
-  const items=o.items||{},runs=[],sum=newSum();
+  const items=o.items||{},runs=[],v=num(o.v);
   (o.runs||[]).forEach(x=>{
     if(!x||!Array.isArray(x.exercises))return;
-    const c=cleanRun(Object.assign({},x,{exercises:x.exercises.map(b=>Object.assign({},b,{k:o.v>=2?items[b.k]:b.k})),sk:Array.isArray(x.sk)?x.sk.map(b=>({i:b&&b.i,k:o.v>=2?items[b&&b.k]:(b&&b.k)})):undefined,rp:x.rp?Object.assign({},x.rp,{x:o.v>=2?items[x.rp.x]:x.rp.x}):null}));
+    const c=cleanRun(Object.assign({},x,{exercises:x.exercises.map(b=>Object.assign({},b,{k:v>=2?items[b&&b.k]:b&&b.k})),sk:Array.isArray(x.sk)?x.sk.map(b=>({i:b&&b.i,k:v>=2?items[b&&b.k]:(b&&b.k)})):undefined,rp:x.rp?Object.assign({},x.rp,{x:v>=2?items[x.rp.x]:x.rp.x}):null}));
     if(c)runs.push(c);
   });
-  const q=o.sum;
-  if(q&&typeof q==='object'){
-    sum.runs=Math.max(0,num(q.runs));sum.sec=Math.max(0,num(q.sec));sum.cr=Math.max(0,num(q.cr));sum.cs=Math.max(0,num(q.cs))||Math.round(sum.cr*4);   /* records from before strokes were kept have only seconds: 4 strokes a second, sixteenths at 60 BPM */sum.pf=Math.max(0,num(q.pf));
-    LEVELS.forEach(l=>{const v=Math.max(0,Math.round(num(q.hs&&q.hs[l.v])));if(v)sum.hs[l.v]=v;});
-    Object.keys(q.hr||{}).forEach(k=>{const m=/^([a-z]+)(?:\|(\d+))?(?:\|([0-9-]+))?$/.exec(k),h=Math.min(1,Math.max(0,num(q.hr[k])));if(m&&LEVELS.some(l=>l.v===m[1])&&h)sum.hr[shareKey(m[1],+m[2]||20,m[3])]=h;});   /* a best kept before windows were told apart was at ±20 ms */
-    Object.keys(q.days||{}).forEach(k=>{if(/^\d{4}-\d\d-\d\d$/.test(k))sum.days[k]=Math.max(0,num(q.days[k]));});
-    (q.pat||[]).forEach(e=>{
-      const k=items[e&&e.k];if(typeof k!=='string'||!Array.isArray(e.tr)||!e.tr.length||!LEVELS.some(l=>l.v===e.lv))return;
-      const dy=/^[gbm2-7RL]?s?$/.test(e.dy)?e.dy:'';
-      sum.pat[statKey(k,e.lv,dy)]={k:k,lv:e.lv,dy:dy,runs:num(e.runs),t:num(e.t),bpm:num(e.bpm),tr:e.tr.slice(-12).map(num),cleared:num(e.cleared),clearedT:num(e.clearedT),avg:e.avg==null?null:num(e.avg),tc:e.tc?1:undefined,ec:e.ec?1:undefined};
-    });
-    Object.keys(q.rt||{}).forEach(key=>{const e=q.rt[key];if(e&&typeof e.rk==='string'&&LEVELS.some(l=>l.v===e.lv))sum.rt[statKey(e.rk,e.lv,/^[gbm2-7RL]?s?$/.test(e.dy)&&e.dy)]={rk:e.rk.slice(0,40),lv:e.lv,dy:/^[gbm2-7RL]?s?$/.test(e.dy)?e.dy:'',ne:Math.max(1,num(e.ne)),runs:num(e.runs),t:num(e.t),cleared:num(e.cleared),ftc:e.ftc?1:undefined};});
+  /* The generation. Before 1.5.236 a clear kept its time (z) instead, and only runs played after it: records with one are in generation 1. */
+  const gen=o.gen?genOf(o):{n:num(o.z)>0||(o.sum&&num(o.sum.z)>0)?1:0,v:ZERO};
+  runs.forEach(r=>{if(r.g===undefined)r.g=gen.n;});   /* a run kept before 1.5.236, or saved before its copy's generation was: in its copy's */
+  const sums={},xs={},q=o.sum;
+  const readXs=m=>Object.keys(m&&typeof m==='object'?m:{}).slice(0,MAX_MARKS).forEach(id=>{const x=m[id];if(Array.isArray(x)&&num(x[0])>0&&num(x[1])>0)xs[id.slice(0,40)]=[num(x[0]),Math.min(14400,num(x[1]))];});
+  if(v>=3){
+    if(o.sums&&typeof o.sums==='object')Object.keys(o.sums).slice(0,200).forEach(d=>{const e=o.sums[d];if(DEV_RE.test(d)&&e&&typeof e==='object')sums[d]=cleanSum(e,items);});
+    Object.keys(sums).forEach(d=>{if(sums[d].v===ZERO)sums[d].v=makeStamp(0,0,d);});   /* its version was not believed: any later fold by that device wins */
+    readXs(o.xs);
+  }else if(q&&typeof q==='object'){
+    /* Totals from before 1.5.231 become this device's entry, at version zero (after the clear, if there was one), so any later fold wins.
+       They kept no ids: the runs folded into them were always older than the ones kept. */
+    readXs(q.xs);
+    const e=cleanSum(Object.assign({},q,{v:undefined,cov:undefined,ids:undefined}),items);
+    e.upTo=q.upTo!==undefined?Math.max(0,num(q.upTo)):e.runs?runs.reduce((m,r)=>Math.min(m,r.t-1),Date.now()):0;
+    e.v=makeStamp(0,0,dev.id);
+    if(e.runs>0||Object.keys(e.days).length)sums[dev.id]=e;
   }
   const names={};
   if(o.names&&typeof o.names==='object')Object.keys(o.names).forEach(k=>{if(typeof o.names[k]==='string'&&o.names[k].trim())names[k.slice(0,400)]=o.names[k].trim().slice(0,80);});
-  return {runs:runs,sum:sum,names:names,nu:Math.max(1,Math.round(num(o.nu))||1),lib:cleanLib(o.lib,items,o.v)};
+  const nt=cleanMarks(o.nt);Object.keys(names).forEach(k=>{if(!nt[k])nt[k]=ZERO;});   /* a name from before sync */
+  return {runs:runs,sums:sums,gen:gen,xs:xs,names:names,nt:nt,nu:Math.max(1,Math.round(num(o.nu))||1),lib:cleanLib(o.lib,items,v),gone:cleanMarks(o.gone),libGone:cleanMarks(o.libGone),x:keepExtra(o,META_KEYS,{})};
 }
 /* A run as exported: each sticking replaced by its hash, hk(text), which also files the text under that hash. */
 function packRun(r,hk){
@@ -3761,22 +3955,29 @@ function packRun(r,hk){
   if(r.rp)o.rp=Object.assign({},r.rp,{x:hk(r.rp.x)});
   return o;
 }
+const REC_FORMAT=3;   /* the format packRecs writes. A newer one is read as far as this version understands it, and its other fields kept. */
 function packRecs(sel){   /* sel says which parts to include; none given means the records as kept in this browser (no settings) */
   sel=sel||{hist:true,lib:true,lists:true,set:false};
   const items={},hk=t=>{const h=hashOf(t);items[h]=t;return h;};
   const runs=(sel.hist&&sel.runs!==false?recs.runs:[]).map(r=>packRun(r,hk));
-  const q=recs.sum,out={v:2};
-  if(sel.hist)out.sum={runs:q.runs,sec:q.sec,cr:q.cr||0,cs:q.cs||0,pf:q.pf||0,hs:q.hs||{},hr:q.hr||{},days:q.days,rt:q.rt,pat:Object.keys(q.pat).map(k=>Object.assign({},q.pat[k],{k:hk(q.pat[k].k)}))};
-  if(sel.lib)out.lib=recs.lib.map(e=>({id:e.id,x:hk(e.x),t:e.t}));
-  if(sel.lists)out.lists=S.lists.map(l=>({url:l.url,name:l.name||undefined}));
-  if(sel.set){out.settings={};PORTABLE.forEach(k=>{out.settings[k]=S[k];});}
-  if(sel.hist||sel.lib){out.names=recs.names;out.nu=recs.nu;}
+  const out=Object.assign({},recs.x,{v:REC_FORMAT});
+  if(sel.hist){
+    out.sums={};
+    Object.keys(recs.sums).forEach(d=>{const e=recs.sums[d];out.sums[d]=Object.assign({},e,{pat:Object.keys(e.pat).map(k=>Object.assign({},e.pat[k],{k:hk(e.pat[k].k)}))});});
+    out.gen=recs.gen;out.xs=recs.xs;out.gone=recs.gone;
+  }
+  if(sel.lib){out.lib=recs.lib.map(e=>{const o={};Object.keys(e).forEach(k=>{if(k[0]!=='_')o[k]=e[k];});o.x=hk(e.x);return o;});out.libGone=recs.libGone;}   /* not _k, held only in memory */
+  if(sel.lists){out.lists=S.lists.map(l=>({id:l.id,url:l.url,name:l.name||undefined,u:l.u||undefined}));out.listGone=S.listGone;}
+  if(sel.set){out.settings={};PORTABLE.forEach(k=>{out.settings[k]=S[k];});out.setT=S.setT;}
+  if(sel.hist||sel.lib){out.names=recs.names;out.nt=recs.nt;out.nu=recs.nu;}
   if(sel.hist&&sel.runs!==false)out.runs=runs;
   out.items=items;
   return out;
 }
-const useRecs=u=>{recs.runs=u.runs;recs.sum=u.sum;recs.names=u.names;recs.nu=u.nu;recs.lib=u.lib;};
-/* Records as kept before 1.5.230, and still where IndexedDB cannot open. */
+/* The totals as shown (recs.sum) are worked out again from every device's entry whenever one changes. */
+const resum=()=>{recs.sum=sumView(recs);};
+const useRecs=u=>{recs.runs=u.runs;recs.sums=u.sums;recs.gen=u.gen;recs.xs=u.xs;recs.x=u.x;recs.names=u.names;recs.nt=u.nt;recs.nu=u.nu;recs.lib=u.lib;recs.gone=u.gone;recs.libGone=u.libGone;resum();};
+/* Records as kept before 1.5.230, and still where the browser has no IndexedDB. */
 function loadLocal(){
   try{
     const o=JSON.parse(localStorage.getItem(RKEY)||'null');
@@ -3787,120 +3988,220 @@ function loadLocal(){
     }
   }catch(e){}
 }
-/* Records live in IndexedDB: one entry for each run, and one (meta, 'recs') for the totals, names and saved routines.
+/* Records live in IndexedDB: one entry for each run, one for each run's stroke detail (store 'detail', since 1.5.237), and one
+   (meta, 'recs') for the totals, names and saved routines.
    A save writes only the runs that changed, in the background, so a long history no longer slows each save.
-   Where IndexedDB cannot open (some private windows), records stay in localStorage with its smaller limits.
+   Only a browser with no IndexedDB at all keeps records in localStorage, with its smaller limits. An error opening the
+   database never falls back to it: that would show an old or empty history, and save new runs where nothing reads them.
+   Every run is kept: nothing is folded into the totals any more. Only stroke detail has a limit, and dropping it deletes the
+   run's detail entry without rewriting the run. In memory, and in an export, the detail is still on each run.
    Settings stay in localStorage either way: they are small, and the page reads them before it draws. */
-const DB_NAME='pocket',MAX_RUNS_DB=2000,DETAIL_DB=10000000;   /* 2,000 runs, and 20 MB of stroke detail at two bytes a character */
-let db=null;   /* null: records are kept in localStorage */
+const DB_NAME='pocket',DB_VER=2,DB_STORES=['meta','runs','detail'],DETAIL_DB=20000000;   /* 40 MB of stroke detail at two bytes a character, about 2.5 years */
+/* A newer version that changes the database must add a store, not only change one: an older version takes a database
+   with exactly its own stores as its own, whatever its version number (see openDb). */
+let db=null;   /* null: records are kept in localStorage, or, while recsOff is set, not at all */
+let recsOff='';   /* why records cannot be saved here until the page reloads: 'newer', 'update', 'lost' or 'error'. Nothing is written meanwhile. */
 const stored=new Map();   /* run id -> signature of the copy IndexedDB holds. '' means it has to be written, or deleted, again. */
+const storedD=new Map();   /* run id -> signature of its detail entry; none: no entry. '!' means it has to be written, or deleted, again. */
 let lastWrite=Promise.resolve(true);
-/* Changes whenever a run is changed in place: an exercise taken out, its routine key changed, its detail trimmed. */
-const runSig=r=>[r.t,r.rk,r.ne,r.exercises.map(b=>b.i+':'+(b.sp?b.sp.length:0)).join(','),r.sk?r.sk.map(b=>b.i).join(','):'',r.rp?r.rp.x.length+'.'+r.rp.st+'.'+(r.rp.o||[]).join(','):''].join('|');
+/* Changes whenever a run is changed in place: an exercise taken out, its routine key or score changed. Its detail has its own. */
+const runSig=r=>[r.t,r.u||'',r.rk,r.ne,r.pts===undefined?'':r.pts,r.exercises.map(b=>b.i).join(','),r.sk?r.sk.map(b=>b.i).join(','):'',r.rp?r.rp.x.length+'.'+r.rp.st+'.'+(r.rp.o||[]).join(','):''].join('|');
+const detailSig=r=>hasDetail(r)?r.exercises.map(b=>b.i+':'+DETAIL_KEYS.map(k=>b[k]?b[k].length:0).join('.')).join(','):'';
+/* A run as the runs store keeps it, without its detail, and its detail entry, one [sp, q, bb] for each exercise in order. */
+const bareRun=r=>{const o=JSON.parse(JSON.stringify(r));dropRunDetail(o);return o;};
+const detailEntry=r=>({id:r.id,d:r.exercises.map(b=>DETAIL_KEYS.map(k=>b[k]||''))});
 const idbReq=q=>new Promise((res,rej)=>{q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});
+const isFull=e=>!!e&&(e.name==='QuotaExceededError'||e.name==='NS_ERROR_DOM_QUOTA_REACHED'||e.code===22);
+const hasStores=d=>DB_STORES.every(n=>d.objectStoreNames.contains(n));
+/* The notice under the header, for records that cannot be opened or saved. Reload fetches the page afresh, as Update does,
+   so a cached older copy is not what comes back. */
+function dbNote(t,reload){$('dbNote').hidden=!t;$('dbText').textContent=t?'⚠ '+t:'';$('dbGo').hidden=!reload;}
+const DB_SAYS={
+  newer:'Your records here were saved by a newer version of Pocket. Reload to get it. Until then, nothing is saved.',
+  update:'Pocket was updated in another tab. Reload this one to keep saving your runs.',
+  lost:'Pocket lost access to your records. Reload to keep saving your runs.',
+  error:'Pocket could not open your records. Reload to try again. Until then, nothing is saved.'
+};
+function stopRecs(why){
+  recsOff=why;
+  if(db){const d=db;db=null;try{d.close();}catch(e){}}
+  dbNote(DB_SAYS[why],true);
+}
+/* A newer version in another tab wants to upgrade the database: this tab lets go, and stops saving until it reloads.
+   The browser closing the database by itself (storage cleared, for one) stops saving too. */
+function watchDb(d){d.onversionchange=()=>{if(db===d)stopRecs('update');else d.close();};d.onclose=()=>{if(db===d)stopRecs('lost');};}
+/* Opens the database at this version's number. Resolves with it, or with why not: 'newer' (a newer version upgraded it),
+   'error', or 'slow' (no answer). An older version open in another tab can hold an upgrade up: this tab says so and waits. */
 function openDb(ver){
   return new Promise(res=>{
-    let q,done=false;
-    const end=d=>{if(done){if(d)d.close();return;}done=true;res(d);};
-    setTimeout(()=>end(null),4000);   /* a browser that never answers: records stay in localStorage */
-    try{q=ver?indexedDB.open(DB_NAME,ver):indexedDB.open(DB_NAME);}catch(e){end(null);return;}
-    q.onupgradeneeded=()=>{const d=q.result;if(!d.objectStoreNames.contains('runs'))d.createObjectStore('runs',{keyPath:'id'});if(!d.objectStoreNames.contains('meta'))d.createObjectStore('meta');};
+    let q,done=false,blocked=false;
+    const end=d=>{
+      if(done){if(d&&typeof d==='object')d.close();return;}
+      done=true;if(blocked)dbNote('');res(d);
+    };
+    setTimeout(()=>{if(!blocked)end('slow');},4000);   /* a browser that never answers */
+    try{q=indexedDB.open(DB_NAME,ver||DB_VER);}catch(e){end('error');return;}
+    q.onupgradeneeded=()=>{const d=q.result;DB_STORES.forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n,n==='meta'?undefined:{keyPath:'id'});});};
     q.onsuccess=()=>{
       const d=q.result;
-      if(d.objectStoreNames.contains('runs')&&d.objectStoreNames.contains('meta')){d.onversionchange=()=>d.close();end(d);return;}
+      if(done){d.close();return;}
+      if(hasStores(d)){watchDb(d);end(d);return;}
       const v=d.version+1;d.close();openDb(v).then(end);   /* a database made without its stores: open it one version up, which makes them */
     };
-    q.onerror=q.onblocked=()=>end(null);
+    q.onblocked=()=>{blocked=true;dbNote('Pocket is open in another tab on an older version. Close or reload that tab to continue.',false);};
+    q.onerror=e=>{
+      if(e&&e.preventDefault)e.preventDefault();
+      if(!(q.error&&q.error.name==='VersionError')){end('error');return;}
+      /* The database has a higher version than this one asks for. Before 1.5.233 Pocket opened a database it found without its
+         stores one version up; with exactly this version's stores it is still this version's. Anything more is a newer version's. */
+      let a;
+      try{a=indexedDB.open(DB_NAME);}catch(x){end('error');return;}
+      a.onsuccess=()=>{const d=a.result;if(d.objectStoreNames.length===DB_STORES.length&&hasStores(d)){watchDb(d);end(d);}else{d.close();end('newer');}};
+      a.onerror=x=>{if(x&&x.preventDefault)x.preventDefault();end('error');};
+    };
   });
 }
 async function loadRecs(){
-  try{if(window.indexedDB)db=await openDb();}catch(e){db=null;}
-  if(db){
-    try{
-      const tx=db.transaction(['runs','meta']);
-      const [meta,raw]=await Promise.all([idbReq(tx.objectStore('meta').get('recs')),idbReq(tx.objectStore('runs').getAll())]);
-      if(meta){
-        const items=Object.assign({},meta.items),hk=t=>{const h=hashOf(t);items[h]=t;return h;},runs=[];
-        raw.forEach(r=>{if(r&&typeof r.id==='string')stored.set(r.id,'');try{runs.push(packRun(r,hk));}catch(e){}});
-        const u=unpackRecs(Object.assign({},meta,{v:2,items:items,runs:runs}));
-        u.runs.sort((a,b)=>a.t-b.t);useRecs(u);
-        u.runs.forEach(r=>stored.set(r.id,runSig(r)));   /* a run that did not pass the checks keeps '', and goes at the next save */
-        try{localStorage.removeItem(RKEY);localStorage.removeItem(OLDKEY);}catch(e){}   /* left by an older version: already moved */
-        return;
-      }
-    }catch(e){db=null;loadLocal();return;}
-  }
-  loadLocal();
-  if(!db)return;
+  if(!window.indexedDB){loadLocal();return;}
+  let d=await openDb();
+  if(d==='slow')d=await openDb();   /* WebKit can leave the first open of a session unanswered; a second one gets through */
+  if(!d||typeof d!=='object'){stopRecs(d==='newer'?'newer':'error');return;}
+  db=d;
+  try{
+    const tx=db.transaction(['runs','meta','detail']);
+    const [meta,raw,det]=await Promise.all([idbReq(tx.objectStore('meta').get('recs')),idbReq(tx.objectStore('runs').getAll()),idbReq(tx.objectStore('detail').getAll())]);
+    if(meta){
+      const items=Object.assign({},meta.items),hk=t=>{const h=hashOf(t);items[h]=t;return h;},runs=[],dm=new Map(),moved=new Set();
+      det.forEach(e=>{if(e&&typeof e.id==='string'){storedD.set(e.id,'!');if(Array.isArray(e.d))dm.set(e.id,e.d);}});   /* '!': checked again below */
+      raw.forEach(r=>{
+        if(!r||typeof r.id!=='string'||!Array.isArray(r.exercises))return;
+        stored.set(r.id,'');
+        /* Detail kept on the run itself was saved before 1.5.237: it moves to its own entry, and the run is written without it. A
+           storage change, not an edit, so the version stays. */
+        if(r.exercises.some(b=>b&&DETAIL_KEYS.some(k=>b[k]!==undefined)))moved.add(r.id);
+        const d=dm.get(r.id);
+        if(d)r=Object.assign({},r,{exercises:r.exercises.map((b,i)=>{const x=Object.assign({},b);if(Array.isArray(d[i]))DETAIL_KEYS.forEach((k,j)=>{if(d[i][j]&&x[k]===undefined)x[k]=d[i][j];});return x;})});
+        try{runs.push(packRun(r,hk));}catch(e){}
+      });
+      const u=unpackRecs(Object.assign({},meta,{v:Math.max(2,num(meta.v)),items:items,runs:runs}));   /* the runs were packed here, so their stickings are hashed */
+      u.runs.sort((a,b)=>a.t-b.t);useRecs(u);
+      /* A run that did not pass the checks keeps '', and goes at the next save; one with its detail on it is written again. A detail
+         entry that does not match what was read back is written again, or deleted. */
+      u.runs.forEach(r=>{
+        if(!moved.has(r.id))stored.set(r.id,runSig(r));
+        if(storedD.has(r.id)&&!moved.has(r.id)){const g=detailSig(r);storedD.set(r.id,g||'!');}
+        else if(moved.has(r.id)&&hasDetail(r))storedD.set(r.id,'!');
+      });
+      if(moved.size)writeRecs();
+      try{localStorage.removeItem(RKEY);localStorage.removeItem(OLDKEY);}catch(e){}   /* left by an older version: already moved */
+      return;
+    }
+  }catch(e){stopRecs('error');return;}
   /* The first load with IndexedDB: the records in localStorage move across, and the old key goes once they are written. */
+  loadLocal();
   if(await writeRecs())try{localStorage.removeItem(RKEY);localStorage.removeItem(OLDKEY);}catch(e){}
 }
-/* Writes the runs that changed, and the meta entry, in one transaction. Resolves true once written. A full disk folds the oldest
-   quarter of runs into the totals and tries again, as the localStorage save does. */
+/* Storage is full: the oldest stroke detail goes, so the newest runs can still be saved. First the oldest half of it, then all
+   but the newest run's. Says whether anything went. */
+function dropDetail(step){
+  let n=detailChars(),any=false;
+  const goal=step?0:Math.floor(n/2);
+  for(let i=0;i<recs.runs.length-1&&n>goal;i++){const r=recs.runs[i],m=detailLen(r);if(m){n-=m;dropRun(r);any=true;}}
+  return any;
+}
+/* A save failed, even after dropping old detail. The records stay in memory while the page is open, so an export still keeps them. */
+function saveFailed(full){
+  const el=$('status');
+  setStatus((full?'Browser storage is full, so Pocket':'Pocket')+' could not save your records. They are kept while Pocket stays open: export them to keep a copy. ');
+  if(!el.querySelector('[data-exp]')){const b=textBtn('Export',openExport,'btn link');b.dataset.exp='1';el.appendChild(b);}
+  if(lastRun&&lastRun.saved&&(!db||stored.get(lastRun.run.id)!==runSig(lastRun.run))){lastRun.saved=false;if(!$('advice').hidden)renderAdvice();}
+}
+/* Writes the runs that changed, and the meta entry, in one transaction. Resolves true once written. A full disk drops the
+   oldest stroke detail and tries again (dropDetail); if that fails too, the person is told (saveFailed). */
 function writeRecs(tries){
   tries=tries||0;
-  const live=new Set(),put=[],del=[];
-  recs.runs.forEach(r=>{live.add(r.id);const g=runSig(r);if(stored.get(r.id)!==g)put.push([r,g]);});
+  if(!db)return Promise.resolve(false);
+  const live=new Set(),put=[],del=[],dput=[],ddel=[];
+  recs.runs.forEach(r=>{
+    live.add(r.id);const g=runSig(r);if(stored.get(r.id)!==g)put.push([r,g]);
+    const h=detailSig(r),w=storedD.get(r.id);if(h){if(w!==h)dput.push([r,h]);}else if(w!==undefined)ddel.push(r.id);
+  });
   stored.forEach((g,id)=>{if(!live.has(id))del.push(id);});
+  storedD.forEach((g,id)=>{if(!live.has(id))ddel.push(id);});
+  let full=false;
   const p=new Promise(res=>{
     let tx=null;
     const failed=e=>{
       put.forEach(x=>stored.set(x[0].id,''));del.forEach(id=>stored.set(id,''));   /* written again at the next save */
-      if(tries<3&&e&&e.name==='QuotaExceededError'){foldOld(Math.floor(recs.runs.length*0.75));writeRecs(tries+1).then(res);return;}
+      dput.forEach(x=>storedD.set(x[0].id,'!'));ddel.forEach(id=>storedD.set(id,'!'));
+      full=isFull(e);
+      if(full&&tries<2&&db&&dropDetail(tries)){writeRecs(tries+1).then(ok=>{if(ok)full=false;res(ok);});return;}
       res(false);
     };
     try{
-      tx=db.transaction(['runs','meta'],'readwrite');
-      const rs=tx.objectStore('runs');
-      put.forEach(x=>rs.put(JSON.parse(JSON.stringify(x[0]))));   /* as JSON would keep it: nothing held only in memory */
+      tx=db.transaction(['runs','meta','detail'],'readwrite');
+      const rs=tx.objectStore('runs'),ds=tx.objectStore('detail');
+      put.forEach(x=>rs.put(bareRun(x[0])));   /* as JSON would keep it: nothing held only in memory */
       del.forEach(id=>rs.delete(id));
+      dput.forEach(x=>ds.put(detailEntry(x[0])));
+      ddel.forEach(id=>ds.delete(id));
       tx.objectStore('meta').put(packRecs({hist:true,lib:true,lists:false,set:false,runs:false}),'recs');
     }catch(e){try{if(tx)tx.abort();}catch(x){}failed(e);return;}
     put.forEach(x=>stored.set(x[0].id,x[1]));del.forEach(id=>stored.delete(id));
+    dput.forEach(x=>storedD.set(x[0].id,x[1]));ddel.forEach(id=>storedD.delete(id));
     tx.oncomplete=()=>res(true);
     tx.onabort=()=>failed(tx.error);
   });
-  lastWrite=p.then(ok=>{if(!ok)setStatus('Could not save your records. Browser storage may be full.');return ok;});
+  if(tries)return p;   /* a retry: the first attempt reports */
+  lastWrite=p.then(ok=>{if(!ok&&!recsOff)saveFailed(full);return ok;});
   return lastWrite;
 }
 /* Waits for the last save to be written, before the page reloads. */
 const recsWritten=()=>lastWrite.catch(()=>false);
-/* Keeps the newest MAX_RUNS runs in full. Older ones are folded into the permanent summary. */
-function foldOld(keep){
-  while(recs.runs.length>keep)foldRun(recs.sum,recs.runs.shift());
-}
 /* A routine's name is kept only while it has runs or totals. */
 function pruneNames(){
   const live=new Set();recs.runs.forEach(r=>{if(r.rk)live.add(r.rk);});Object.keys(recs.sum.rt).forEach(k=>live.add(recs.sum.rt[k].rk));
   recs.lib.forEach(e=>{const k=libKey(e);if(k)live.add(k);});
-  Object.keys(recs.names).forEach(k=>{if(!live.has(k))delete recs.names[k];});
+  Object.keys(recs.names).concat(Object.keys(recs.nt)).forEach(k=>{if(!live.has(k)){delete recs.names[k];delete recs.nt[k];}});
 }
+/* Sets a routine's name, and when, so the newer name wins in a sync. */
+const setName=(k,v)=>{if(recs.names[k]!==v){recs.names[k]=v;recs.nt[k]=newVersion(recs.nt[k]);}};
+/* Deleted runs and saved routines leave a marker, id -> the stamp of the delete, so a sync does not bring them back. */
+const markGone=(m,x)=>{m[x.id]=newVersion(verOf(x),m[x.id]);};   /* newer than the item it deletes */
+/* A saved routine put back by Undo: newer than its marker. */
+const restoreLib=e=>{const u=newVersion(recs.libGone[e.id],e.u);recs.lib.push(e);delete recs.libGone[e.id];e.u=u;};
 const routineName=rk=>recs.names[rk]||'Untitled routine';
 /* Saved routines. An entry is found by the key its text is recorded under, so History and the library agree on which routine is which. */
 const libKey=e=>e._k!==undefined?e._k:(e._k=textKey(e.x,S.subdiv));
 const libFor=k=>k?recs.lib.find(e=>libKey(e)===k):null;
 const entryName=e=>{const k=libKey(e);return recs.names[k]||(isRoutineKey(k)?routineName(k):showKey(k||e.x));};   /* a title is kept for any entry; one exercise without a title shows its sticking */
-const libId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const libId=()=>newStamp();
 /* The text to load for an entry: a routine gets its name back as a title. */
 function entryText(e){const k=libKey(e);return recs.names[k]?setHeader(e.x,'title',recs.names[k]):e.x;}
-/* Stroke detail may use 40% of the space the browser gives this page (about 5 MB, two bytes a character). When it is over, the oldest runs lose theirs first; their totals stay.
-   One run keeps at most a quarter of that share. */
+/* Stroke detail may use 40% of the space the browser gives this page (about 5 MB, two bytes a character), or DETAIL_DB in IndexedDB.
+   When it is over, the oldest runs lose theirs first, whoever played them; the runs and their scores stay. A run with more than a
+   quarter of that share keeps none: detail is never cut short. */
 const QUOTA=Math.floor(5*1024*1024/2),DETAIL_SHARE=0.4;
 const detailBudget=()=>db?DETAIL_DB:Math.floor(QUOTA*DETAIL_SHARE);   /* in characters. IndexedDB has room for far more. */
-const detailChars=()=>recs.runs.reduce((n,r)=>n+r.exercises.reduce((m,b)=>m+(b.sp?b.sp.length:0),0),0);
+const detailChars=()=>recs.runs.reduce((n,r)=>n+detailLen(r),0);
+/* Drops a run's detail, keeping its score first. Dropping is local: no new version, nothing to sync. */
+const dropRun=r=>{keepScore(r);dropRunDetail(r);};
 function trimDetail(){
   const budget=detailBudget(),one=Math.floor(budget/4);
-  recs.runs.forEach(r=>{let left=one;r.exercises.forEach(b=>{if(!b.sp)return;if(b.sp.length<=left){left-=b.sp.length;return;}if(left>=4)b.sp=b.sp.slice(0,left-left%4);else delete b.sp;left=0;});});
-  let n=detailChars();
-  for(let i=0;i<recs.runs.length&&n>budget;i++)recs.runs[i].exercises.forEach(b=>{if(b.sp){n-=b.sp.length;delete b.sp;}});
+  let n=0;
+  recs.runs.forEach(r=>{const m=detailLen(r);if(m>one)dropRun(r);else n+=m;});
+  for(let i=0;i<recs.runs.length&&n>budget;i++){const m=detailLen(recs.runs[i]);if(m){n-=m;dropRun(recs.runs[i]);}}
 }
 function saveRecs(){
-  foldOld(db?MAX_RUNS_DB:MAX_RUNS);pruneNames();trimDetail();
+  if(recsOff)return false;   /* records cannot be saved until the page reloads: the notice says why */
+  pruneNames();trimDetail();
   if(db){writeRecs();return true;}   /* written in the background; a failure says so in the status line */
-  for(let i=0;i<4;i++){
+  let full=false;
+  for(let i=0;i<3;i++){
     try{localStorage.setItem(RKEY,JSON.stringify(packRecs()));try{localStorage.removeItem(OLDKEY);}catch(e){}return true;}
-    catch(e){foldOld(Math.floor(recs.runs.length*0.75));}
+    catch(e){full=isFull(e);if(full&&i<2&&dropDetail(i))continue;break;}
   }
+  saveFailed(full);
   return false;
 }
 let lastRun=null;
@@ -6142,10 +6443,10 @@ function recordRun(r){
   const all=S.mode==='routine'?allExercises().map(b=>patKey(b.notes,b.groupStart,b.subs,b.defSub,b.sig)):null;
   const rk=all?routineKeyOf(all):null;
   if(rk){   /* a title in the text wins, else the name it already has, else the next Untitled number */
-    if(routineParsed.title)recs.names[rk]=routineParsed.title.slice(0,80);
-    else if(!recs.names[rk])recs.names[rk]='Untitled '+(recs.nu++);
+    if(routineParsed.title)setName(rk,routineParsed.title.slice(0,80));
+    else if(!recs.names[rk])setName(rk,'Untitled '+(recs.nu++));
   }
-  const run={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:Date.now(),mode:S.mode,
+  const run={id:newStamp(),g:recs.gen.n,t:Date.now(),mode:S.mode,
     rk:all?routineKeyOf(all):null,ne:all?all.length:1,bpm:S.bpm,ft:ownTempos(allExercises())?1:undefined,tol:S.tol,lv:S.click,gb:r.gb||undefined,dy:r.dyc||'',rp:replaySnap(),sec:Math.max(0,Math.min(14400,Math.round((Date.now()-(r.w0||Date.now()))/1000))),
     exercises:rows.map(x=>({k:x.key,bpm:x.bpm,due:x.due,within:Math.round(x.pct*x.due),heard:x.heard,
       avg:isNaN(x.avg)?null:x.avg,sd:isNaN(x.spread)?null:x.spread,miss:x.miss,i:x.idx,
@@ -6158,6 +6459,7 @@ function recordRun(r){
   const prevBest=new Map();
   rows.forEach(x=>{const b=bestBefore(recs.runs,x.key,x.bpm,S.click,r.dyc);if(b!==null)prevBest.set(x.key,b);});
   const newTempo=rows.filter(x=>x.pct>=TARGET&&x.bpm>(x.was=clearedBefore(recs.runs,x.key,S.click,recs.sum,r.dyc)));   /* was: the fastest clear before, for the medal it held */
+  keepScore(run);
   const bv0=badgeValues(recs.runs,recs.sum),score=runScore(run),hs0=highScores(recs.runs,recs.sum)[run.lv]||0,share0=bestShares(recs.runs,recs.sum)[shareKey(run.lv,run.tol,run.gb)]||0;
   recs.runs.push(run);
   let autoLib=null;   /* a kept routine goes to the library, where Delete removes it; discarding the run takes it back out */
@@ -6287,8 +6589,8 @@ const setupSig=()=>S.mode+'|'+allExercises().map(b=>patKey(b.notes,b.groupStart,
 function discardRun(){
   const L=lastRun,V=view,sig=setupSig();if(!L)return;
   const i=recs.runs.findIndex(x=>x.id===L.run.id),gone=i>=0?recs.runs.splice(i,1)[0]:null;
-  const dk=gone?dayKey(gone.t):'',sec=gone&&gone.sec||0,days=recs.sum.days;
-  if(sec)days[dk]=(days[dk]||0)+sec;
+  const sec=gone&&gone.sec||0;
+  if(gone){markGone(recs.gone,gone);if(sec)recs.xs[gone.id]=[gone.t,sec];}
   const al=L.autoLib,dropLib=!!(al&&recs.lib.includes(al)&&!recs.runs.some(x=>x.rk===L.run.rk)),wasCur=dropLib&&S.libId===al.id;
   if(dropLib)removeLibEntry(al);
   saveRecs();
@@ -6299,10 +6601,10 @@ function discardRun(){
     if(run&&!run.ended)return;
     if(gone&&!recs.runs.some(x=>x.id===gone.id)){
       recs.runs.splice(Math.min(i,recs.runs.length),0,gone);
-      if(sec){const d=recs.sum.days,v=(d[dk]||0)-sec;if(v>0)d[dk]=v;else delete d[dk];}   /* the run counts its own time again */
+      gone.u=newVersion(recs.gone[gone.id],gone.u);delete recs.gone[gone.id];delete recs.xs[gone.id];   /* the run counts its own time again, and is newer than the marker another device may have */
     }
     /* As the Library's own Undo: not if the routine was saved again meanwhile, and the selection only if none was made since. */
-    if(dropLib&&!recs.lib.includes(al)&&!libFor(libKey(al))&&recs.lib.length<MAX_LIB){recs.lib.push(al);if(wasCur&&!S.libId){S.libId=al.id;save();}}
+    if(dropLib&&!recs.lib.includes(al)&&!libFor(libKey(al))&&recs.lib.length<MAX_LIB){restoreLib(al);if(wasCur&&!S.libId){S.libId=al.id;save();}}
     saveRecs();
     /* The result is shown again only over the routine it was played on. */
     if(setupSig()===sig){lastRun=L;view=V;showRunResult();setStatus('Run restored to your records.',true);}
@@ -6713,25 +7015,15 @@ function setSview(v){
   if(v==='data')renderStorage();
   showTabs(v,[['pref','svPref','svBtnPref'],['dev','svDev','svBtnDev'],['data','svData','svBtnData']]);
 }
-/* What the saved data takes. Sizes are characters, two bytes each. In localStorage the limit is the browser's, about 5 MB, and is only an estimate.
-   In IndexedDB the browser allows far more, so the bar is drawn against Pocket's own limit for stroke detail. */
+/* What the saved data takes, in characters, two bytes each. In localStorage the browser's limit is about 5 MB, and is only an estimate. */
 function renderStorage(){
-  let rk=0,kk=0;
-  const detail=detailChars(),p=packRecs();
-  try{rk=db?JSON.stringify(p).length:(localStorage.getItem(RKEY)||'').length;kk=(localStorage.getItem(KEY)||'').length;}catch(e){}
-  const scale=db?Math.floor(detailBudget()/DETAIL_SHARE):QUOTA;
-  const runs=Math.max(0,JSON.stringify(p.runs||[]).length-detail)+JSON.stringify(p.sum||{}).length;
-  const libs=JSON.stringify(S.lists||[]).length,sets=Math.max(0,kk-libs),routines=Math.max(0,rk-detail-runs);
-  const parts=[['Stroke detail',detail,'var(--accent)'],['Runs',runs,'var(--ok)'],['Routines',routines,'var(--late)'],['Libraries',libs,'var(--early)'],['Settings',sets,'var(--muted)']];
-  const used=parts.reduce((n,x)=>n+x[1],0),fmt=c=>{const b=c*2;return b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(0.1,b/1024).toFixed(b<10240?1:0)+' KB';};
-  $('stoTotal').textContent=db?fmt(used)+' used on this device. Pocket keeps up to '+MAX_RUNS_DB.toLocaleString('en-AU')+' runs in full.':fmt(used)+' of about '+fmt(QUOTA)+' used on this device.';
-  const bar=$('stoBar');bar.textContent='';bar.setAttribute('aria-label',$('stoTotal').textContent);
-  parts.forEach(x=>{if(!x[1])return;const e=document.createElement('i');e.style.width=(x[1]/scale*100)+'%';e.style.background=x[2];e.title=x[0];bar.appendChild(e);});
-  const mk=document.createElement('i');mk.className='stomk';mk.style.left=(detailBudget()/scale*100)+'%';mk.title='Limit for stroke detail';bar.appendChild(mk);
-  const leg=$('stoLeg');leg.textContent='';
-  parts.forEach(x=>{const d=document.createElement('div');const dot=document.createElement('span');dot.style.background=x[2];d.append(dot,x[0]+' '+fmt(x[1]));leg.appendChild(d);});
-  const n=recs.runs.filter(r=>r.exercises.some(b=>b.sp)).length;
-  $('stoNote').textContent='Stroke detail is what lets a run show its staff and strokes again. It may use up to '+fmt(detailBudget())+'. Past that the oldest runs lose their detail first and keep their totals. '+n+(n===1?' run has':' runs have')+' its detail now.';
+  let used=0;
+  try{used=(db?JSON.stringify(packRecs()).length:(localStorage.getItem(RKEY)||'').length)+(localStorage.getItem(KEY)||'').length;}catch(e){}
+  const fmt=c=>{const b=c*2;return b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(0.1,b/1024).toFixed(b<10240?1:0)+' KB';};
+  const n=recs.runs.filter(hasDetail).length;
+  $('stoNote').textContent=(db?fmt(used)+' used on this device. Pocket keeps every run.':fmt(used)+' of about '+fmt(QUOTA)+' used on this device.')
+    +' Stroke detail, which lets a run show its staff and strokes again, may use up to '+fmt(detailBudget())+'; past that, the oldest runs lose it first and keep their scores and counts. '
+    +n+(n===1?' run has its':' runs have their')+' detail now.';
 }
 function showSetup(v){setSview(v);showTab('setup');}
 let histShown=20,histDays=7,hview='day';
@@ -7142,7 +7434,7 @@ function renderHistoryGroups(){
 }
 function deleteRun(id){
   const i=recs.runs.findIndex(x=>x.id===id);if(i<0)return;
-  recs.runs.splice(i,1);saveRecs();
+  markGone(recs.gone,recs.runs.splice(i,1)[0]);saveRecs();
   if(lastRun&&lastRun.run.id===id){lastRun=null;renderAdvice();}
   renderProgress();
 }
@@ -7157,8 +7449,8 @@ function dropExercise(r,b){
   r.exercises=left;
   const keys=left.map(x=>({i:x.i,k:x.k})).concat((r.sk||[]).map(x=>({i:x.i,k:x.k}))).sort((a,c)=>a.i-c.i).map(x=>x.k);
   const was=r.rk;
-  r.ne=keys.length;r.rk=routineKeyOf(keys);
-  if(was&&was!==r.rk&&recs.names[was]&&!recs.names[r.rk])recs.names[r.rk]=recs.names[was];
+  r.ne=keys.length;r.rk=routineKeyOf(keys);r.u=newVersion(r.u);
+  if(was&&was!==r.rk&&recs.names[was]&&!recs.names[r.rk])setName(r.rk,recs.names[was]);
   if(r.rp){   /* the replay text loses the same line, so Play does not bring the exercise back */
     const t=String(r.rp.x||'').replace(/^\uFEFF/,'').trim(),ex=/^[\[{]/.test(t)?null:parseRoutine(t).exercises.find(e=>e.idx===gone);
     if(ex&&ex.line!=null){
@@ -7297,7 +7589,7 @@ async function exportRecs(){
   if(!saved){$('recMsg').textContent='Export cancelled.';return;}
   if(sel.hist){S.lastExport=Date.now();S.expRuns=totalRuns();save();}
   syncBackup();
-  const pl=(n,w)=>n+' '+w+(n===1?'':'s'),bits=[];
+  const pl=(n,w)=>n.toLocaleString('en-US')+' '+w+(n===1?'':'s'),bits=[];
   if(sel.hist)bits.push(pl(totalRuns(),'run'));if(sel.lib)bits.push(pl(recs.lib.length,'routine'));if(sel.lists)bits.push(pl(S.lists.length,'library'));if(sel.set)bits.push('settings');
   $('recMsg').textContent='Exported '+bits.join(', ')+'.';$('recMsg').classList.add('flash');
 }
@@ -7320,16 +7612,20 @@ async function exportRun(){
   await saveFile('pocket-run-'+stamp(true)+'.json','application/json',JSON.stringify(runTrace(r,lastRun.run)));
 }
 let impPending=null;
+/* Far above the largest export: about 1K characters a run, plus at most 20M characters of stroke detail. 5 MB was the limit while
+   records lived in localStorage; an export passes it at about 1,200 runs. */
+const MAX_IMPORT=100e6;
 /* The Data page's import message. After an import it is set once the page has redrawn, so the run count does not overwrite it. */
 function sayRec(t){$('recMsg').textContent=t;$('recMsg').classList.add('flash');}
 async function importRecs(file){
   if(!file)return;
-  if(file.size>5e6){sayRec('That file is too large.');return;}
+  if(recsOff){sayRec('Your records cannot be saved here until Pocket reloads.');return;}
+  if(file.size>MAX_IMPORT){sayRec('That file is over 100 MB, too large to import.');return;}
   try{
     const o=JSON.parse(await file.text());
     if(!o||(!Array.isArray(o.runs)&&!Array.isArray(o.lib)&&!Array.isArray(o.lists)&&!(o.settings&&typeof o.settings==='object')))throw 0;
     const u=unpackRecs(o),nl=Array.isArray(o.lists)?o.lists.length:0,pl=(n,w)=>n+' '+w+(n===1?'':'s');
-    const has={hist:u.runs.length+(u.sum.runs||0),lib:u.lib.length,lists:nl,set:o.settings&&typeof o.settings==='object'?1:0};
+    const has={hist:u.runs.length+sumView(u).runs,lib:u.lib.length,lists:nl,set:o.settings&&typeof o.settings==='object'?1:0};
     const det={hist:()=>pl(has.hist,'run'),lib:()=>pl(has.lib,'routine'),lists:()=>nl+(nl===1?' library':' libraries'),set:()=>'tempo, click, accents, theme'};
     const parts=EXP_PARTS.filter(p=>has[p[0]]).map(p=>[p[0],p[1],det[p[0]]]);
     if(!parts.length){sayRec('That file has nothing in it.');return;}
@@ -7341,40 +7637,56 @@ function importSelected(){
   const sel=readSel();
   $('expModal').hidden=true;
   const {o,u,file}=impPending;impPending=null;
+  seeVersions(latestVersion(u,o));   /* what is changed here next is newer than anything in the file */
   const fresh=!recs.runs.length&&!recs.sum.runs;
   let add=0,addL=0,addS=0,setN=0,dup=0,savedCopy=false;
   if(sel.hist){
-    if(fresh&&u.sum.runs)recs.sum=u.sum;
+    /* A file from an older generation brings in nothing from before the history was cleared here; one from a newer generation comes
+       into this one. An import never changes this device's generation. */
+    const old=u.gen.n<recs.gen.n;
+    /* Totals by device, the newer copy of each. Totals from before 1.5.231 belong to no device, so they come in only on a fresh start. */
+    if(!old&&(num(o.v)>=3||fresh))Object.keys(u.sums).forEach(d=>{const e=u.sums[d];if(!recs.sums[d]||e.v>recs.sums[d].v)recs.sums[d]=e;});
+    const folded=coverage(recs.sums),kept=recs.runs.filter(r=>!folded(r));
+    if(!old)Object.keys(u.xs).forEach(id=>{recs.xs[id]=u.xs[id];});
+    Object.keys(recs.xs).forEach(id=>{if(folded({id:id,t:recs.xs[id][0]}))delete recs.xs[id];});   /* its time is in the totals now */
+    if(kept.length<recs.runs.length)recs.runs.splice(0,recs.runs.length,...kept);   /* now counted in the totals that came in */
+    resum();
     const have=new Set(recs.runs.map(x=>x.id));
-    u.runs.forEach(c=>{if(!have.has(c.id)){recs.runs.push(c);have.add(c.id);add++;}});
-    Object.keys(u.names).forEach(k=>{if(!recs.names[k])recs.names[k]=u.names[k];});recs.nu=Math.max(recs.nu,u.nu);
+    u.runs.forEach(c=>{
+      if(have.has(c.id)||folded(c)||c.g<recs.gen.n)return;   /* already in the totals, or from before the history was cleared */
+      c.g=recs.gen.n;
+      if(recs.gone[c.id]){c.u=newVersion(recs.gone[c.id],c.u);delete recs.gone[c.id];}   /* a deleted run, brought back on purpose */
+      recs.runs.push(c);have.add(c.id);add++;
+    });
+    Object.keys(u.names).forEach(k=>{if(!recs.names[k])setName(k,u.names[k]);});recs.nu=Math.max(recs.nu,u.nu);
     recs.runs.sort((a,b)=>a.t-b.t);dup+=u.runs.length-add;
     /* The file is a saved copy: dated when it was written, and holding as many runs as it holds. A fresh install that imports its old records is not 'unsaved'. */
     const ids=new Set(u.runs.map(x=>x.id));
-    if(Array.isArray(o.runs)&&(file.lastModified||0)>S.lastExport){S.lastExport=file.lastModified;S.expRuns=recs.runs.filter(x=>ids.has(x.id)).length+(fresh?(u.sum.runs||0):0);savedCopy=true;}
+    if(Array.isArray(o.runs)&&(file.lastModified||0)>S.lastExport){S.lastExport=file.lastModified;S.expRuns=recs.runs.filter(x=>ids.has(x.id)).length+(fresh?sumView(u).runs:0);savedCopy=true;}
   }
   if(sel.lib){
-    u.lib.forEach(c=>{const k=textKey(c.x,S.subdiv);if(k&&!libFor(k)&&recs.lib.length<MAX_LIB){recs.lib.push({id:recs.lib.some(q=>q.id===c.id)?libId():c.id,x:c.x,t:c.t});addL++;}});
+    u.lib.forEach(c=>{const k=textKey(c.x,S.subdiv);if(k&&!libFor(k)&&recs.lib.length<MAX_LIB){const n=Object.assign({},c,{id:recs.lib.some(q=>q.id===c.id)?libId():c.id});if(recs.libGone[n.id])restoreLib(n);else recs.lib.push(n);addL++;}});
     dup+=u.lib.length-addL;
   }
-  if(sel.lists)(Array.isArray(o.lists)?o.lists:[]).forEach(l=>{if(l&&typeof l.url==='string'&&l.url.length<=500&&httpUrl(l.url)&&S.lists.length<20&&!S.lists.some(q=>q.url===l.url||listName(q).toLowerCase()===listName({url:l.url,name:typeof l.name==='string'?l.name:''}).toLowerCase())){S.lists.push({url:l.url,name:typeof l.name==='string'?l.name.slice(0,60):'',t:0});addS++;}});
+  if(sel.hist||sel.lib)Object.keys(u.x).forEach(k=>{if(!(k in recs.x))recs.x[k]=u.x[k];});   /* fields from a newer version, kept for it */
+  if(sel.lists)(Array.isArray(o.lists)?o.lists:[]).forEach(l=>{if(l&&typeof l.url==='string'&&l.url.length<=500&&httpUrl(l.url)&&S.lists.length<20&&!S.lists.some(q=>q.url===l.url||listName(q).toLowerCase()===listName({url:l.url,name:typeof l.name==='string'?l.name:''}).toLowerCase())){const id=typeof l.id==='string'&&l.id&&l.id.length<=40&&!S.lists.some(q=>q.id===l.id)?l.id:listId(l.url);delete S.listGone[id];S.lists.push({id,url:l.url,name:typeof l.name==='string'?l.name.slice(0,60):'',t:0,u:newVersion()});addS++;}});
   /* Settings from the file: only the ones that travel, and only of the right kind. The page reloads so everything is read back through the usual checks. */
   if(sel.set&&o.settings&&typeof o.settings==='object')PORTABLE.forEach(k=>{const v=o.settings[k];if(v!==undefined&&typeof v===typeof S[k]){S[k]=v;setN++;}});
   if(addS||savedCopy||setN)save();
   saveRecs();renderProgress();
   if(setN){sayRec('Imported settings. Reloading…');Promise.all([recsWritten(),new Promise(r=>setTimeout(r,900))]).then(()=>location.reload());return;}
-  const pl=(n,w)=>n+' '+w+(n===1?'':'s'),bits=[];
+  const pl=(n,w)=>n.toLocaleString('en-US')+' '+w+(n===1?'':'s'),bits=[];
   if(add)bits.push(pl(add,'new run'));if(addL)bits.push(pl(addL,'routine'));if(addS)bits.push(pl(addS,'library'));
-  sayRec(bits.length?'Imported '+bits.join(' and ')+(dup?' ('+dup+' already here)':'')+'.':'Nothing new in what you ticked.');
+  sayRec(bits.length?'Imported '+bits.join(' and ')+(dup?' ('+dup.toLocaleString('en-US')+' already here)':'')+'.':'Nothing new in what you ticked.');
 }
 /* The Clear dialog: tick what to wipe. Nothing is ticked to start with, and Clear asks twice. */
 const CLR_PARTS=[EXP_PARTS[0],EXP_PARTS[1],EXP_PARTS[2],EXP_PARTS[3],['dev','Device setup',()=>'microphone level, latency, calibration']];
 function openClear(){exMode='clr';tickDialog('Clear','Clear',CLR_PARTS,()=>false);}
 function clearSelected(){
   const sel=readSel();
-  if(sel.hist){recs.runs.length=0;recs.sum=newSum();recs.names={};recs.nu=1;S.lastExport=0;S.expRuns=0;}
-  if(sel.lib){recs.lib=[];S.libId='';S.routineText=STARTER;S.startExercise=1;S.seeded=false;}   /* back to a first start: the routines that ship with the app are added again */
-  if(sel.lists){S.lists=hostedLists();S.listSel='';}
+  if(sel.hist){recs.gen={n:recs.gen.n+1,v:newVersion(recs.gen.v)};recs.runs.length=0;recs.sums={};recs.xs={};resum();recs.names={};recs.nt={};recs.gone={};recs.nu=1;S.lastExport=0;S.expRuns=0;}   /* a new generation: in a sync, nothing from an older one comes back, on any device */
+  if(sel.lib){recs.lib.forEach(e=>markGone(recs.libGone,e));recs.lib=[];S.libId='';S.routineText=STARTER;S.startExercise=1;S.seeded=false;}   /* back to a first start: the routines that ship with the app are added again */
+  if(sel.lists){const t=newVersion(...S.lists.map(l=>l.u),...Object.values(S.listGone));S.lists.forEach(l=>{S.listGone[l.id]=t;});S.lists=hostedLists();S.lists.forEach(l=>{delete S.listGone[l.id];l.u=t;});S.listSel='';}
   if(sel.set)PORTABLE.forEach(k=>{delete S[k];});   /* the page reloads, and every one falls back to its starting value */
   if(sel.dev){micOff(true);S.clockLog=[];S.noise=null;S.latCal=false;S.latency=null;delete S.sens;delete S.settle;delete S.input;}   /* shows the Set up card again */
   save();saveRecs();recsWritten().then(()=>location.reload());
@@ -7675,17 +7987,17 @@ function putEntry(t,id,keep){
   if(x.length>MAX_SNAP)return {err:'That routine is too long to save.'};
   const title=(getHeader(t,'title')||'').trim().slice(0,80);
   let e=recs.lib.find(q=>q.id===id);
-  if(!e){e=libFor(key);if(e&&keep){if(title&&!recs.names[key]){recs.names[key]=title;saveRecs();}return {e:e,isNew:false};}}   /* importing again names an entry that has no name, and keeps one that has */
+  if(!e){e=libFor(key);if(e&&keep){if(title&&!recs.names[key]){setName(key,title);saveRecs();}return {e:e,isNew:false};}}   /* importing again names an entry that has no name, and keeps one that has */
   const isNew=!e,oldKey=e?libKey(e):null;
   if(isNew){
     if(recs.lib.length>=MAX_LIB)return {err:'Your library is full ('+MAX_LIB+' routines).'};
     e={id:libId(),x:x,t:nowT()};recs.lib.push(e);
   }else{e.x=x;e.t=nowT();}
   e._k=key;
-  recs.lib=recs.lib.filter(q=>q===e||libKey(q)!==key);   /* two entries for one routine would only confuse */
-  if(title)recs.names[key]=title;
+  recs.lib=recs.lib.filter(q=>{if(q===e||libKey(q)!==key)return true;markGone(recs.libGone,q);return false;});   /* two entries for one routine would only confuse */
+  if(title)setName(key,title);
   else if(isRoutineKey(key)){
-    if(!recs.names[key])recs.names[key]=oldKey&&recs.names[oldKey]?recs.names[oldKey]:'Untitled '+(recs.nu++);
+    if(!recs.names[key])setName(key,oldKey&&recs.names[oldKey]?recs.names[oldKey]:'Untitled '+(recs.nu++));
   }
   if(!saveRecs())return {err:'Could not save. Browser storage may be full.'};
   return {e:e,isNew:isNew};
@@ -7815,7 +8127,7 @@ const editEntry=e=>{
   guard(()=>{loadEntry(e);openEditor('library');});
 };
 function removeLibEntry(e){
-  recs.lib=recs.lib.filter(q=>q!==e);
+  recs.lib=recs.lib.filter(q=>q!==e);markGone(recs.libGone,e);
   if(S.libId===e.id){S.libId='';save();}
   saveRecs();
 }
@@ -7824,8 +8136,8 @@ function removeLibEntry(e){
 function libUndo(e,wasOpen,name,label){
   const m=$('libMsg');m.textContent='Deleted “'+label+'”. Its runs stay in History. ';
   m.appendChild(textBtn('Undo',()=>{
-    if(!libFor(libKey(e))&&recs.lib.length<MAX_LIB)recs.lib.push(e);
-    if(name&&!recs.names[libKey(e)])recs.names[libKey(e)]=name;
+    if(!libFor(libKey(e))&&recs.lib.length<MAX_LIB)restoreLib(e);
+    if(name&&!recs.names[libKey(e)])setName(libKey(e),name);
     if(wasOpen&&!S.libId){S.libId=e.id;save();}
     saveRecs();m.textContent='Restored “'+entryName(e)+'”.';renderLibraryPage();
   }));
@@ -8053,9 +8365,9 @@ function renderLinks(){
       if((l===NEW||u.href!==l.url)&&S.lists.some(q=>q.url===u.href)){er.textContent='That address is already in the list.';return;}
       if(l===NEW){
         if(S.lists.length>=20){er.textContent='You can keep 20 libraries.';return;}
-        S.lists.push({url:u.href,name:nm.value.trim().slice(0,60),t:0});
+        S.lists.push({id:newListId(u.href),url:u.href,name:nm.value.trim().slice(0,60),t:0,u:newVersion()});
       }else{
-        l.name=nm.value.trim().slice(0,60);
+        l.name=nm.value.trim().slice(0,60);l.u=newVersion(l.u);
         if(S.listSel===l.url)S.listSel=u.href;
         if(u.href!==l.url){l.url=u.href;delete l.items;l.t=0;lib={items:[],loaded:false,busy:false,cur:''};}
       }
@@ -8070,7 +8382,7 @@ function renderLinks(){
     const nm=document.createElement('b'),ur=document.createElement('span'),ac=document.createElement('span');
     nm.className='rt';nm.textContent=listName(l);ur.className='rm lnkurl';ur.textContent=l.url;ac.className='ra';
     ac.appendChild(iconBtn('edit','Edit',()=>{lnkEdit=l;renderLinks();}));
-    ac.appendChild(kebab('More actions',[{t:'Delete',fn:()=>{S.lists=S.lists.filter(q=>q!==l);if(S.listSel===l.url){S.listSel='';lib={items:[],loaded:false,busy:false,cur:''};}libMode='';save();renderLibrary();},arm:true,danger:true}]));
+    ac.appendChild(kebab('More actions',[{t:'Delete',fn:()=>{S.lists=S.lists.filter(q=>q!==l);S.listGone[l.id]=newVersion(l.u,S.listGone[l.id]);if(S.listSel===l.url){S.listSel='';lib={items:[],loaded:false,busy:false,cur:''};}libMode='';save();renderLibrary();},arm:true,danger:true}]));
     const inner=document.createElement('div');inner.className='row';inner.append(nm,ur,ac);
     box.appendChild(inner);
   });
@@ -8131,7 +8443,7 @@ async function loadLibrary(){
       reviewImport(raw);return;
     }
     let l=S.lists.find(q=>q.url===href);
-    if(!l){l={url:href,name:$('libName').value.trim().slice(0,60),t:0};S.lists.push(l);}
+    if(!l){l={id:newListId(href),url:href,name:$('libName').value.trim().slice(0,60),t:0,u:newVersion()};S.lists.push(l);}
     l.t=Date.now();l.items=res.items.map(i=>({title:i.title,text:i.text}));
     S.listSel=href;libMode='';$('libraryUrl').value='';$('libName').value='';suggestName();
     S.lists.filter(q=>q.items).sort((x,y)=>y.t-x.t).slice(3).forEach(q=>{delete q.items;});save();
@@ -9151,6 +9463,7 @@ function wire(){
     if(run&&!run.ended)return;
     fetch(location.pathname,{cache:'reload'}).catch(()=>{}).then(()=>location.reload());   /* with cookies, as a page load is: Safari keeps the two in separate cache entries */
   });
+  $('dbGo').addEventListener('click',()=>{fetch(location.pathname,{cache:'reload'}).catch(()=>{}).then(()=>location.reload());});   /* as Update does: not the cached copy */
   $('updLater').addEventListener('click',()=>{updLater=true;showUpd();});
   setTimeout(checkUpdate,2000);
   window.addEventListener('focus',checkUpdate);setInterval(checkUpdate,1800000);
