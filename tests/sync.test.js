@@ -123,15 +123,22 @@ test('saved routines: a deleted one stays deleted, and two copies of the same te
   assert.equal(m.libGone.p, st(30, 2, 'bbbbbbbb'), 'the other copy gets a deleted marker at the version that beat it');
 });
 
-test('deleted markers keep the newest when there are too many, and only stamps are read back', () => {
-  const a = {}, b = {};
-  for (let i = 0; i < c.MAX_MARKS; i++) a['a' + i] = st(i + 1, i + 1);
+test('deleted markers are never trimmed, however many, and only stamps are read back', () => {
+  const N = 20000, a = {}, b = {};
+  for (let i = 0; i < N; i++) a['a' + i] = st(i + 1, i + 1);
   b.z = st(1e9, 1);
-  const m = c.mergeMarks(a, b, c.MAX_MARKS);
-  assert.equal(Object.keys(m).length, c.MAX_MARKS);
+  b.a0 = st(0, 1);   /* older than a's marker for the same id */
+  const m = c.mergeMarks(a, b);
+  assert.equal(Object.keys(m).length, N + 1);
   assert.equal(m.z, st(1e9, 1));
-  assert.equal(m.a0, undefined, 'the oldest is dropped');
+  assert.equal(m.a0, st(1, 1), 'the oldest stays, at its newer stamp');
+  assert.equal(Object.keys(c.cleanMarks(m)).length, N + 1, 'and all are read back');
   assert.deepEqual(plain(c.cleanMarks({ x: st(5, 1), y: 'bad', z: -1, w: 5 })), { x: st(5, 1) });
+  /* Through a merge: a run deleted long ago, with thousands of deletes since, does not come back from an old copy. */
+  const gone = Object.assign({}, a, { old: st(1, 0) });
+  const r = c.mergeRecs(side({ gone }), side({ runs: [run('old', 1)] }), key);
+  assert.equal(r.runs.length, 0);
+  assert.equal(Object.keys(r.gone).length, N + 1);
 });
 
 test('fields this version does not know are kept through a merge', () => {

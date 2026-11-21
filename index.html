@@ -3192,11 +3192,11 @@ function mergeSums(a,b,z){
    Runs combine by id, everything else by newest version. A deleted marker (id -> the stamp of the delete) wins over any version that is
    not newer, so a run deleted on one copy stays deleted unless it was restored (Undo, import) after. An edit made after a delete on
    another copy brings the item back: the last change wins. Two saved routines with the same exercises keep the newer one. */
-function mergeMarks(a,b,max){
+/* Every marker is kept, never trimmed: a trimmed marker would let an old copy bring its item back. One is about 45 characters. */
+function mergeMarks(a,b){
   const o=Object.assign({},a);
   Object.keys(b||{}).forEach(k=>{if(!(o[k]>=b[k]))o[k]=b[k];});
-  const ks=Object.keys(o);if(ks.length<=max)return o;
-  const out={};ks.sort((x,y)=>o[x]<o[y]?1:o[x]>o[y]?-1:0).slice(0,max).forEach(k=>{out[k]=o[k];});return out;   /* the newest markers are kept */
+  return o;
 }
 function newestById(as,bs,gone,ver,tie){
   const m=new Map();
@@ -3210,9 +3210,9 @@ function dropDuplicates(list,key,ver,gone){
   list.forEach(x=>{const k=key(x);if(!k)return;const y=best.get(k);if(!y||ver(x)>ver(y)||(ver(x)===ver(y)&&x.id>y.id))best.set(k,x);});
   return list.filter(x=>{const k=key(x),y=k&&best.get(k);if(!y||y===x)return true;if(!(gone[x.id]>=ver(y)))gone[x.id]=ver(y);return false;});
 }
-const MAX_MARKS=5000;
-/* Markers and version maps read back from storage: key to a trusted stamp, the first MAX_MARKS kept. */
-const cleanMarks=m=>{const out={};if(m&&typeof m==='object'&&!Array.isArray(m))Object.keys(m).slice(0,MAX_MARKS).forEach(k=>{if(okStamp(m[k]))out[k.slice(0,400)]=m[k];});return out;};
+const MAX_MARKS=5000;   /* old folded ids and discarded times read back; deleted markers have no limit */
+/* Markers and version maps read back from storage: key to a trusted stamp, all of them. */
+const cleanMarks=m=>{const out={};if(m&&typeof m==='object'&&!Array.isArray(m))Object.keys(m).forEach(k=>{if(okStamp(m[k]))out[k.slice(0,400)]=m[k];});return out;};
 const detailLen=r=>r.exercises.reduce((n,b)=>n+(b.sp?b.sp.length:0),0);
 /* a and b: {runs, sums, z, xs, names, nt, nu, lib, gone, libGone, x}. z: when the history was cleared (a time); nothing from before it
    comes back. xs: discarded runs, id -> [time, seconds], so two devices count their time once. x: fields this version does not know,
@@ -3221,10 +3221,10 @@ const detailLen=r=>r.exercises.reduce((n,b)=>n+(b.sp?b.sp.length:0),0);
 function mergeRecs(a,b,key,maxLib){
   const z=Math.max(+a.z||0,+b.z||0),sums=mergeSums(a.sums,b.sums,z),folded=coverage(sums),xs={};
   [a.xs,b.xs].forEach(o=>Object.keys(o||{}).forEach(id=>{if(o[id][0]>z&&!folded({id:id,t:o[id][0]}))xs[id]=o[id];}));   /* folded: its time is in that device's totals */
-  const gone=mergeMarks(a.gone,b.gone,MAX_MARKS);
+  const gone=mergeMarks(a.gone,b.gone);
   const runs=newestById(a.runs,b.runs,gone,verOf,(x,y)=>detailLen(x)-detailLen(y))   /* the same version: the copy that kept its stroke detail */
     .filter(r=>r.t>z&&!folded(r)).sort((x,y)=>x.t-y.t);
-  const libGone=mergeMarks(a.libGone,b.libGone,MAX_MARKS);
+  const libGone=mergeMarks(a.libGone,b.libGone);
   const lib=dropDuplicates(newestById(a.lib,b.lib,libGone,verOf),e=>key(e.x),verOf,libGone).sort((x,y)=>x.t-y.t).slice(-(maxLib||500));
   const names={},nt={},an=a.names||{},bn=b.names||{};
   new Set(Object.keys(a.nt||{}).concat(Object.keys(b.nt||{}),Object.keys(an),Object.keys(bn))).forEach(k=>{
@@ -3244,7 +3244,7 @@ function mergeSettings(a,b,keys){
     if(w.set&&w.set[k]!==undefined)set[k]=w.set[k];
     if(t!==ZERO)setT[k]=t;
   });
-  const listGone=mergeMarks(a.listGone,b.listGone,MAX_MARKS);
+  const listGone=mergeMarks(a.listGone,b.listGone);
   const lists=dropDuplicates(newestById(a.lists,b.lists,listGone,verOf),l=>l.url,verOf,listGone).slice(0,20);
   return {set:set,setT:setT,lists:lists,listGone:listGone};
 }
@@ -3744,7 +3744,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.233';                           /* shown beside the title */
+const VERSION='1.5.234';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 /* This device: a random id, made once and kept only here (never exported or synced), its stamp counter, and the latest time it stamped. */
 const DKEY=KEY+'.dev';
