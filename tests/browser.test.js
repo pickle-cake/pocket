@@ -379,9 +379,20 @@ test('Report a timing problem opens feedback with the timing ticked, and Copy an
   assert.match(await p.textContent('#fbMsg'), /^Copied\. Paste it into an email to pocket@mndlss\.com/);
   const copied = await p.evaluate(() => window.__copied);
   assert.match(copied, /^To: pocket@mndlss\.com\n\nThe first click came late\.\n\n-- Device and timing details --\nPocket /);
+  /* the GitHub link fills the issue form's fields just before it is followed (a right-click here, so nothing opens) */
+  const gitUrl = async () => { await p.dispatchEvent('#fbGit', 'contextmenu'); return new URL(await p.getAttribute('#fbGit', 'href')); };
+  let u = await gitUrl();
+  assert.equal(u.origin + u.pathname, 'https://github.com/pickle-cake/pocket/issues/new');
+  assert.equal(u.searchParams.get('template'), 'feedback.yml');
+  assert.match(u.searchParams.get('version'), /^\d+\.\d+\.\d+$/);
+  assert.equal(u.searchParams.get('message'), 'The first click came late.');
+  assert.match(u.searchParams.get('details'), /^Pocket .*\n[^]*x slipped, slip 250 ms/);
   /* without the details, only the message */
   await p.uncheck('#fbDev');
   assert.equal(await p.isVisible('#fbShow'), false);
+  u = await gitUrl();
+  assert.equal(u.searchParams.get('details'), null);
+  assert.equal(u.searchParams.get('message'), 'The first click came late.');
   await p.click('#fbCopy');
   await p.waitForTimeout(100);
   assert.equal(await p.evaluate(() => window.__copied), 'To: pocket@mndlss.com\n\nThe first click came late.');

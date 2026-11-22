@@ -1785,7 +1785,7 @@ RLRR LRLL RLRR LRLL</pre>
     <details class="how" id="fbShow"><summary>What is included</summary><pre class="fbdet" id="fbDet"></pre></details>
     <p class="hint" id="fbMsg" role="status" aria-live="polite"></p>
     <div class="btns"><button class="btn" id="fbMail" type="button">Email it</button><button class="btn" id="fbCopy" type="button">Copy</button><button class="btn" id="fbClose" type="button">Close</button></div>
-    <p class="hint">Use GitHub? <a class="btn link" href="https://github.com/pickle-cake/pocket/issues/new" target="_blank" rel="noopener">Report it on GitHub</a></p>
+    <p class="hint">Use GitHub? <a class="btn link" id="fbGit" href="https://github.com/pickle-cake/pocket/issues/new?template=feedback.yml" target="_blank" rel="noopener">Report it on GitHub</a> Reports there are public.</p>
   </div>
 </div>
 
@@ -3710,7 +3710,7 @@ function parseLibrary(text,max){
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const VERSION='1.5.238';                           /* shown beside the title */
+const VERSION='1.5.239';                           /* shown beside the title */
 const KEY='stick-timing-trainer.v1';
 /* This device: a random id, made once and kept only here (never exported or synced), its stamp counter, and v, the highest version time it has made or seen. */
 const DKEY=KEY+'.dev';
@@ -4994,6 +4994,13 @@ function mailFeedback(){
   if(body.length>1800)body=body.slice(0,1800)+'\n(cut short: use Copy for the rest)';   /* mail apps refuse very long links */
   location.href='mailto:'+FB_TO+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
   $('fbMsg').textContent='Your mail app should open with the message ready to send. If nothing opened, use Copy and paste it into an email to '+FB_TO+'.';
+}
+/* The GitHub issue form (.github/ISSUE_TEMPLATE/feedback.yml), filled from the dialog: query parameters named after its field ids. */
+const FB_ISSUE='https://github.com/pickle-cake/pocket/issues/new?template=feedback.yml';
+function githubFeedback(){
+  const q=[['version',VERSION],['message',$('fbText').value.trim()]];
+  if($('fbDev').checked)q.push(['details',feedbackDetails()]);
+  $('fbGit').href=FB_ISSUE+q.filter(p=>p[1]).map(p=>'&'+p[0]+'='+encodeURIComponent(p[1])).join('');
 }
 function copyFeedback(){
   const txt='To: '+FB_TO+'\n\n'+feedbackText();
@@ -9295,6 +9302,7 @@ function wire(){
   $('fbDev').addEventListener('change',syncFeedback);
   $('fbMail').addEventListener('click',mailFeedback);
   $('fbCopy').addEventListener('click',copyFeedback);
+  ['click','auxclick','contextmenu'].forEach(t=>$('fbGit').addEventListener(t,githubFeedback));   /* fill the link just before it is followed or copied */
   $('fbClose').addEventListener('click',closeFeedback);
   dismissable($('fbModal'),closeFeedback,{first:true});   /* Escape closes the dialog and not the Help page under it */
   syncClock();
